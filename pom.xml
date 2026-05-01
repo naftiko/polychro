@@ -25,6 +25,7 @@
         <module>polychro-wellformedness</module>
         <module>polychro-json-schema</module>
         <module>polychro-json-structure</module>
+        <module>polychro-ruleset</module>
         <module>polychro-spike-jsonpath</module>
     </modules>
 

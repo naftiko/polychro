@@ -9,3 +9,4 @@ dependency-reduced-pom.xml
 /polychro-json-structure/target
 /polychro-spike-jsonpath/target
 /polychro-wellformedness/target
+/polychro-ruleset/target
