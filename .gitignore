@@ -6,5 +6,6 @@ dependency-reduced-pom.xml
 /.github/node_modules
 /polychro-api/target
 /polychro-json-schema/target
+/polychro-json-structure/target
 /polychro-spike-jsonpath/target
 /polychro-wellformedness/target

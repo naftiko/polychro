@@ -24,6 +24,7 @@
         <module>polychro-api</module>
         <module>polychro-wellformedness</module>
         <module>polychro-json-schema</module>
+        <module>polychro-json-structure</module>
         <module>polychro-spike-jsonpath</module>
     </modules>
 
@@ -35,6 +36,7 @@
         <jackson.version>2.20.2</jackson.version>
         <json-schema-validator.version>1.0.87</json-schema-validator.version>
         <json-path.version>2.9.0</json-path.version>
+        <json-structure.version>0.5.5</json-structure.version>
         <slf4j.version>2.0.17</slf4j.version>
         <picocli.version>4.7.6</picocli.version>
 
@@ -69,6 +71,13 @@
                 <groupId>com.jayway.jsonpath</groupId>
                 <artifactId>json-path</artifactId>
                 <version>${json-path.version}</version>
+            </dependency>
+
+            <!-- JSON Structure -->
+            <dependency>
+                <groupId>org.json-structure</groupId>
+                <artifactId>json-structure</artifactId>
+                <version>${json-structure.version}</version>
             </dependency>
 
             <!-- Logging -->

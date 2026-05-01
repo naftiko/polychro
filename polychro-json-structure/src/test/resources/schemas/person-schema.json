@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-structure.org/meta/core/v0/#",
+  "$id": "https://example.com/person",
+  "name": "Person",
+  "type": "object",
+  "properties": {
+    "firstName": { "type": "string" },
+    "lastName": { "type": "string" },
+    "age": { "type": "int32" },
+    "email": { "type": "string" }
+  },
+  "required": ["firstName", "lastName"]
+}
