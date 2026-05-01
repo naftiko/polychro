@@ -30,6 +30,7 @@
         <module>polychro-core</module>
         <module>polychro-cli</module>
         <module>polychro-markdown</module>
+        <module>polychro-checkov</module>
         <module>polychro-spike-jsonpath</module>
     </modules>
 
