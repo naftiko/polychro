@@ -1,0 +1,18 @@
+specVersion: 1.0.0-alpha1
+info:
+  name: query-in-path-cap
+  version: 1.0.0
+  description: "Capability with query string in resource path"
+
+capability:
+  consumes:
+    - namespace: some-api
+      type: http
+      description: "API with query in path"
+      baseUri: https://api.example.org
+      resources:
+        - name: items
+          path: /items?status=active
+          operations:
+            - name: list-items
+              method: GET

@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>polychro-spike-jsonpath</artifactId>
-    <name>polychro-spike-jsonpath</name>
+    <name>Polychro Spike JSONPath</name>
     <description>Phase 0: JSONPath compatibility spike — validates Jayway JsonPath against Spectral-format expressions</description>
 
     <dependencies>

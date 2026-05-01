@@ -11,8 +11,8 @@
     </parent>
 
     <artifactId>polychro-json-schema</artifactId>
-    <name>polychro-json-schema</name>
-    <description>JSON Schema validator producing unified polychro diagnostics</description>
+    <name>Polychro JSON Schema</name>
+    <description>JSON Schema validator producing unified Polychro diagnostics</description>
 
     <dependencies>
         <dependency>

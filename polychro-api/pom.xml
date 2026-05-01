@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>polychro-api</artifactId>
-    <name>polychro-api</name>
+    <name>Polychro API</name>
     <description>SPI contracts: Validator, Diagnostic, Document</description>
 
     <dependencies>

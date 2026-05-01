@@ -1,0 +1,18 @@
+specVersion: 1.0.0-alpha1
+info:
+  name: trailing-slash-cap
+  version: 1.0.0
+  description: "Capability with trailing slash baseUri"
+
+capability:
+  consumes:
+    - namespace: some-api
+      type: http
+      description: "API with trailing slash"
+      baseUri: https://api.example.org/
+      resources:
+        - name: items
+          path: /items
+          operations:
+            - name: list-items
+              method: GET

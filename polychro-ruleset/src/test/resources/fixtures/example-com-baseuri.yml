@@ -1,0 +1,18 @@
+specVersion: 1.0.0-alpha1
+info:
+  name: example-baseuri-cap
+  version: 1.0.0
+  description: "Capability using example.com"
+
+capability:
+  consumes:
+    - namespace: some-api
+      type: http
+      description: "Placeholder API"
+      baseUri: https://api.example.com
+      resources:
+        - name: items
+          path: /items
+          operations:
+            - name: list-items
+              method: GET

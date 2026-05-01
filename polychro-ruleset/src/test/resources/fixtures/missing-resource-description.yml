@@ -1,0 +1,32 @@
+specVersion: 1.0.0-alpha1
+info:
+  name: missing-desc-cap
+  version: 1.0.0
+  description: "Capability with REST resource missing description"
+
+capability:
+  consumes:
+    - namespace: some-api
+      type: http
+      description: "Legitimate API"
+      baseUri: https://api.example.org
+      resources:
+        - name: items
+          path: /items
+          operations:
+            - name: list-items
+              method: GET
+
+  exposes:
+    - namespace: my-rest
+      type: rest
+      port: 8080
+      description: "REST adapter"
+      resources:
+        - path: /items
+          operations:
+            - name: list-items
+              method: GET
+              steps:
+                - name: fetch
+                  call: some-api/items/list-items

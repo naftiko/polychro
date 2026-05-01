@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>polychro-wellformedness</artifactId>
-    <name>polychro-wellformedness</name>
+    <name>Polychro Wellformedness</name>
     <description>Document well-formedness validator: duplicate keys, encoding, depth/size limits</description>
 
     <dependencies>

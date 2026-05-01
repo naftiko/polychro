@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>polychro-ruleset</artifactId>
-    <name>polychro-ruleset</name>
+    <name>Polychro Ruleset</name>
     <description>Spectral-format ruleset engine: parser and built-in functions</description>
 
     <dependencies>
