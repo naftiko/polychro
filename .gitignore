@@ -1,0 +1,10 @@
+/target/
+.DS_Store
+/src/.vscode
+/.vscode
+dependency-reduced-pom.xml
+/.github/node_modules
+/polychro-api/target
+/polychro-spike-jsonpath/target
+/polychro-wellformedness/target
+/polychro-spike-jsonpath/target

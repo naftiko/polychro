@@ -1,0 +1,3 @@
+true: boolean-key
+123: numeric-key
+normal: string-key

@@ -1,0 +1,8 @@
+name: clean
+version: "1.0"
+description: A well-formed YAML document
+items:
+  - id: 1
+    label: first
+  - id: 2
+    label: second

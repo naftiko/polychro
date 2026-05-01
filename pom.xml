@@ -10,7 +10,7 @@
     <packaging>pom</packaging>
 
     <name>polychro</name>
-    <description>Java-native document linting engine with pluggable validators</description>
+    <description>Polyglot Spec Linting Engine</description>
     <url>https://github.com/naftiko/polychro</url>
 
     <licenses>
@@ -22,6 +22,7 @@
 
     <modules>
         <module>polychro-api</module>
+        <module>polychro-wellformedness</module>
         <module>polychro-spike-jsonpath</module>
     </modules>
 
