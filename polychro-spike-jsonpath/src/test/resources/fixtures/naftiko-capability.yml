@@ -1,0 +1,236 @@
+---
+naftiko: "1.0.0-alpha3"
+
+info:
+  description: "A representative capability for JSONPath spike testing"
+  label: "Spike Test Capability"
+  tags:
+    - fleet
+    - maritime
+
+binds:
+  - namespace: "registry-env"
+    description: "Maritime Registry API credentials."
+    location: "file:///./secrets.yaml"
+    keys:
+      REGISTRY_TOKEN: "registry-bearer-token"
+
+capability:
+  consumes:
+    - namespace: registry
+      type: http
+      description: "Maritime Registry REST API"
+      baseUri: "https://api.maritime-registry.io/v2"
+      authentication:
+        type: bearer
+        token: "{{REGISTRY_TOKEN}}"
+      resources:
+        - name: list-ships
+          path: "/ships"
+          method: GET
+          outputParameters:
+            - name: imo_number
+              type: string
+            - name: vessel_name
+              type: string
+            - name: vessel_type
+              type: string
+            - name: flag_code
+              type: string
+            - name: operational_status
+              type: string
+        - name: get-ship
+          path: "/ships/{imo_number}"
+          method: GET
+          inputParameters:
+            - name: imo_number
+              in: path
+              type: string
+              required: true
+          outputParameters:
+            - name: imo_number
+              type: string
+            - name: vessel_name
+              type: string
+            - name: vessel_type
+              type: string
+            - name: flag_code
+              type: string
+            - name: operational_status
+              type: string
+            - name: year_built
+              type: number
+            - name: gross_tonnage
+              type: number
+
+    - namespace: weather
+      type: http
+      description: "Weather forecast API"
+      baseUri: "https://api.weather.io/v1"
+      resources:
+        - name: get-forecast
+          path: "/forecast"
+          method: GET
+          inputParameters:
+            - name: lat
+              in: query
+              type: number
+              required: true
+            - name: lon
+              in: query
+              type: number
+              required: true
+
+  aggregates:
+    - label: "Fleet Resolver"
+      namespace: fleet-resolver
+      functions:
+        - name: get-ship-details
+          description: "Get complete ship details"
+          semantics:
+            safe: true
+            idempotent: true
+            cacheable: true
+          inputParameters:
+            - name: imo
+              type: string
+              required: true
+              description: "IMO number of the ship"
+          steps:
+            - name: fetch-ship
+              type: call
+              call: registry.get-ship
+              with:
+                imo_number: "{{imo}}"
+          mappings:
+            - targetName: imo
+              value: "$.fetch-ship.imo_number"
+            - targetName: name
+              value: "$.fetch-ship.vessel_name"
+          outputParameters:
+            - name: imo
+              type: string
+            - name: name
+              type: string
+
+  exposes:
+    - type: mcp
+      address: "0.0.0.0"
+      port: 3001
+      transport: http
+      namespace: fleet-tools
+      authentication:
+        type: bearer
+        token: "{{MCP_SERVER_TOKEN}}"
+      description: "Fleet management MCP tools"
+      tools:
+        - name: list-ships
+          description: "List ships in the fleet"
+          inputParameters:
+            - name: status
+              type: string
+              required: false
+              description: "Filter by operational status"
+          call: registry.list-ships
+          with:
+            status: fleet-tools.status
+          outputParameters:
+            - type: array
+              mapping: "$."
+              items:
+                type: object
+                properties:
+                  imo:
+                    type: string
+                    mapping: "$.imo_number"
+                  name:
+                    type: string
+                    mapping: "$.vessel_name"
+        - name: get-ship-details
+          description: "Get ship details"
+          ref: fleet-resolver.get-ship-details
+
+    - type: rest
+      address: "0.0.0.0"
+      port: 3003
+      namespace: fleet-api
+      description: "Fleet REST API"
+      resources:
+        - name: ships
+          path: "/ships"
+          description: "Ship resource"
+          operations:
+            - name: list-ships
+              description: "List all ships"
+              method: GET
+              inputParameters:
+                - name: status
+                  in: query
+                  type: string
+                  description: "Filter by status"
+              call: registry.list-ships
+              with:
+                status: fleet-api.status
+              steps:
+                - name: fetch-list
+                  type: call
+                  call: registry.list-ships
+              outputParameters:
+                - type: array
+                  mapping: "$."
+                  items:
+                    type: object
+                    properties:
+                      imo:
+                        type: string
+                        mapping: "$.imo_number"
+        - name: ship-detail
+          path: "/ships/{imo}"
+          description: "Single ship resource"
+          operations:
+            - name: get-ship
+              description: "Get ship by IMO"
+              method: GET
+              inputParameters:
+                - name: imo
+                  in: path
+                  type: string
+                  required: true
+              call: registry.get-ship
+              with:
+                imo_number: fleet-api.imo
+              outputParameters:
+                - type: object
+                  properties:
+                    imo:
+                      type: string
+                      mapping: "$.imo_number"
+
+    - type: skill
+      address: "0.0.0.0"
+      port: 3002
+      namespace: fleet-skills
+      description: "Fleet skill groups"
+      skills:
+        - name: fleet-ops
+          description: "Fleet management skills"
+          tools:
+            - name: list-ships
+              description: "List ships"
+              from:
+                sourceNamespace: fleet-tools
+                action: list-ships
+
+    - type: control
+      address: "localhost"
+      port: 9090
+      management:
+        scripting:
+          defaultLocation: "./scripts"
+          defaultLanguage: javascript
+
+  management:
+    observability:
+      tracing:
+        enabled: true
+        exporter: otlp
