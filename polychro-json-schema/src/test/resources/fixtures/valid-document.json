@@ -1,0 +1,11 @@
+{
+  "name": "Alice",
+  "age": 30,
+  "email": "alice@example.com",
+  "role": "admin",
+  "tags": ["developer", "lead"],
+  "address": {
+    "street": "123 Main St",
+    "city": "Springfield"
+  }
+}

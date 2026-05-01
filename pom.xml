@@ -23,6 +23,7 @@
     <modules>
         <module>polychro-api</module>
         <module>polychro-wellformedness</module>
+        <module>polychro-json-schema</module>
         <module>polychro-spike-jsonpath</module>
     </modules>
 

@@ -16,7 +16,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,9 +77,8 @@ class WellformednessValidator implements Validator {
             return;
         }
         if (node.isObject()) {
-            Iterator<Map.Entry<String, JsonNode>> fields = node.fields();
-            while (fields.hasNext()) {
-                checkDepth(fields.next().getValue(), currentDepth + 1, diagnostics);
+            for (Map.Entry<String, JsonNode> field : node.properties()) {
+                checkDepth(field.getValue(), currentDepth + 1, diagnostics);
             }
         } else if (node.isArray()) {
             for (JsonNode child : node) {
@@ -105,9 +103,8 @@ class WellformednessValidator implements Validator {
         }
         int count = 1;
         if (node.isObject()) {
-            Iterator<Map.Entry<String, JsonNode>> fields = node.fields();
-            while (fields.hasNext()) {
-                count += countNodes(fields.next().getValue());
+            for (Map.Entry<String, JsonNode> field : node.properties()) {
+                count += countNodes(field.getValue());
             }
         } else if (node.isArray()) {
             for (JsonNode child : node) {
