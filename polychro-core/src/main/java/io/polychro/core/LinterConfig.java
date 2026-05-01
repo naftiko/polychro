@@ -27,7 +27,7 @@ public class LinterConfig {
     private final boolean failFast;
     private final String defaultSchemaValidator;
 
-    LinterConfig(List<String> validators, Map<String, Map<String, Object>> validatorConfigs,
+    public LinterConfig(List<String> validators, Map<String, Map<String, Object>> validatorConfigs,
                  boolean failFast, String defaultSchemaValidator) {
         this.validators = validators != null ? List.copyOf(validators) : List.of();
         this.validatorConfigs = validatorConfigs != null ? Map.copyOf(validatorConfigs) : Map.of();

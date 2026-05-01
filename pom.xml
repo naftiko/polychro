@@ -28,6 +28,7 @@
         <module>polychro-ruleset</module>
         <module>polychro-ruleset-polyglot</module>
         <module>polychro-core</module>
+        <module>polychro-cli</module>
         <module>polychro-spike-jsonpath</module>
     </modules>
 
@@ -110,6 +111,13 @@
                 <artifactId>junit-jupiter</artifactId>
                 <version>${junit.version}</version>
                 <scope>test</scope>
+            </dependency>
+
+            <!-- CLI -->
+            <dependency>
+                <groupId>info.picocli</groupId>
+                <artifactId>picocli</artifactId>
+                <version>${picocli.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

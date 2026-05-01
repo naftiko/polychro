@@ -12,4 +12,5 @@ dependency-reduced-pom.xml
 /polychro-ruleset/target
 /polychro-ruleset-polyglot/target
 /polychro-core/target
+/polychro-cli/target
 build-output.txt
