@@ -29,6 +29,7 @@
         <module>polychro-ruleset-polyglot</module>
         <module>polychro-core</module>
         <module>polychro-cli</module>
+        <module>polychro-markdown</module>
         <module>polychro-spike-jsonpath</module>
     </modules>
 
