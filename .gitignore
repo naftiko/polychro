@@ -10,4 +10,5 @@ dependency-reduced-pom.xml
 /polychro-spike-jsonpath/target
 /polychro-wellformedness/target
 /polychro-ruleset/target
+/polychro-ruleset-polyglot/target
 build-output.txt

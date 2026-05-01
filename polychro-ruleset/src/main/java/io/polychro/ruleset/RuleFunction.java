@@ -8,7 +8,7 @@ import java.util.Map;
 /**
  * Interface for ruleset functions that evaluate a node against configured options.
  */
-interface RuleFunction {
+public interface RuleFunction {
 
     /**
      * @return the function name as used in ruleset YAML (e.g. "truthy", "pattern")
