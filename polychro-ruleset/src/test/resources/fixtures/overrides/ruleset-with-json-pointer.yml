@@ -1,0 +1,24 @@
+# Ruleset with JSON Pointer in overrides
+extends: []
+
+rules:
+  name-truthy:
+    message: "Name required"
+    severity: warn
+    recommended: true
+    given: "$.info.name"
+    then:
+      function: truthy
+
+overrides:
+  - files:
+      - "**#/paths"
+    rules:
+      path-rule:
+        message: "Path-specific rule"
+        severity: error
+        recommended: true
+        given: "$"
+        then:
+          field: paths
+          function: defined

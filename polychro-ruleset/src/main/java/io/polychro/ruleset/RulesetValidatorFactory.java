@@ -34,15 +34,20 @@ public class RulesetValidatorFactory implements ValidatorFactory {
 
     private Ruleset loadRuleset(ValidatorConfig config) {
         RulesetParser parser = new RulesetParser();
+        RulesetComposer composer = new RulesetComposer(parser);
 
         var pathOpt = config.get("rulesetPath", String.class);
         if (pathOpt.isPresent()) {
-            return parser.parse(Path.of(pathOpt.get()));
+            Path rulesetPath = Path.of(pathOpt.get());
+            Ruleset ruleset = parser.parse(rulesetPath);
+            Path baseDir = rulesetPath.toAbsolutePath().getParent();
+            return composer.compose(ruleset, baseDir, rulesetPath.normalize().toString());
         }
 
         var contentOpt = config.get("rulesetContent", String.class);
         if (contentOpt.isPresent()) {
-            return parser.parse(contentOpt.get());
+            Ruleset ruleset = parser.parse(contentOpt.get());
+            return composer.compose(ruleset);
         }
 
         throw new RulesetParseException("No ruleset configured: provide either 'rulesetPath' or 'rulesetContent'");

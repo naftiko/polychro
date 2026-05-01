@@ -1,0 +1,19 @@
+# Parent ruleset for extends testing
+extends: []
+
+rules:
+  parent-name-truthy:
+    message: "Name must not be empty"
+    severity: warn
+    recommended: true
+    given: "$.info.name"
+    then:
+      function: truthy
+
+  parent-desc-truthy:
+    message: "Description must not be empty"
+    severity: info
+    recommended: true
+    given: "$.info.description"
+    then:
+      function: truthy

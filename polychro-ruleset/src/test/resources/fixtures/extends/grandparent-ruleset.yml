@@ -1,0 +1,12 @@
+# Grandparent ruleset for two-level extends testing
+extends: []
+
+rules:
+  grandparent-rule:
+    message: "Root info must exist"
+    severity: hint
+    recommended: true
+    given: "$"
+    then:
+      field: info
+      function: defined

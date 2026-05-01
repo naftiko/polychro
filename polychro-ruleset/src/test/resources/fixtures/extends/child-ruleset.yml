@@ -1,0 +1,12 @@
+# Child ruleset that extends parent
+extends:
+  - parent-ruleset.yml
+
+rules:
+  child-version-truthy:
+    message: "Version must not be empty"
+    severity: error
+    recommended: true
+    given: "$.info.version"
+    then:
+      function: truthy

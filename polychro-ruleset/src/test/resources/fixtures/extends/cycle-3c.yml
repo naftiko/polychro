@@ -1,0 +1,12 @@
+# Three-node cycle: cycle-3a -> cycle-3b -> cycle-3c -> cycle-3a
+extends:
+  - cycle-3a.yml
+
+rules:
+  rule-3c:
+    message: "3C"
+    severity: warn
+    recommended: true
+    given: "$"
+    then:
+      function: truthy

@@ -1,0 +1,15 @@
+# Overrides parent severity and disables a rule
+extends:
+  - parent-ruleset.yml
+
+rules:
+  parent-name-truthy:
+    message: "Name is mandatory"
+    severity: error
+    recommended: true
+    given: "$.info.name"
+    then:
+      function: truthy
+
+  parent-desc-truthy:
+    severity: off

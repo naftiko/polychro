@@ -1,0 +1,12 @@
+# Middle ruleset — extends grandparent
+extends:
+  - grandparent-ruleset.yml
+
+rules:
+  parent-name-truthy:
+    message: "Name must not be empty"
+    severity: warn
+    recommended: true
+    given: "$.info.name"
+    then:
+      function: truthy

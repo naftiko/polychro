@@ -293,4 +293,130 @@ class RulesetParserEdgeCasesTest {
         Ruleset ruleset = parser.parse(yaml);
         assertNull(ruleset.rules().get("test-rule").description());
     }
+
+    @Test
+    void overridesWithNullNodeShouldReturnEmptyList() {
+        String yaml = """
+                rules:
+                  test-rule:
+                    message: "Test"
+                    severity: warn
+                    recommended: true
+                    given: "$"
+                    then:
+                      function: truthy
+                """;
+        Ruleset ruleset = parser.parse(yaml);
+        assertEquals(List.of(), ruleset.overrides());
+    }
+
+    @Test
+    void overridesWithNonObjectItemShouldBeSkipped() {
+        String yaml = """
+                rules:
+                  test-rule:
+                    message: "Test"
+                    severity: warn
+                    recommended: true
+                    given: "$"
+                    then:
+                      function: truthy
+                overrides:
+                  - files:
+                      - "**/*.json"
+                    rules:
+                      test-rule:
+                        severity: error
+                        recommended: true
+                        given: "$"
+                        then:
+                          function: truthy
+                  - "not an object"
+                """;
+        Ruleset ruleset = parser.parse(yaml);
+        assertEquals(1, ruleset.overrides().size());
+    }
+
+    @Test
+    void severityBooleanFalseShouldBeInterpretedAsOff() {
+        // YAML 'off' without quotes is boolean false
+        String yaml = """
+                rules:
+                  test-rule:
+                    message: "Test"
+                    severity: off
+                    recommended: true
+                    given: "$"
+                    then:
+                      function: truthy
+                """;
+        Ruleset ruleset = parser.parse(yaml);
+        assertEquals("off", ruleset.rules().get("test-rule").severity());
+    }
+
+    @Test
+    void severityBooleanTrueShouldBeInterpretedAsString() {
+        // YAML 'on' or 'true' should just give the text representation
+        String yaml = """
+                rules:
+                  test-rule:
+                    message: "Test"
+                    severity: true
+                    recommended: true
+                    given: "$"
+                    then:
+                      function: truthy
+                """;
+        Ruleset ruleset = parser.parse(yaml);
+        assertEquals("true", ruleset.rules().get("test-rule").severity());
+    }
+
+    @Test
+    void nullSeverityNodeShouldDefaultToWarn() {
+        String yaml = """
+                rules:
+                  test-rule:
+                    message: "Test"
+                    recommended: true
+                    given: "$"
+                    then:
+                      function: truthy
+                """;
+        Ruleset ruleset = parser.parse(yaml);
+        assertEquals("warn", ruleset.rules().get("test-rule").severity());
+    }
+
+    @Test
+    void overridesAsScalarShouldReturnEmptyList() {
+        String yaml = """
+                rules:
+                  test-rule:
+                    message: "Test"
+                    severity: warn
+                    recommended: true
+                    given: "$"
+                    then:
+                      function: truthy
+                overrides: "not-an-array"
+                """;
+        Ruleset ruleset = parser.parse(yaml);
+        assertEquals(List.of(), ruleset.overrides());
+    }
+
+    @Test
+    void nullYamlSeverityShouldDefaultToWarn() {
+        // Explicit YAML null value
+        String yaml = """
+                rules:
+                  test-rule:
+                    message: "Test"
+                    severity: ~
+                    recommended: true
+                    given: "$"
+                    then:
+                      function: truthy
+                """;
+        Ruleset ruleset = parser.parse(yaml);
+        assertEquals("warn", ruleset.rules().get("test-rule").severity());
+    }
 }

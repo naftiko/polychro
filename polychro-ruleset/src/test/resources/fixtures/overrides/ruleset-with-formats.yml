@@ -1,0 +1,25 @@
+# Ruleset with format-scoped overrides
+extends: []
+
+rules:
+  name-truthy:
+    message: "Name required"
+    severity: warn
+    recommended: true
+    given: "$.info.name"
+    then:
+      function: truthy
+
+overrides:
+  - files:
+      - "**"
+    formats:
+      - oas3
+    rules:
+      oas3-only-rule:
+        message: "OAS3-specific check"
+        severity: error
+        recommended: true
+        given: "$.openapi"
+        then:
+          function: truthy

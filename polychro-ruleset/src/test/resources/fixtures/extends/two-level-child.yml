@@ -1,0 +1,12 @@
+# Two-level child: grandparent -> middle -> this
+extends:
+  - middle-ruleset.yml
+
+rules:
+  child-version-truthy:
+    message: "Version required"
+    severity: error
+    recommended: true
+    given: "$.info.version"
+    then:
+      function: truthy

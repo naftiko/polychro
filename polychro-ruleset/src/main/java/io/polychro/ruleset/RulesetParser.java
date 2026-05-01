@@ -61,13 +61,14 @@ class RulesetParser {
 
         List<String> extendsRefs = parseExtends(root.get("extends"));
         Map<String, String> aliases = parseAliases(root.get("aliases"));
+        List<RulesetOverride> overrides = parseOverrides(root.get("overrides"));
         List<String> formats = parseStringList(root.get("formats"));
         String functionsDir = textOrNull(root.get("functionsDir"));
         List<String> functions = parseStringList(root.get("functions"));
         String documentationUrl = textOrNull(root.get("documentationUrl"));
         Map<String, Rule> rules = parseRules(root.get("rules"));
 
-        return new Ruleset(extendsRefs, aliases, formats, functionsDir, functions, rules, documentationUrl);
+        return new Ruleset(extendsRefs, aliases, overrides, formats, functionsDir, functions, rules, documentationUrl);
     }
 
     private List<String> parseExtends(JsonNode node) {
@@ -157,7 +158,7 @@ class RulesetParser {
 
         String message = textOrNull(node.get("message"));
         String description = textOrNull(node.get("description"));
-        String severity = textOrNull(node.get("severity"));
+        String severity = parseSeverity(node.get("severity"));
         boolean recommended = node.has("recommended") ? node.get("recommended").asBoolean(true) : true;
         List<String> formats = node.has("formats") ? parseStringList(node.get("formats")) : null;
         String documentationUrl = textOrNull(node.get("documentationUrl"));
@@ -226,6 +227,38 @@ class RulesetParser {
             return Map.of();
         }
         return YAML_MAPPER.convertValue(node, Map.class);
+    }
+
+    private List<RulesetOverride> parseOverrides(JsonNode node) {
+        if (node == null || !node.isArray()) {
+            return List.of();
+        }
+        List<RulesetOverride> overrides = new ArrayList<>();
+        for (JsonNode item : node) {
+            if (item.isObject()) {
+                overrides.add(parseOverride(item));
+            }
+        }
+        return overrides;
+    }
+
+    private RulesetOverride parseOverride(JsonNode node) {
+        List<String> files = parseStringList(node.get("files"));
+        Map<String, Rule> rules = parseRules(node.get("rules"));
+        Map<String, String> aliases = parseAliases(node.get("aliases"));
+        List<String> formats = node.has("formats") ? parseStringList(node.get("formats")) : null;
+        return new RulesetOverride(files, rules, aliases, formats);
+    }
+
+    private String parseSeverity(JsonNode node) {
+        if (node == null || node.isNull()) {
+            return null;
+        }
+        // YAML interprets bare 'off' as boolean false
+        if (node.isBoolean() && !node.asBoolean()) {
+            return "off";
+        }
+        return node.asText();
     }
 
     private String textOrNull(JsonNode node) {

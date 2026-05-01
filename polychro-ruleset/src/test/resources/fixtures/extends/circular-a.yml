@@ -1,0 +1,12 @@
+# Circular A — extends circular-b.yml
+extends:
+  - circular-b.yml
+
+rules:
+  rule-a:
+    message: "Rule A"
+    severity: warn
+    recommended: true
+    given: "$"
+    then:
+      function: truthy

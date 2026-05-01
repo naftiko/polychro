@@ -62,6 +62,10 @@ public record Document(JsonNode root, String sourcePath) {
      * @throws IllegalArgumentException if the format is not recognized
      */
     public static Document fromString(String content, String format) {
+        return fromString(content, format, null);
+    }
+
+    public static Document fromString(String content, String format, String sourcePath) {
         if (content == null || content.isBlank()) {
             throw new IllegalArgumentException("Document content must not be null or blank");
         }
@@ -75,7 +79,7 @@ public record Document(JsonNode root, String sourcePath) {
                 case "json" -> JSON_MAPPER.readTree(content);
                 default -> throw new IllegalArgumentException("Unknown format: " + effectiveFormat);
             };
-            return new Document(root, null);
+            return new Document(root, sourcePath);
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to parse content as " + effectiveFormat, e);
         }

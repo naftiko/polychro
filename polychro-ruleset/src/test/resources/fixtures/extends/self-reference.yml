@@ -1,0 +1,12 @@
+# Self-reference — extends itself
+extends:
+  - self-reference.yml
+
+rules:
+  self-rule:
+    message: "Self"
+    severity: warn
+    recommended: true
+    given: "$"
+    then:
+      function: truthy

@@ -1,0 +1,215 @@
+# Full naftiko-rules.yml (built-in function rules only) — for integration testing
+# Includes aliases and extends: [] to test full composition flow
+extends: []
+
+aliases:
+  Consumes: "$.capability.consumes[*]"
+  ConsumesDirect: "$.consumes[*]"
+  Exposes: "$.capability.exposes[*]"
+
+rules:
+
+  naftiko-consumes-baseuri-no-trailing-slash:
+    message: "The `consumes.baseUri` should not have a trailing slash."
+    severity: warn
+    recommended: true
+    given:
+      - "#Consumes.baseUri"
+      - "#ConsumesDirect.baseUri"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "/$"
+
+  naftiko-consumed-resource-no-query-in-path:
+    message: "Consumed resource `path` must not contain a query string."
+    severity: warn
+    recommended: true
+    given:
+      - "$.consumes[?(@.type == 'http')].resources[*].path"
+      - "$.capability.consumes[?(@.type == 'http')].resources[*].path"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "\\?"
+
+  naftiko-no-script-tags-in-markdown:
+    message: "Markdown fields must not contain <script> tags."
+    severity: error
+    recommended: true
+    given:
+      - "$.info.description"
+      - "$.info.label"
+      - "#Consumes.description"
+      - "#ConsumesDirect.description"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "<script"
+
+  naftiko-no-eval-in-markdown:
+    message: "Markdown fields must not contain eval() calls."
+    severity: error
+    recommended: true
+    given:
+      - "$.info.description"
+      - "$.info.label"
+      - "#Consumes.description"
+      - "#ConsumesDirect.description"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "eval\\("
+
+  naftiko-baseuri-not-example:
+    message: "The `consumes.baseUri` should not point to example.com."
+    severity: warn
+    recommended: false
+    given:
+      - "#Consumes.baseUri"
+      - "#ConsumesDirect.baseUri"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "example\\.com"
+
+  naftiko-rest-resource-description:
+    message: "Each exposed REST resource should have a `description` field."
+    severity: warn
+    recommended: true
+    given: "$.capability.exposes[?(@.type == 'rest')].resources[*]"
+    then:
+      field: "description"
+      function: truthy
+
+  naftiko-consumes-description:
+    message: "Each `consumes` entry should have a `description` field."
+    severity: warn
+    recommended: true
+    given:
+      - "#Consumes"
+      - "#ConsumesDirect"
+    then:
+      field: "description"
+      function: truthy
+
+  naftiko-info-name-kebab:
+    message: "Capability info.name must be in kebab-case."
+    severity: warn
+    recommended: true
+    given: "$.info.name"
+    then:
+      function: casing
+      functionOptions:
+        type: kebab
+
+  naftiko-info-version-defined:
+    message: "Capability must declare info.version."
+    severity: error
+    recommended: true
+    given: "$"
+    then:
+      field: "info"
+      function: defined
+
+  naftiko-spec-version-defined:
+    message: "Capability must declare specVersion."
+    severity: error
+    recommended: true
+    given: "$"
+    then:
+      field: "specVersion"
+      function: defined
+
+  naftiko-consumes-namespace-kebab:
+    message: "Consumes namespace must be in kebab-case."
+    severity: warn
+    recommended: true
+    given:
+      - "#Consumes.namespace"
+      - "#ConsumesDirect.namespace"
+    then:
+      function: casing
+      functionOptions:
+        type: kebab
+
+  naftiko-exposes-namespace-kebab:
+    message: "Exposes namespace must be in kebab-case."
+    severity: warn
+    recommended: true
+    given: "#Exposes.namespace"
+    then:
+      function: casing
+      functionOptions:
+        type: kebab
+
+  naftiko-consumes-type-enum:
+    message: "Consumes type must be one of: http, graphql, grpc, soap."
+    severity: error
+    recommended: true
+    given:
+      - "#Consumes.type"
+      - "#ConsumesDirect.type"
+    then:
+      function: enumeration
+      functionOptions:
+        values:
+          - http
+          - graphql
+          - grpc
+          - soap
+
+  naftiko-exposes-type-enum:
+    message: "Exposes type must be one of: rest, mcp, skill, control."
+    severity: error
+    recommended: true
+    given: "#Exposes.type"
+    then:
+      function: enumeration
+      functionOptions:
+        values:
+          - rest
+          - mcp
+          - skill
+          - control
+
+  naftiko-rest-method-enum:
+    message: "REST operation method must be a valid HTTP method."
+    severity: error
+    recommended: true
+    given: "$.capability.exposes[?(@.type == 'rest')].resources[*].operations[*].method"
+    then:
+      function: enumeration
+      functionOptions:
+        values:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+          - HEAD
+          - OPTIONS
+
+  naftiko-consumes-baseuri-pattern:
+    message: "Consumes baseUri must start with https:// or http://."
+    severity: warn
+    recommended: true
+    given:
+      - "#Consumes.baseUri"
+      - "#ConsumesDirect.baseUri"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^https?://"
+
+  naftiko-resource-path-leading-slash:
+    message: "Consumed resource path must start with /."
+    severity: warn
+    recommended: true
+    given:
+      - "$.consumes[?(@.type == 'http')].resources[*].path"
+      - "$.capability.consumes[?(@.type == 'http')].resources[*].path"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^/"

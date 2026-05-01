@@ -1,0 +1,29 @@
+# Ruleset with scoped aliases in overrides
+extends: []
+
+aliases:
+  InfoObject: "$.info"
+
+rules:
+  name-truthy:
+    message: "Name required"
+    severity: warn
+    recommended: true
+    given: "#InfoObject.name"
+    then:
+      function: truthy
+
+overrides:
+  - files:
+      - "schemas/**"
+    aliases:
+      SchemaRoot: "$"
+    rules:
+      schema-rule:
+        message: "Definitions must be present"
+        severity: error
+        recommended: true
+        given: "#SchemaRoot"
+        then:
+          field: definitions
+          function: truthy

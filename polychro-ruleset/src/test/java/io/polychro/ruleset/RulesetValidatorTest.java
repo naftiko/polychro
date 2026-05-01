@@ -15,14 +15,14 @@ class RulesetValidatorTest {
 
     @Test
     void nameShouldReturnRuleset() {
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of(), null);
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of(), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         assertEquals("ruleset", validator.name());
     }
 
     @Test
     void validateShouldReturnEmptyForEmptyRuleset() {
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of(), null);
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of(), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         Document doc = Document.fromString("{\"info\": {\"name\": \"test\"}}", "json");
 
@@ -35,7 +35,7 @@ class RulesetValidatorTest {
         Rule rule = new Rule("name-truthy", "Name must not be empty", null, "warn", true,
                 null, null, List.of("$.info.name"),
                 List.of(new RuleAction(null, "truthy", Map.of())));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of("name-truthy", rule), null);
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("name-truthy", rule), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         Document doc = Document.fromString("{\"info\": {\"name\": \"\"}}", "json");
 
@@ -53,7 +53,7 @@ class RulesetValidatorTest {
         Rule rule2 = new Rule("desc-truthy", "Description required", null, "warn", true,
                 null, null, List.of("$.info"),
                 List.of(new RuleAction("description", "truthy", Map.of())));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null,
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, null,
                 Map.of("name-truthy", rule1, "desc-truthy", rule2), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         Document doc = Document.fromString("{\"info\": {\"name\": \"\"}}", "json");
@@ -70,7 +70,7 @@ class RulesetValidatorTest {
         Rule rule = new Rule("optional-rule", "Optional", null, "warn", false,
                 null, null, List.of("$.info.name"),
                 List.of(new RuleAction(null, "truthy", Map.of())));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of("optional-rule", rule), null);
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("optional-rule", rule), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         Document doc = Document.fromString("{\"info\": {\"name\": \"\"}}", "json");
 
@@ -83,7 +83,7 @@ class RulesetValidatorTest {
         Rule rule = new Rule("optional-rule", "Optional", null, "warn", false,
                 null, null, List.of("$.info.name"),
                 List.of(new RuleAction(null, "truthy", Map.of())));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of("optional-rule", rule), null);
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("optional-rule", rule), null);
         RulesetValidator validator = new RulesetValidator(ruleset, true);
         Document doc = Document.fromString("{\"info\": {\"name\": \"\"}}", "json");
 
@@ -96,7 +96,7 @@ class RulesetValidatorTest {
         Rule rule = new Rule("disabled-rule", "Disabled", null, "off", true,
                 null, null, List.of("$.info.name"),
                 List.of(new RuleAction(null, "truthy", Map.of())));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of("disabled-rule", rule), null);
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("disabled-rule", rule), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         Document doc = Document.fromString("{\"info\": {\"name\": \"\"}}", "json");
 
@@ -112,7 +112,7 @@ class RulesetValidatorTest {
         Rule rule2 = new Rule("error-rule", "Error issue", null, "error", true,
                 null, null, List.of("$.a"),
                 List.of(new RuleAction(null, "truthy", Map.of())));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null,
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, null,
                 Map.of("warn-rule", rule1, "error-rule", rule2), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         Document doc = Document.fromString("{\"a\": \"\", \"b\": \"\"}", "json");
@@ -121,5 +121,19 @@ class RulesetValidatorTest {
         assertEquals(2, results.size());
         assertEquals(Severity.ERROR, results.get(0).severity());
         assertEquals(Severity.WARN, results.get(1).severity());
+    }
+
+    @Test
+    void ruleWithEmptyGivenAndAliasesShouldNotFail() {
+        Rule rule = new Rule("empty-given", "No path", null, "warn", true,
+                null, null, List.of(),
+                List.of(new RuleAction(null, "truthy", Map.of())));
+        Ruleset ruleset = new Ruleset(null, Map.of("Info", "$.info"), null, null, null, null,
+                Map.of("empty-given", rule), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
+        Document doc = Document.fromString("{\"info\": {\"name\": \"test\"}}", "json");
+
+        List<Diagnostic> results = validator.validate(doc);
+        assertTrue(results.isEmpty());
     }
 }

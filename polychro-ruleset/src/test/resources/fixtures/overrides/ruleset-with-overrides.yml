@@ -1,0 +1,44 @@
+# Ruleset with overrides for testing
+extends: []
+
+rules:
+  name-truthy:
+    message: "Name required"
+    severity: warn
+    recommended: true
+    given: "$.info.name"
+    then:
+      function: truthy
+
+  desc-truthy:
+    message: "Description required"
+    severity: warn
+    recommended: true
+    given: "$.info.description"
+    then:
+      function: truthy
+
+overrides:
+  - files:
+      - "schemas/**/*.json"
+    rules:
+      name-truthy:
+        severity: off
+      schema-type-check:
+        message: "Schema must have type"
+        severity: error
+        recommended: true
+        given: "$"
+        then:
+          field: type
+          function: truthy
+  - files:
+      - "tests/**"
+    rules:
+      desc-truthy:
+        message: "Description required"
+        severity: info
+        recommended: true
+        given: "$.info.description"
+        then:
+          function: truthy
