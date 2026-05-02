@@ -1,4 +1,4 @@
-package io.polychro.mcp;
+package io.polychro.capability;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.naftiko.engine.step.StepHandlerContext;

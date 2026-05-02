@@ -27,7 +27,7 @@
         </dependency>
         <dependency>
             <groupId>io.polychro</groupId>
-            <artifactId>polychro-mcp</artifactId>
+            <artifactId>polychro-capability</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

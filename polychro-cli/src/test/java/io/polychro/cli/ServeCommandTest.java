@@ -1,6 +1,6 @@
 package io.polychro.cli;
 
-import io.polychro.mcp.PolychroCapability;
+import io.polychro.capability.PolychroCapability;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;

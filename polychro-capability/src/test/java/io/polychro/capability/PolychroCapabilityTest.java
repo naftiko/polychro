@@ -1,4 +1,4 @@
-package io.polychro.mcp;
+package io.polychro.capability;
 
 import io.polychro.core.LinterConfig;
 import org.junit.jupiter.api.Test;

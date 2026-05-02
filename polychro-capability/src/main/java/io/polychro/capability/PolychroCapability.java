@@ -1,4 +1,4 @@
-package io.polychro.mcp;
+package io.polychro.capability;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
