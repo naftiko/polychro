@@ -20,7 +20,7 @@ JavaScript, Python, and Groovy — all executed via GraalVM's Polyglot API in a 
 
 ### Does Polychro require Node.js?
 
-No. Polychro runs entirely on the JVM. There is no dependency on Node.js, npm, or any external process.
+No. Polychro runs entirely on the JVM. There is no dependency on Node.js, npm, or any external process — except for `polychro-checkov`, which requires a local Checkov installation (Python).
 
 ## Usage
 
