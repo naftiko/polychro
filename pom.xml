@@ -31,6 +31,7 @@
         <module>polychro-core</module>
         <module>polychro-capability</module>
         <module>polychro-cli</module>
+        <module>polychro-github-action</module>
         <module>polychro-markdown</module>
         <module>polychro-checkov</module>
     </modules>

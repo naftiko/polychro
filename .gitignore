@@ -16,6 +16,7 @@ dependency-reduced-pom.xml
 /polychro-cli/target
 /polychro-markdown/target
 /polychro-checkov/target
+/polychro-github-action/target
 build-output.txt
 /polychro-capability/target
 

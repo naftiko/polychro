@@ -1,0 +1,136 @@
+name: 'Polychro Lint'
+description: 'Run Polychro linting on YAML/JSON specs with SARIF output for GitHub Code Scanning'
+branding:
+  icon: 'shield'
+  color: 'purple'
+
+inputs:
+  files:
+    description: 'Glob pattern(s) for files to lint (comma or newline separated)'
+    required: true
+    default: '**/*.yml'
+  ruleset:
+    description: 'Path to custom ruleset file'
+    required: false
+  schema:
+    description: 'Path to custom schema file'
+    required: false
+  config:
+    description: 'Path to .polychro.yml config file'
+    required: false
+  format:
+    description: 'Output format: sarif, json, text, agent'
+    required: false
+    default: 'sarif'
+  fail-on:
+    description: 'Minimum severity to fail the action: error, warn, info, hint'
+    required: false
+    default: 'error'
+  version:
+    description: 'Polychro version to use'
+    required: false
+    default: 'latest'
+
+outputs:
+  sarif-file:
+    description: 'Path to the generated SARIF file'
+    value: ${{ steps.lint.outputs.sarif-file }}
+  exit-code:
+    description: 'Exit code (0 = clean, 1 = threshold exceeded)'
+    value: ${{ steps.lint.outputs.exit-code }}
+  summary:
+    description: 'Markdown summary of lint results'
+    value: ${{ steps.lint.outputs.summary }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Cache Polychro binary
+      uses: actions/cache@v4
+      with:
+        path: ~/.polychro/bin
+        key: polychro-${{ inputs.version }}-linux-x64
+
+    - name: Download Polychro binary
+      shell: bash
+      run: |
+        POLYCHRO_BIN="$HOME/.polychro/bin/polychro"
+        if [ ! -f "$POLYCHRO_BIN" ]; then
+          mkdir -p "$HOME/.polychro/bin"
+          VERSION="${{ inputs.version }}"
+          if [ "$VERSION" = "latest" ]; then
+            VERSION=$(curl -sL https://api.github.com/repos/naftiko/polychro/releases/latest | grep '"tag_name"' | sed 's/.*"v\(.*\)".*/\1/')
+          fi
+          curl -sL "https://github.com/naftiko/polychro/releases/download/v${VERSION}/polychro-linux-x64" -o "$POLYCHRO_BIN"
+          chmod +x "$POLYCHRO_BIN"
+        fi
+        echo "$HOME/.polychro/bin" >> "$GITHUB_PATH"
+
+    - name: Run Polychro lint
+      id: lint
+      shell: bash
+      run: |
+        ARGS="lint --format ${{ inputs.format }}"
+        if [ -n "${{ inputs.ruleset }}" ]; then
+          ARGS="$ARGS --ruleset ${{ inputs.ruleset }}"
+        fi
+        if [ -n "${{ inputs.schema }}" ]; then
+          ARGS="$ARGS --schema ${{ inputs.schema }}"
+        fi
+        if [ -n "${{ inputs.config }}" ]; then
+          ARGS="$ARGS --config ${{ inputs.config }}"
+        fi
+
+        # Expand glob patterns
+        FILES=$(find . -path './.git' -prune -o -type f | while IFS= read -r f; do
+          for pattern in $(echo "${{ inputs.files }}" | tr ',' '\n'); do
+            if [[ "${f#./}" == $pattern ]]; then
+              echo "${f#./}"
+              break
+            fi
+          done
+        done | sort -u)
+
+        if [ -z "$FILES" ]; then
+          echo "No files matched the pattern: ${{ inputs.files }}"
+          echo "exit-code=0" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        SARIF_FILE="${RUNNER_TEMP}/polychro-results.sarif"
+        polychro $ARGS $FILES > "$SARIF_FILE" 2>&1 || true
+
+        echo "sarif-file=$SARIF_FILE" >> "$GITHUB_OUTPUT"
+
+        # Determine exit code based on fail-on threshold
+        ERROR_COUNT=$(cat "$SARIF_FILE" | python3 -c "
+        import json, sys
+        data = json.load(sys.stdin)
+        results = data.get('runs', [{}])[0].get('results', [])
+        threshold = '${{ inputs.fail-on }}'.lower()
+        levels = {'error': 0, 'warning': 1, 'note': 2}
+        threshold_level = levels.get(threshold, levels.get('error', 0))
+        count = sum(1 for r in results if levels.get(r.get('level', 'note'), 2) <= threshold_level)
+        print(count)
+        " 2>/dev/null || echo "0")
+
+        if [ "$ERROR_COUNT" -gt 0 ]; then
+          echo "exit-code=1" >> "$GITHUB_OUTPUT"
+          echo "summary=**Polychro Lint:** $ERROR_COUNT issue(s) at or above '${{ inputs.fail-on }}' threshold" >> "$GITHUB_OUTPUT"
+        else
+          echo "exit-code=0" >> "$GITHUB_OUTPUT"
+          echo "summary=**Polychro Lint:** No issues found" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Upload SARIF to GitHub Code Scanning
+      if: inputs.format == 'sarif' && always()
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ steps.lint.outputs.sarif-file }}
+
+    - name: Fail if threshold exceeded
+      if: steps.lint.outputs.exit-code == '1'
+      shell: bash
+      run: |
+        echo "::error::Polychro lint failed — issues found at or above '${{ inputs.fail-on }}' severity"
+        exit 1
