@@ -1,5 +1,6 @@
 package io.polychro.cli;
 
+import io.polychro.core.AgentFormatter;
 import io.polychro.core.DiagnosticFormatter;
 import io.polychro.core.JsonFormatter;
 import io.polychro.core.Linter;
@@ -43,7 +44,7 @@ public class LintCommand implements Runnable {
 
     @CommandLine.Option(
             names = {"--format", "-f"},
-            description = "Output format: text, json, sarif (default: text)",
+            description = "Output format: text, json, sarif, agent (default: text)",
             defaultValue = "text"
     )
     String format;
@@ -147,6 +148,7 @@ public class LintCommand implements Runnable {
         return switch (format.toLowerCase()) {
             case "json" -> new JsonFormatter();
             case "sarif" -> new SarifFormatter();
+            case "agent" -> new AgentFormatter();
             default -> new TextFormatter();
         };
     }
