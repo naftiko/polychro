@@ -18,3 +18,12 @@ dependency-reduced-pom.xml
 /polychro-checkov/target
 build-output.txt
 /polychro-capability/target
+
+# SDK directories (non-Maven)
+__pycache__/
+*.pyc
+/polychro-python/.pytest_cache/
+/polychro-python/dist/
+/polychro-python/*.egg-info/
+/polychro-node/node_modules/
+/polychro-node/dist/

@@ -1,0 +1,47 @@
+{
+  "name": "polychro",
+  "version": "0.1.0",
+  "description": "TypeScript/Node.js SDK for Polychro — deterministic linting for spec-driven development",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit"
+  },
+  "keywords": [
+    "polychro",
+    "linter",
+    "yaml",
+    "spectral",
+    "naftiko",
+    "mcp",
+    "ai-safety"
+  ],
+  "author": "Naftiko",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/naftiko/polychro-node.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "vitest": "^3.0.0",
+    "@types/node": "^22.0.0"
+  }
+}
