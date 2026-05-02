@@ -70,4 +70,20 @@ class McpRulesetTest {
         assertTrue(results.stream().anyMatch(d -> d.code().equals("mcp-output-no-integer")),
                 () -> "Expected mcp-output-no-integer violation, got: " + results);
     }
+
+    @Test
+    void toolNameExceeding64CharsShouldTriggerRule() {
+        Document doc = Document.fromYaml(FIXTURES.resolve("mcp-violations.yml"));
+        List<Diagnostic> results = validator.validate(doc);
+        assertTrue(results.stream().anyMatch(d -> d.code().equals("mcp-tool-name-length")),
+                () -> "Expected mcp-tool-name-length violation, got: " + results);
+    }
+
+    @Test
+    void shortDescriptionShouldTriggerMinQualityRule() {
+        Document doc = Document.fromYaml(FIXTURES.resolve("mcp-violations.yml"));
+        List<Diagnostic> results = validator.validate(doc);
+        assertTrue(results.stream().anyMatch(d -> d.code().equals("mcp-tool-description-min-quality")),
+                () -> "Expected mcp-tool-description-min-quality violation, got: " + results);
+    }
 }

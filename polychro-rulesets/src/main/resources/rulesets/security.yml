@@ -100,3 +100,44 @@ rules:
       function: pattern
       functionOptions:
         notMatch: "^http://"
+
+  no-credentials-in-base-uri:
+    message: "Consumer `baseUri` must not contain credential query parameters — credentials must never travel in URLs."
+    description: "URLs with tokens, API keys, or secrets are logged, cached, and leaked via referrer headers. Use authentication blocks instead."
+    severity: error
+    recommended: true
+    given:
+      - "#Consumes.baseUri"
+      - "#ConsumesDirect.baseUri"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "[?&](token|api_key|api-key|apikey|secret|password|access_token|refresh_token)="
+
+  authentication-scheme-not-basic:
+    message: "HTTP Basic authentication is discouraged — transmits credentials in plaintext-equivalent encoding."
+    description: "HTTP Basic sends credentials as Base64 (trivially decoded). Prefer bearer tokens, API keys with externalRef, or OAuth2."
+    severity: warn
+    recommended: true
+    given:
+      - "#Consumes.authentication.type"
+      - "#ConsumesDirect.authentication.type"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "^basic$"
+
+  no-sensitive-data-in-descriptions:
+    message: "Description fields must not contain patterns resembling leaked secrets or tokens."
+    description: "Regex scan detects common token patterns (sk-..., ghp_..., Bearer ..., long Base64 blobs) that indicate copy-paste accidents during agent generation."
+    severity: warn
+    recommended: true
+    given:
+      - "$.info.description"
+      - "#Consumes.description"
+      - "#ConsumesDirect.description"
+      - "#Exposes.description"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "(sk-[a-zA-Z0-9_-]{20,}|ghp_[a-zA-Z0-9]{36}|Bearer [a-zA-Z0-9._-]{20,}|[A-Za-z0-9+/]{40,}={0,2})"

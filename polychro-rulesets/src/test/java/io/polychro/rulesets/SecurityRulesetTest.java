@@ -73,6 +73,30 @@ class SecurityRulesetTest {
     }
 
     @Test
+    void credentialsInBaseUriShouldTriggerRule() {
+        Document doc = Document.fromYaml(FIXTURES.resolve("security-violations.yml"));
+        List<Diagnostic> results = validator.validate(doc);
+        assertTrue(results.stream().anyMatch(d -> d.code().equals("no-credentials-in-base-uri")),
+                () -> "Expected no-credentials-in-base-uri violation, got: " + results);
+    }
+
+    @Test
+    void basicAuthShouldTriggerRule() {
+        Document doc = Document.fromYaml(FIXTURES.resolve("security-violations.yml"));
+        List<Diagnostic> results = validator.validate(doc);
+        assertTrue(results.stream().anyMatch(d -> d.code().equals("authentication-scheme-not-basic")),
+                () -> "Expected authentication-scheme-not-basic violation, got: " + results);
+    }
+
+    @Test
+    void sensitiveDataInDescriptionShouldTriggerRule() {
+        Document doc = Document.fromYaml(FIXTURES.resolve("security-violations.yml"));
+        List<Diagnostic> results = validator.validate(doc);
+        assertTrue(results.stream().anyMatch(d -> d.code().equals("no-sensitive-data-in-descriptions")),
+                () -> "Expected no-sensitive-data-in-descriptions violation, got: " + results);
+    }
+
+    @Test
     void securityViolationsShouldHaveAtLeastOneError() {
         Document doc = Document.fromYaml(FIXTURES.resolve("security-violations.yml"));
         List<Diagnostic> results = validator.validate(doc);

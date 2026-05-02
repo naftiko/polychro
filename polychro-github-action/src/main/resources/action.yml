@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-action.json
 name: 'Polychro Lint'
 description: 'Run Polychro linting on YAML/JSON specs with SARIF output for GitHub Code Scanning'
 branding:

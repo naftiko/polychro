@@ -78,3 +78,35 @@ rules:
     then:
       field: "description"
       function: truthy
+
+  mcp-tool-name-length:
+    message: "MCP tool name exceeds 64 characters — some MCP clients truncate long names."
+    description: "Tool names are exposed to agents for discovery. Names exceeding 64 characters may be truncated by clients, causing tool invocation failures."
+    severity: warn
+    recommended: true
+    given: "#McpOperations.name"
+    then:
+      function: length
+      functionOptions:
+        max: 64
+
+  mcp-tool-description-min-quality:
+    message: "MCP tool description is too short or a placeholder — agents rely on descriptions for tool selection."
+    description: "Tool descriptions shorter than 20 characters or matching generic placeholders (TODO, description, does stuff) provide insufficient context for agents to make tool selection decisions."
+    severity: warn
+    recommended: true
+    given: "#McpOperations.description"
+    then:
+      function: length
+      functionOptions:
+        min: 20
+
+  mcp-destructive-hints-present:
+    message: "MCP tool performing write/delete should declare `hints.destructive: true` — agents must detect destructive actions."
+    description: "Tools that modify or delete data should declare destructive hints so agents can prompt for user confirmation before invocation. This is advisory — hints are optional in the schema."
+    severity: info
+    recommended: true
+    given: "#McpOperations[?(@.method && @.method.match(/POST|PUT|DELETE|PATCH/))]"
+    then:
+      field: "hints"
+      function: defined

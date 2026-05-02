@@ -69,3 +69,25 @@ rules:
     then:
       field: "call"
       function: truthy
+
+  duplicate-operation-name:
+    message: "Two operations share the same name — ambiguous `call` targets at runtime."
+    description: "When multiple consumed operations have the same name across different resources or consumers, step call resolution becomes ambiguous and the engine cannot determine which to invoke."
+    severity: error
+    recommended: true
+    given: "$.capability.consumes"
+    then:
+      function: uniqueOperationNames
+
+  url-input-without-review:
+    message: "Input parameter name suggests a URL — potential SSRF vector if passed unvalidated to a consumer call."
+    description: "Parameters named url, callback, redirect, or webhook may be passed to consumer HTTP calls. If unvalidated, an attacker can point them at internal services. This is advisory (INFO) — review the usage in steps."
+    severity: info
+    recommended: true
+    given:
+      - "#Steps..inputParameters[*].name"
+      - "$.capability.exposes[*].resources[*].operations[*].inputParameters[*].name"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "^(url|callback|redirect|webhook|redirect-url|callback-url|webhook-url)$"

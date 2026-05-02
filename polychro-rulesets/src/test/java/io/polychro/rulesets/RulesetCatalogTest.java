@@ -24,12 +24,13 @@ class RulesetCatalogTest {
     @Test
     void availableShouldReturnAllRulesetNames() {
         List<String> names = RulesetCatalog.available();
-        assertEquals(5, names.size());
+        assertEquals(6, names.size());
         assertTrue(names.contains("governance"));
         assertTrue(names.contains("ai-safety"));
         assertTrue(names.contains("security"));
         assertTrue(names.contains("mcp"));
         assertTrue(names.contains("consistency"));
+        assertTrue(names.contains("resilience"));
     }
 
     @Test
@@ -68,6 +69,14 @@ class RulesetCatalogTest {
     }
 
     @Test
+    void loadShouldReturnResilienceContent() {
+        String content = RulesetCatalog.load("resilience");
+        assertNotNull(content);
+        assertTrue(content.contains("consumer-timeout-declared"));
+        assertTrue(content.contains("recommended: false"));
+    }
+
+    @Test
     void loadShouldThrowForUnknownRuleset() {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> RulesetCatalog.load("nonexistent"));
@@ -82,6 +91,7 @@ class RulesetCatalogTest {
         assertEquals("/rulesets/security.yml", RulesetCatalog.resourcePath("security"));
         assertEquals("/rulesets/mcp.yml", RulesetCatalog.resourcePath("mcp"));
         assertEquals("/rulesets/consistency.yml", RulesetCatalog.resourcePath("consistency"));
+        assertEquals("/rulesets/resilience.yml", RulesetCatalog.resourcePath("resilience"));
     }
 
     @Test

@@ -3,16 +3,16 @@ naftiko: 1.0.0-alpha3
 info:
   name: insecure-capability
   version: 1.0.0
-  description: "A capability with eval() injection in description."
+  description: "A capability with eval() injection and leaked token sk-live-abc123secretkey456789012 in description."
 
 capability:
   consumes:
     - namespace: payment-api
       type: http
       description: "Payment processor API"
-      baseUri: http://localhost:3000
+      baseUri: http://localhost:3000?token=secret123&api_key=mykey
       authentication:
-        type: bearer
+        type: basic
         token: sk-live-abc123secretkey
       resources:
         - name: charges

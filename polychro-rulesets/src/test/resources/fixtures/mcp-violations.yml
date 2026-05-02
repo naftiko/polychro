@@ -25,6 +25,7 @@ capability:
         - path: /tools
           operations:
             - name: runProcess
+              description: "Short"
               steps:
                 - name: execute
                   call: internal-api/process/run-process
@@ -35,3 +36,12 @@ capability:
                 - name: result
                   mapping: execute.output
                   type: integer
+            - name: this-is-an-extremely-long-tool-name-that-exceeds-the-sixty-four-character-limit-for-mcp-clients
+              description: "A tool with an excessively long name that will be truncated by some MCP clients."
+              steps:
+                - name: execute
+                  call: internal-api/process/run-process
+              outputParameters:
+                - name: output
+                  mapping: execute.output
+                  type: string

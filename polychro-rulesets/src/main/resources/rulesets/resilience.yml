@@ -1,0 +1,132 @@
+# polychro:resilience — Operational robustness rules (optional, INFO-only)
+# Advisory rules for features not yet fully supported by the Naftiko schema.
+# Enable explicitly: polychro lint --ruleset polychro:resilience
+# Rules will be promoted to WARN/ERROR when corresponding schema features are implemented.
+extends: []
+recommended: false
+
+aliases:
+  Consumes: "$.capability.consumes[*]"
+  ConsumesDirect: "$.consumes[*]"
+  Exposes: "$.capability.exposes[*]"
+  RestExposes: "$.capability.exposes[?(@.type == 'rest')]"
+  Operations: "$.capability.exposes[*].resources[*].operations[*]"
+  InputParams: "$.capability.exposes[*].resources[*].operations[*].inputParameters[*]"
+  OutputParams: "$.capability.exposes[*].resources[*].operations[*].outputParameters[*]"
+  Aggregates: "$.capability.aggregates[*].functions[*]"
+
+rules:
+
+  # ─── Consumer Resilience ────────────────────────────────────────────────────
+
+  consumer-timeout-declared:
+    message: "Consumer has no timeout configuration — calls to external APIs without timeouts hang indefinitely."
+    description: "HTTP consumers should declare a request timeout. Without one, a slow or unresponsive upstream API blocks the engine thread forever. Schema gap: no `timeout` property on HTTP consumers (only on ScriptConfig)."
+    severity: info
+    recommended: false
+    tags:
+      - consumer
+      - resilience
+    given:
+      - "#Consumes"
+      - "#ConsumesDirect"
+    then:
+      field: "timeout"
+      function: defined
+
+  consumer-retry-policy-present:
+    message: "Consumer has no retry policy — silent failure on transient errors."
+    description: "Operations calling external APIs should declare retry semantics (retries, backoff). Silent failure is the #1 production issue for integration capabilities. Schema gap: no `retry`/`backoff` properties in the schema."
+    severity: info
+    recommended: false
+    tags:
+      - consumer
+      - resilience
+    given:
+      - "#Consumes"
+      - "#ConsumesDirect"
+    then:
+      field: "retry"
+      function: defined
+
+  # ─── Expose Resilience ──────────────────────────────────────────────────────
+
+  rate-limit-headers-documented:
+    message: "REST exposed operations should document rate-limit headers (RateLimit, X-RateLimit-Limit, Retry-After)."
+    description: "Consumers of your API need to know throttling behavior. Without documented rate-limit headers, clients cannot implement proper backoff. Schema gap: no rate-limit header mapping on REST exposes."
+    severity: info
+    recommended: false
+    tags:
+      - expose
+      - resilience
+    given: "#RestExposes"
+    then:
+      field: "rateLimitHeaders"
+      function: defined
+
+  expose-429-response-defined:
+    message: "REST adapters should declare a 429 response with Retry-After guidance."
+    description: "Rate limiting without documentation creates blind retry storms. Clients must know when they are throttled and when to retry. Schema gap: no error/status-code mapping on REST exposes."
+    severity: info
+    recommended: false
+    tags:
+      - expose
+      - resilience
+    given: "#RestExposes"
+    then:
+      field: "errorResponses"
+      function: defined
+
+  expose-error-response-defined:
+    message: "REST exposed operations declare no error mapping (4xx/5xx) — production APIs must document failure modes."
+    description: "Without error response definitions, clients have no contract for failure behavior. This leads to brittle integrations that break silently. Schema gap: no error response structure in the schema."
+    severity: info
+    recommended: false
+    tags:
+      - expose
+      - resilience
+    given: "#Exposes"
+    then:
+      field: "errorResponses"
+      function: defined
+
+  # ─── Operations Resilience ──────────────────────────────────────────────────
+
+  semantics-declared-on-write-operations:
+    message: "Aggregate functions should declare `semantics` — without idempotency annotation, agents can't safely retry."
+    description: "Aggregate functions that perform write operations (POST/PUT/DELETE intent) should declare semantics so the engine and downstream agents know whether retrying is safe. Schema gap: `semantics` exists on AggregateFunction but is optional; this rule nudges adoption."
+    severity: info
+    recommended: false
+    tags:
+      - operations
+      - resilience
+    given: "#Aggregates"
+    then:
+      field: "semantics"
+      function: defined
+
+  array-output-unbounded:
+    message: "Array-typed output parameter has no size constraint — may cause OOM at runtime."
+    description: "Agents generating specs often produce unbounded arrays. Without pagination or maxItems, a large upstream response can exhaust JVM memory. Schema gap: no `maxItems` on output parameter definitions."
+    severity: info
+    recommended: false
+    tags:
+      - operations
+      - resilience
+    given: "#OutputParams"
+    then:
+      field: "maxItems"
+      function: defined
+
+  string-input-unconstrained:
+    message: "String-typed input parameter without `pattern` — resource exhaustion risk via oversized payloads."
+    description: "String inputs without constraints (pattern, enum, maxLength) allow arbitrarily large payloads that can degrade performance. Schema gap: `pattern` exists on ExposedInputParameter (REST only), not on MCP; `enum`/`maxLength` not in schema."
+    severity: info
+    recommended: false
+    tags:
+      - operations
+      - resilience
+    given: "#InputParams"
+    then:
+      field: "pattern"
+      function: defined
