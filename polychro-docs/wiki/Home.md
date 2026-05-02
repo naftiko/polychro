@@ -8,7 +8,7 @@ When AI agents generate specifications at scale, deterministic linting is the es
 |---|---|
 | CLI | Single binary — lint any YAML/JSON spec from the command line |
 | MCP Server Mode | Expose linting as MCP tools for AI agent consumption |
-| Native Executable | GraalVM native-image compilation — no JVM required at runtime |
+| Native Executable | Standalone binaries for **Linux**, **macOS**, and **Windows** — no JVM required |
 | GitHub Action | Lint specs in CI with structured SARIF output |
 | Spectral-Format Rulesets | Execute governance rulesets with `given`/`then` semantics |
 | Polyglot Custom Functions | JavaScript, Python, and Groovy custom functions via sandboxed GraalVM |
