@@ -1,0 +1,168 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/naftiko/framework/main/src/main/resources/schemas/naftiko-schema.json
+---
+naftiko: "1.0.0-alpha3"
+info:
+  label: "Polychro Linter"
+  description: "MCP server exposing Polychro spec linting tools"
+  tags:
+    - Linting
+    - MCP
+  created: "2026-06-01"
+  modified: "2026-06-01"
+
+capability:
+  exposes:
+    - type: "mcp"
+      address: "localhost"
+      port: 3001
+      namespace: "polychro"
+      description: "Polychro linting tools exposed via MCP."
+
+      tools:
+        - name: "lint"
+          description: "Lint a YAML or JSON document and return diagnostics"
+          inputParameters:
+            - name: "document"
+              type: "string"
+              description: "The document content to lint (YAML or JSON)"
+              required: true
+            - name: "format"
+              type: "string"
+              description: "Document format: yaml or json (auto-detected if omitted)"
+              required: false
+            - name: "source-path"
+              type: "string"
+              description: "Optional source path identifier for the document"
+              required: false
+          steps:
+            - type: "call"
+              name: "do-lint"
+              call: "internal.lint"
+              with:
+                document: "{{document}}"
+                format: "{{format}}"
+                source-path: "{{source-path}}"
+          outputParameters:
+            - name: "diagnostics"
+              type: "string"
+            - name: "count"
+              type: "number"
+            - name: "has-errors"
+              type: "boolean"
+          mappings:
+            - targetName: "diagnostics"
+              value: "$.do-lint.diagnostics"
+            - targetName: "count"
+              value: "$.do-lint.count"
+            - targetName: "has-errors"
+              value: "$.do-lint.has-errors"
+
+        - name: "validate-schema"
+          description: "Validate a document against its JSON Schema (fast path, schema-only)"
+          inputParameters:
+            - name: "document"
+              type: "string"
+              description: "The document content to validate (YAML or JSON)"
+              required: true
+            - name: "schema"
+              type: "string"
+              description: "Path or URI to the JSON Schema to validate against"
+              required: false
+            - name: "format"
+              type: "string"
+              description: "Document format: yaml or json (auto-detected if omitted)"
+              required: false
+          steps:
+            - type: "call"
+              name: "do-validate-schema"
+              call: "internal.validate-schema"
+              with:
+                document: "{{document}}"
+                schema: "{{schema}}"
+                format: "{{format}}"
+          outputParameters:
+            - name: "valid"
+              type: "boolean"
+            - name: "diagnostics"
+              type: "string"
+            - name: "count"
+              type: "number"
+          mappings:
+            - targetName: "valid"
+              value: "$.do-validate-schema.valid"
+            - targetName: "diagnostics"
+              value: "$.do-validate-schema.diagnostics"
+            - targetName: "count"
+              value: "$.do-validate-schema.count"
+
+        - name: "list-rules"
+          description: "List all active validators and their rule metadata"
+          inputParameters: []
+          steps:
+            - type: "call"
+              name: "do-list-rules"
+              call: "internal.list-rules"
+          outputParameters:
+            - name: "validators"
+              type: "string"
+            - name: "count"
+              type: "number"
+          mappings:
+            - targetName: "validators"
+              value: "$.do-list-rules.validators"
+            - targetName: "count"
+              value: "$.do-list-rules.count"
+
+        - name: "explain-diagnostic"
+          description: "Explain a diagnostic code and suggest how to fix it"
+          inputParameters:
+            - name: "code"
+              type: "string"
+              description: "The diagnostic code (rule name) to explain"
+              required: true
+          steps:
+            - type: "call"
+              name: "do-explain"
+              call: "internal.explain"
+              with:
+                code: "{{code}}"
+          outputParameters:
+            - name: "code"
+              type: "string"
+            - name: "explanation"
+              type: "string"
+            - name: "suggestion"
+              type: "string"
+          mappings:
+            - targetName: "code"
+              value: "$.do-explain.code"
+            - targetName: "explanation"
+              value: "$.do-explain.explanation"
+            - targetName: "suggestion"
+              value: "$.do-explain.suggestion"
+
+  consumes:
+    - type: "http"
+      namespace: "internal"
+      baseUri: "http://localhost:19999"
+      resources:
+        - name: "lint"
+          path: "lint"
+          operations:
+            - name: "lint"
+              method: "POST"
+        - name: "validate-schema"
+          path: "validate-schema"
+          operations:
+            - name: "validate-schema"
+              method: "POST"
+        - name: "list-rules"
+          path: "list-rules"
+          operations:
+            - name: "list-rules"
+              method: "GET"
+        - name: "explain"
+          path: "explain"
+          operations:
+            - name: "explain"
+              method: "POST"

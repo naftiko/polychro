@@ -11,80 +11,79 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class PolychroMcpServerTest {
+class PolychroCapabilityTest {
 
     @Test
-    void buildShouldCreateServerWithDefaultConfig() {
-        PolychroMcpServer server = PolychroMcpServer.builder().build();
+    void buildShouldCreateCapabilityWithDefaultConfig() {
+        PolychroCapability capability = PolychroCapability.builder().build();
 
-        assertNotNull(server);
-        assertNotNull(server.engine());
+        assertNotNull(capability);
+        assertNotNull(capability.getStepHandlerRegistry());
     }
 
     @Test
-    void startShouldDelegateToEngine() {
-        PolychroMcpServer server = PolychroMcpServer.builder().build();
+    void startShouldDelegate() {
+        PolychroCapability capability = PolychroCapability.builder().build();
 
-        // start() delegates to engine.start() which requires full runtime;
-        // verify it propagates the underlying error
-        assertThrows(Exception.class, server::start);
+        // start() requires full runtime (OTel, Restlet); verify it propagates the error
+        assertThrows(Throwable.class, capability::start);
     }
 
     @Test
-    void stopShouldDelegateToEngine() throws Exception {
-        PolychroMcpServer server = PolychroMcpServer.builder().build();
+    void stopShouldDelegate() {
+        PolychroCapability capability = PolychroCapability.builder().build();
 
-        // stop() on an engine that was never started should not throw
-        server.stop();
+        // stop() requires full runtime; verify it propagates the error
+        assertThrows(Throwable.class, capability::stop);
     }
 
     @Test
-    void buildShouldCreateServerWithExplicitConfig() {
+    void buildShouldCreateCapabilityWithExplicitConfig() {
         LinterConfig config = new LinterConfig(List.of(), Map.of(), false, "json-schema");
 
-        PolychroMcpServer server = PolychroMcpServer.builder()
+        PolychroCapability capability = PolychroCapability.builder()
                 .config(config)
                 .build();
 
-        assertNotNull(server);
+        assertNotNull(capability);
     }
 
     @Test
-    void buildShouldCreateServerWithConfigPath(@TempDir Path tempDir) throws Exception {
+    void buildShouldCreateCapabilityWithConfigPath(@TempDir Path tempDir) throws Exception {
         Path configFile = tempDir.resolve(".polychro.yml");
         Files.writeString(configFile, "validators: []\nfailFast: false\n");
 
-        PolychroMcpServer server = PolychroMcpServer.builder()
+        PolychroCapability capability = PolychroCapability.builder()
                 .config(configFile)
                 .build();
 
-        assertNotNull(server);
+        assertNotNull(capability);
     }
 
     @Test
     void buildShouldRegisterExplanations() {
-        PolychroMcpServer server = PolychroMcpServer.builder()
+        PolychroCapability capability = PolychroCapability.builder()
                 .explanation("rule-a", "Rule A fires when...", "Fix by doing X")
                 .explanation("rule-b", "Rule B fires when...", "Fix by doing Y")
                 .build();
 
-        assertNotNull(server);
-        assertTrue(server.engine().getRegistry().has("do-explain"));
+        assertNotNull(capability);
+        assertTrue(capability.getStepHandlerRegistry().has("do-explain"));
     }
 
     @Test
     void buildShouldRegisterAllHandlers() {
-        PolychroMcpServer server = PolychroMcpServer.builder().build();
+        PolychroCapability capability = PolychroCapability.builder().build();
 
-        assertTrue(server.engine().getRegistry().has("do-lint"));
-        assertTrue(server.engine().getRegistry().has("do-validate-schema"));
-        assertTrue(server.engine().getRegistry().has("do-list-rules"));
-        assertTrue(server.engine().getRegistry().has("do-explain"));
+        assertTrue(capability.getStepHandlerRegistry().has("do-lint"));
+        assertTrue(capability.getStepHandlerRegistry().has("do-validate-schema"));
+        assertTrue(capability.getStepHandlerRegistry().has("do-list-rules"));
+        assertTrue(capability.getStepHandlerRegistry().has("do-explain"));
     }
 
     @Test
     void resolveConfigShouldReturnDefaultsWhenNothingSet() {
-        PolychroMcpServer.Builder builder = PolychroMcpServer.builder();
+        PolychroCapability.Builder builder = PolychroCapability.builder();
         LinterConfig config = builder.resolveConfig();
 
         assertNotNull(config);
@@ -97,7 +96,7 @@ class PolychroMcpServerTest {
         LinterConfig explicit = new LinterConfig(
                 List.of("wellformedness"), Map.of(), true, "json-schema");
 
-        PolychroMcpServer.Builder builder = PolychroMcpServer.builder().config(explicit);
+        PolychroCapability.Builder builder = PolychroCapability.builder().config(explicit);
         LinterConfig result = builder.resolveConfig();
 
         assertEquals(List.of("wellformedness"), result.validators());
@@ -109,7 +108,7 @@ class PolychroMcpServerTest {
         Path configFile = tempDir.resolve(".polychro.yml");
         Files.writeString(configFile, "validators:\n  - ruleset\nfailFast: true\n");
 
-        PolychroMcpServer.Builder builder = PolychroMcpServer.builder().config(configFile);
+        PolychroCapability.Builder builder = PolychroCapability.builder().config(configFile);
         LinterConfig result = builder.resolveConfig();
 
         assertEquals(List.of("ruleset"), result.validators());
@@ -121,14 +120,11 @@ class PolychroMcpServerTest {
         LinterConfig explicit = new LinterConfig(
                 List.of("wellformedness"), Map.of(), false, "json-schema");
 
-        PolychroMcpServer.Builder builder = PolychroMcpServer.builder()
+        PolychroCapability.Builder builder = PolychroCapability.builder()
                 .config(explicit)
                 .config(Path.of("nonexistent.yml"));
 
         // configPath takes precedence — resolveConfig would try to load from path
-        // But since we just test the setter logic, verify it doesn't throw on build
-        // We test that resolveConfig prefers path when both were called by checking
-        // that explicit config is cleared (resolveConfig will try file)
         assertThrows(Exception.class, builder::resolveConfig);
     }
 
@@ -136,7 +132,7 @@ class PolychroMcpServerTest {
     void explicitConfigShouldOverridePreviousPath() {
         LinterConfig explicit = new LinterConfig(List.of(), Map.of(), true, "json-schema");
 
-        PolychroMcpServer.Builder builder = PolychroMcpServer.builder()
+        PolychroCapability.Builder builder = PolychroCapability.builder()
                 .config(Path.of("nonexistent.yml"))
                 .config(explicit);
 

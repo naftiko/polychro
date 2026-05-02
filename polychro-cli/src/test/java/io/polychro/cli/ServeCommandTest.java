@@ -1,6 +1,6 @@
 package io.polychro.cli;
 
-import io.polychro.mcp.PolychroMcpServer;
+import io.polychro.mcp.PolychroCapability;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
@@ -28,16 +28,16 @@ class ServeCommandTest {
     }
 
     @Test
-    void buildServerShouldCreateServerWithNoConfig() {
+    void buildCapabilityShouldCreateWithNoConfig() {
         ServeCommand cmd = new ServeCommand();
         wireSpec(cmd);
 
-        PolychroMcpServer server = cmd.buildServer();
-        assertNotNull(server);
+        PolychroCapability capability = cmd.buildCapability();
+        assertNotNull(capability);
     }
 
     @Test
-    void buildServerShouldCreateServerWithConfig() throws Exception {
+    void buildCapabilityShouldCreateWithConfig() throws Exception {
         Path configFile = tempDir.resolve(".polychro.yml");
         Files.writeString(configFile, "validators: []\nfailFast: false\n");
 
@@ -45,8 +45,8 @@ class ServeCommandTest {
         cmd.config = configFile;
         wireSpec(cmd);
 
-        PolychroMcpServer server = cmd.buildServer();
-        assertNotNull(server);
+        PolychroCapability capability = cmd.buildCapability();
+        assertNotNull(capability);
     }
 
     @Test

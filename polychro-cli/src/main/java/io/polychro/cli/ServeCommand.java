@@ -1,6 +1,6 @@
 package io.polychro.cli;
 
-import io.polychro.mcp.PolychroMcpServer;
+import io.polychro.mcp.PolychroCapability;
 import picocli.CommandLine;
 
 import java.nio.file.Files;
@@ -39,9 +39,9 @@ public class ServeCommand implements Runnable {
             return 2;
         }
 
-        PolychroMcpServer server = buildServer();
+        PolychroCapability capability = buildCapability();
         try {
-            server.start();
+            capability.start();
             return 0;
         } catch (Exception e) {
             err.println("Error: MCP server failed: " + e.getMessage());
@@ -49,8 +49,8 @@ public class ServeCommand implements Runnable {
         }
     }
 
-    PolychroMcpServer buildServer() {
-        PolychroMcpServer.Builder builder = PolychroMcpServer.builder();
+    PolychroCapability buildCapability() {
+        PolychroCapability.Builder builder = PolychroCapability.builder();
         if (config != null) {
             builder.config(config);
         }

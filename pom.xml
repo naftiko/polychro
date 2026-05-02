@@ -28,6 +28,7 @@
         <module>polychro-ruleset</module>
         <module>polychro-ruleset-polyglot</module>
         <module>polychro-core</module>
+        <module>polychro-mcp</module>
         <module>polychro-cli</module>
         <module>polychro-markdown</module>
         <module>polychro-checkov</module>
