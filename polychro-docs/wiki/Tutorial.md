@@ -1,26 +1,25 @@
 # Tutorial
 
-This tutorial walks through a complete linting workflow — from a simple schema check to a multi-validator pipeline with custom rules and agent-optimized output.
+This tutorial walks through a complete linting workflow — from a simple CLI check to a multi-validator pipeline with custom rules and agent-optimized output.
 
-## Step 1 — Schema Validation
+## Step 1 — Lint a Spec
 
-The simplest use case: validate a YAML document against a JSON Schema.
+The simplest use case: lint a YAML file from the command line.
 
-```java
-Linter linter = Linter.builder()
-    .config("""
-        validators:
-          schema:
-            path: my-schema.json
-        """)
-    .build();
-
-Document doc = Document.fromPath(Path.of("my-spec.yml"));
-List<Diagnostic> issues = linter.lint(doc);
+```bash
+polychro lint my-spec.yml
 ```
 
-Every schema violation produces a `Diagnostic` with:
-- `severity` — ERROR for schema violations
+Output:
+```
+my-spec.yml
+  1:1  warning  capability-description-present  Capability must include a description
+
+✖ 1 problem (0 errors, 1 warning)
+```
+
+Every issue produces a `Diagnostic` with:
+- `severity` — ERROR, WARN, INFO, or HINT
 - `message` — human-readable description
 - `range` — line and column in the source document
 - `code` — machine-readable diagnostic code
@@ -125,31 +124,15 @@ validators:
     functionsDir: rules/functions/
 ```
 
-## Step 6 — Agent Feedback Loop
+## Step 6 — MCP Server for AI Agents
 
-The real power of Polychro: embedding it in an AI agent's generate-validate-retry loop.
+Run Polychro as an MCP server so AI agents can lint specs directly:
 
-```java
-Linter linter = Linter.builder()
-    .ruleset("polychro:ai-safety")
-    .schema(schemaPath)
-    .build();
-
-// Agent generates a spec
-String yaml = agent.generate(userIntent);
-Document doc = Document.fromString(yaml, "yaml");
-
-// Validate — all layers in one call, <100ms
-List<Diagnostic> issues = linter.lint(doc);
-
-if (issues.stream().anyMatch(d -> d.severity() == Severity.ERROR)) {
-    // Feed diagnostics back to the agent for self-correction
-    agent.retry(userIntent, issues);
-} else {
-    // Spec is valid — proceed
-    deploy(doc);
-}
+```bash
+polychro serve --ruleset polychro:ai-safety
 ```
+
+Agents call the `lint` tool with a spec and get structured diagnostics back. They can also call `list-rules` to understand active constraints before generating, and `explain-diagnostic` to get fix suggestions for unclear rules.
 
 ## Step 7 — Agent-Optimized Output Format
 
@@ -175,6 +158,32 @@ polychro lint --format agent my-spec.yml
 ```
 
 The `tokens` field pre-computes the context window cost — agents can decide whether to include all diagnostics or summarize.
+
+## Step 8 — Java API Embedding
+
+For JVM applications that need in-process linting (e.g., agent frameworks, CI tools):
+
+```java
+Linter linter = Linter.builder()
+    .ruleset("polychro:ai-safety")
+    .schema(schemaPath)
+    .build();
+
+// Agent generates a spec
+String yaml = agent.generate(userIntent);
+Document doc = Document.fromString(yaml, "yaml");
+
+// Validate — all layers in one call, <100ms
+List<Diagnostic> issues = linter.lint(doc);
+
+if (issues.stream().anyMatch(d -> d.severity() == Severity.ERROR)) {
+    // Feed diagnostics back to the agent for self-correction
+    agent.retry(userIntent, issues);
+} else {
+    // Spec is valid — proceed
+    deploy(doc);
+}
+```
 
 ## Next Steps
 

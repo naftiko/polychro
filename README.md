@@ -8,18 +8,19 @@ Designed for AI agent loops where non-deterministic generation needs determinist
 
 | Feature | Description |
 |---|---|
-| In-Process Linting | Embeddable Java API — no subprocess, no Node.js, no shell-out |
-| Spectral-Format Rulesets | Execute governance rulesets with `given`/`then` semantics on the JVM |
+| CLI | Single binary — lint any YAML/JSON spec from the command line |
+| MCP Server Mode | Expose linting as MCP tools for AI agent consumption |
+| Native Executable | GraalVM native-image compilation — no JVM required at runtime |
+| GitHub Action | Lint specs in CI with structured SARIF output |
+| Spectral-Format Rulesets | Execute governance rulesets with `given`/`then` semantics |
 | Polyglot Custom Functions | JavaScript, Python, and Groovy custom functions via sandboxed GraalVM |
 | JSON Schema Validation | Draft 2020-12 schema validation with structured diagnostics |
 | JSON Structure Validation | Strict typing via the [JSON Structure](https://json-structure.org/) standard |
 | Well-Formedness Checks | Duplicate keys, encoding, depth limits, YAML-specific traps |
 | Markdown Linting | Heading hierarchy, internal links, relative file references |
 | Unified Diagnostics | All validators produce the same `Diagnostic` format — one pipeline, one output |
+| Embeddable Java API | In-process linting for JVM applications — no subprocess, no Node.js |
 | Pluggable SPI | Add custom validators via `ServiceLoader` — zero framework coupling |
-| MCP Server Mode | Expose linting as MCP tools for AI agent consumption |
-| Native Executable | GraalVM native-image compilation for CLI distribution |
-| GitHub Action | Lint specs in CI with structured SARIF output |
 
 ***
 
@@ -41,25 +42,6 @@ Here are additional documents to learn more:
 ***
 
 ## Quick Start
-
-### Java API
-
-```xml
-<dependency>
-    <groupId>io.polychro</groupId>
-    <artifactId>polychro-core</artifactId>
-    <version>0.1.0</version>
-</dependency>
-```
-
-```java
-Linter linter = Linter.builder()
-    .config(getClass().getResourceAsStream("/.polychro.yml"))
-    .build();
-
-Document doc = Document.fromString(yamlContent, "yaml");
-List<Diagnostic> issues = linter.lint(doc);
-```
 
 ### CLI
 
@@ -86,24 +68,43 @@ polychro serve --ruleset polychro:ai-safety
 }
 ```
 
+### Java API
+
+```xml
+<dependency>
+    <groupId>io.polychro</groupId>
+    <artifactId>polychro-core</artifactId>
+    <version>0.1.0</version>
+</dependency>
+```
+
+```java
+Linter linter = Linter.builder()
+    .config(getClass().getResourceAsStream("/.polychro.yml"))
+    .build();
+
+Document doc = Document.fromString(yamlContent, "yaml");
+List<Diagnostic> issues = linter.lint(doc);
+```
+
 ***
 
 ## Module Overview
 
 | Module | Purpose |
 |---|---|
-| `polychro-api` | SPI contracts: `Validator`, `Diagnostic`, `Document` |
+| `polychro-cli` | Command-line interface with native compilation |
+| `polychro-capability` | MCP server mode for AI agents |
+| `polychro-github-action` | GitHub Action for CI integration |
 | `polychro-core` | Pipeline orchestrator — discovers and runs validators |
-| `polychro-wellformedness` | Duplicate keys, encoding, depth limits |
-| `polychro-json-schema` | JSON Schema Draft 2020-12 validation |
-| `polychro-json-structure` | JSON Structure validation |
+| `polychro-rulesets` | Curated governance and safety rulesets |
 | `polychro-ruleset` | Spectral-format ruleset engine (built-in functions) |
 | `polychro-ruleset-polyglot` | Polyglot custom functions (JS, Python, Groovy) |
-| `polychro-rulesets` | Curated governance and safety rulesets |
+| `polychro-json-schema` | JSON Schema Draft 2020-12 validation |
+| `polychro-json-structure` | JSON Structure validation |
+| `polychro-wellformedness` | Duplicate keys, encoding, depth limits |
 | `polychro-markdown` | Markdown structural validation |
-| `polychro-cli` | Command-line interface with native compilation |
-| `polychro-capability` | MCP server mode via Naftiko Framework embedding |
-| `polychro-github-action` | GitHub Action for CI integration |
+| `polychro-api` | SPI contracts: `Validator`, `Diagnostic`, `Document` |
 
 ***
 
@@ -119,9 +120,10 @@ polychro serve --ruleset polychro:ai-safety
 
 ## Requirements
 
-- **Java 21+** (for library and CLI)
-- **Maven 3.9+** (for building from source)
-- GraalVM 21+ (optional — for native compilation and polyglot functions)
+- **CLI**: Download the native binary — no JVM needed
+- **MCP Server**: Same native binary, `polychro serve`
+- **Java library**: Java 21+, Maven 3.9+
+- **Polyglot functions**: GraalVM 21+ (optional)
 
 ## License
 

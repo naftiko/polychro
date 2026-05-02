@@ -2,15 +2,49 @@
 
 ## Prerequisites
 
-- **Java 21+** — required for all usage modes
-- **Maven 3.9+** — for building from source or using as a library dependency
-- **GraalVM 21+** — optional, needed for polyglot custom functions (JS, Python, Groovy) and native compilation
+- **CLI / MCP Server**: Download the native binary — no JVM needed
+- **Java library**: Java 21+, Maven 3.9+
+- **Polyglot functions**: GraalVM 21+ (optional)
 
 ## Installation
 
-### Maven Dependency (Library)
+### CLI (Native Binary)
 
-Add the core module to your project:
+Download the native binary for your platform from the [Releases](https://github.com/naftiko/polychro/releases) page. No JVM required.
+
+```bash
+# Linux / macOS
+chmod +x polychro
+./polychro lint my-spec.yml
+
+# Windows
+polychro.exe lint my-spec.yml
+```
+
+### MCP Server
+
+The same binary runs as an MCP server:
+
+```bash
+polychro serve --ruleset polychro:ai-safety
+```
+
+Add to your MCP client configuration:
+
+```json
+{
+  "mcpServers": {
+    "polychro": {
+      "command": "polychro",
+      "args": ["serve", "--ruleset", "polychro:ai-safety"]
+    }
+  }
+}
+```
+
+### Java Library
+
+For embedding in JVM applications (requires Java 21+, Maven 3.9+):
 
 ```xml
 <dependency>
@@ -20,7 +54,7 @@ Add the core module to your project:
 </dependency>
 ```
 
-This includes all built-in validators. For polyglot custom functions, add:
+For polyglot custom functions (requires GraalVM 21+):
 
 ```xml
 <dependency>
@@ -28,19 +62,6 @@ This includes all built-in validators. For polyglot custom functions, add:
     <artifactId>polychro-ruleset-polyglot</artifactId>
     <version>0.1.0</version>
 </dependency>
-```
-
-### CLI (Native Binary)
-
-Download the native binary for your platform from the [Releases](https://github.com/naftiko/polychro/releases) page:
-
-```bash
-# Linux / macOS
-chmod +x polychro
-./polychro lint my-spec.yml
-
-# Windows
-polychro.exe lint my-spec.yml
 ```
 
 ### Build from Source
@@ -55,6 +76,29 @@ For native compilation:
 
 ```bash
 mvn -B clean package -Pnative -pl polychro-cli
+```
+
+## First Lint — CLI
+
+```bash
+# Lint with the default governance ruleset
+polychro lint my-spec.yml
+
+# Lint with a specific ruleset
+polychro lint --ruleset polychro:ai-safety my-spec.yml
+
+# Lint with agent-optimized output (JSON, token-counted)
+polychro lint --format agent my-spec.yml
+```
+
+### Example Output
+
+```
+my-spec.yml
+  2:1  warning  capability-description-present  Capability must include a description  
+  1:1  warning  capability-version-format       Version must follow semver format       
+
+✖ 2 problems (0 errors, 2 warnings)
 ```
 
 ## First Lint — Java API
@@ -85,29 +129,6 @@ public class QuickStart {
             d.severity(), d.message(), d.range()));
     }
 }
-```
-
-## First Lint — CLI
-
-```bash
-# Lint with the default governance ruleset
-polychro lint my-spec.yml
-
-# Lint with a specific ruleset
-polychro lint --ruleset polychro:ai-safety my-spec.yml
-
-# Lint with agent-optimized output (JSON, token-counted)
-polychro lint --format agent my-spec.yml
-```
-
-### Example Output
-
-```
-my-spec.yml
-  2:1  warning  capability-description-present  Capability must include a description  
-  1:1  warning  capability-version-format       Version must follow semver format       
-
-✖ 2 problems (0 errors, 2 warnings)
 ```
 
 ## Configuration File
