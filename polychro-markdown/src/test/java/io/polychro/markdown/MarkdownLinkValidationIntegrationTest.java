@@ -1,0 +1,220 @@
+package io.polychro.markdown;
+
+import com.fasterxml.jackson.databind.node.TextNode;
+import io.polychro.spi.Diagnostic;
+import io.polychro.spi.Document;
+import org.commonmark.node.Link;
+import org.commonmark.node.Paragraph;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class MarkdownLinkValidationIntegrationTest {
+
+    @TempDir
+    Path tempDir;
+
+    @Test
+    void validateShouldReportBrokenRelativeLink() throws IOException {
+        Path docFile = tempDir.resolve("doc.md");
+        Files.writeString(docFile, "# Title\n\n[link](missing.md)\n");
+
+        MarkdownValidator validator = new MarkdownValidator(
+                120, "-", new GenericFormat(), new FrontmatterParser());
+
+        Document doc = new Document(new TextNode(Files.readString(docFile)), docFile.toString());
+        List<Diagnostic> diagnostics = validator.validate(doc);
+
+        assertTrue(diagnostics.stream().anyMatch(d -> d.code().equals("broken-relative-link")));
+    }
+
+    @Test
+    void validateShouldAcceptValidRelativeLink() throws IOException {
+        Path target = tempDir.resolve("target.md");
+        Files.writeString(target, "# Target\n");
+
+        Path docFile = tempDir.resolve("doc.md");
+        Files.writeString(docFile, "# Title\n\n[link](target.md)\n");
+
+        MarkdownValidator validator = new MarkdownValidator(
+                120, "-", new GenericFormat(), new FrontmatterParser());
+
+        Document doc = new Document(new TextNode(Files.readString(docFile)), docFile.toString());
+        List<Diagnostic> diagnostics = validator.validate(doc);
+
+        assertTrue(diagnostics.stream().noneMatch(d -> d.code().equals("broken-relative-link")));
+    }
+
+    @Test
+    void validateShouldReportBrokenRelativeAnchor() throws IOException {
+        Path target = tempDir.resolve("target.md");
+        Files.writeString(target, "# Title\n\n## Real Section\n");
+
+        Path docFile = tempDir.resolve("doc.md");
+        Files.writeString(docFile, "# Title\n\n[link](target.md#wrong-anchor)\n");
+
+        MarkdownValidator validator = new MarkdownValidator(
+                120, "-", new GenericFormat(), new FrontmatterParser());
+
+        Document doc = new Document(new TextNode(Files.readString(docFile)), docFile.toString());
+        List<Diagnostic> diagnostics = validator.validate(doc);
+
+        assertTrue(diagnostics.stream().anyMatch(d -> d.code().equals("broken-relative-anchor")));
+    }
+
+    @Test
+    void validateShouldNotCheckExternalLinksWhenDisabled() throws IOException {
+        Path docFile = tempDir.resolve("doc.md");
+        Files.writeString(docFile, "# Title\n\n[link](http://unreachable.invalid/page)\n");
+
+        MarkdownValidator validator = new MarkdownValidator(
+                120, "-", new GenericFormat(), new FrontmatterParser(),
+                false, 5000, 10);
+
+        Document doc = new Document(new TextNode(Files.readString(docFile)), docFile.toString());
+        List<Diagnostic> diagnostics = validator.validate(doc);
+
+        assertTrue(diagnostics.stream().noneMatch(d -> d.code().equals("broken-external-link")));
+    }
+
+    @Test
+    void validateShouldCheckExternalLinksWhenEnabled() throws IOException {
+        Path docFile = tempDir.resolve("doc.md");
+        Files.writeString(docFile, "# Title\n\n[link](http://this-domain-definitely-does-not-exist-xyzzy.invalid/page)\n");
+
+        MarkdownValidator validator = new MarkdownValidator(
+                120, "-", new GenericFormat(), new FrontmatterParser(),
+                true, 2000, 10);
+
+        Document doc = new Document(new TextNode(Files.readString(docFile)), docFile.toString());
+        List<Diagnostic> diagnostics = validator.validate(doc);
+
+        assertTrue(diagnostics.stream().anyMatch(d -> d.code().equals("broken-external-link")));
+    }
+
+    @Test
+    void validateShouldIgnoreMailtoLinks() throws IOException {
+        Path docFile = tempDir.resolve("doc.md");
+        Files.writeString(docFile, "# Title\n\n[email](mailto:user@example.com)\n");
+
+        MarkdownValidator validator = new MarkdownValidator(
+                120, "-", new GenericFormat(), new FrontmatterParser());
+
+        Document doc = new Document(new TextNode(Files.readString(docFile)), docFile.toString());
+        List<Diagnostic> diagnostics = validator.validate(doc);
+
+        assertTrue(diagnostics.stream().noneMatch(d ->
+                d.code().equals("broken-relative-link") || d.code().equals("broken-external-link")));
+    }
+
+    @Test
+    void validateShouldSkipLinkChecksWhenNoSourcePath() {
+        MarkdownValidator validator = new MarkdownValidator(
+                120, "-", new GenericFormat(), new FrontmatterParser());
+
+        Document doc = new Document(new TextNode("# Title\n\n[link](missing.md)\n"), null);
+        List<Diagnostic> diagnostics = validator.validate(doc);
+
+        // No broken-relative-link because source path is null (can't resolve)
+        assertTrue(diagnostics.stream().noneMatch(d -> d.code().equals("broken-relative-link")));
+    }
+
+    @Test
+    void validateShouldHandleMixedLinkTypes() throws IOException {
+        Path target = tempDir.resolve("exists.md");
+        Files.writeString(target, "# Exists\n\n## Section\n");
+
+        Path docFile = tempDir.resolve("doc.md");
+        Files.writeString(docFile, """
+                # Title
+                
+                [valid relative](exists.md)
+                [valid anchor](exists.md#section)
+                [broken relative](missing.md)
+                [internal](#title)
+                """);
+
+        MarkdownValidator validator = new MarkdownValidator(
+                120, "-", new GenericFormat(), new FrontmatterParser());
+
+        Document doc = new Document(new TextNode(Files.readString(docFile)), docFile.toString());
+        List<Diagnostic> diagnostics = validator.validate(doc);
+
+        long brokenRelative = diagnostics.stream()
+                .filter(d -> d.code().equals("broken-relative-link")).count();
+        assertEquals(1, brokenRelative);
+
+        // No broken anchors or internal links
+        assertTrue(diagnostics.stream().noneMatch(d -> d.code().equals("broken-relative-anchor")));
+        assertTrue(diagnostics.stream().noneMatch(d -> d.code().equals("broken-internal-link")));
+    }
+
+    @Test
+    void validateShouldIgnoreBlankDestinationLinks() throws IOException {
+        // [text]() produces a blank destination — should not be collected as a link
+        Path docFile = tempDir.resolve("doc.md");
+        Files.writeString(docFile, "# Title\n\n[empty]()\n\n[also empty](  )\n");
+
+        MarkdownValidator validator = new MarkdownValidator(
+                120, "-", new GenericFormat(), new FrontmatterParser());
+
+        Document doc = new Document(new TextNode(Files.readString(docFile)), docFile.toString());
+        List<Diagnostic> diagnostics = validator.validate(doc);
+
+        assertTrue(diagnostics.stream().noneMatch(d -> d.code().equals("broken-relative-link")));
+    }
+
+    @Test
+    void validateShouldIgnoreMailtoAndTelLinks() throws IOException {
+        Path docFile = tempDir.resolve("doc.md");
+        Files.writeString(docFile, "# Title\n\n[email](mailto:a@b.com)\n\n[phone](tel:+123)\n");
+
+        MarkdownValidator validator = new MarkdownValidator(
+                120, "-", new GenericFormat(), new FrontmatterParser());
+
+        Document doc = new Document(new TextNode(Files.readString(docFile)), docFile.toString());
+        List<Diagnostic> diagnostics = validator.validate(doc);
+
+        assertTrue(diagnostics.stream().noneMatch(d -> d.code().equals("broken-relative-link")));
+        assertTrue(diagnostics.stream().noneMatch(d -> d.code().equals("broken-external-link")));
+    }
+
+    @Test
+    void validateShouldClassifyHttpLinksAsExternal() throws IOException {
+        Path docFile = tempDir.resolve("doc.md");
+        Files.writeString(docFile, "# Title\n\n[link](http://example.com)\n\n[secure](https://example.com)\n");
+
+        // External link checking disabled, so http:// links are just skipped
+        MarkdownValidator validator = new MarkdownValidator(
+                120, "-", new GenericFormat(), new FrontmatterParser());
+
+        Document doc = new Document(new TextNode(Files.readString(docFile)), docFile.toString());
+        List<Diagnostic> diagnostics = validator.validate(doc);
+
+        // No broken-relative-link for http:// or https:// links
+        assertTrue(diagnostics.stream().noneMatch(d -> d.code().equals("broken-relative-link")));
+    }
+
+    @Test
+    void collectAllLinksShouldSkipNullDestination() {
+        MarkdownValidator validator = new MarkdownValidator(
+                120, "-", new GenericFormat(), new FrontmatterParser());
+
+        // Build a document with a Link node that has null destination
+        org.commonmark.node.Document cmDoc = new org.commonmark.node.Document();
+        Paragraph para = new Paragraph();
+        Link link = new Link();
+        link.setDestination(null);
+        para.appendChild(link);
+        cmDoc.appendChild(para);
+
+        List<MarkdownValidator.LinkInfo> links = validator.collectAllLinks(cmDoc, 0);
+        assertTrue(links.isEmpty());
+    }
+}

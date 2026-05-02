@@ -21,6 +21,12 @@ public class MarkdownValidatorFactory implements ValidatorFactory {
         String listMarker = config.get("listMarker", String.class)
                 .orElse(MarkdownValidator.DEFAULT_LIST_MARKER);
         String formatOverride = config.get("format", String.class).orElse(null);
+        boolean checkExternalLinks = config.get("checkExternalLinks", Boolean.class)
+                .orElse(false);
+        int externalLinkTimeout = config.get("externalLinkTimeout", Integer.class)
+                .orElse(MarkdownValidator.DEFAULT_EXTERNAL_LINK_TIMEOUT_MS);
+        int externalLinkRateLimit = config.get("externalLinkRateLimit", Integer.class)
+                .orElse(MarkdownValidator.DEFAULT_EXTERNAL_LINK_RATE_LIMIT);
 
         MarkdownFormat format;
         if (formatOverride != null) {
@@ -30,7 +36,8 @@ public class MarkdownValidatorFactory implements ValidatorFactory {
             format = new GenericFormat();
         }
 
-        return new MarkdownValidator(lineLength, listMarker, format, new FrontmatterParser());
+        return new MarkdownValidator(lineLength, listMarker, format, new FrontmatterParser(),
+                checkExternalLinks, externalLinkTimeout, externalLinkRateLimit);
     }
 
     /**
@@ -42,6 +49,12 @@ public class MarkdownValidatorFactory implements ValidatorFactory {
         String listMarker = config.get("listMarker", String.class)
                 .orElse(MarkdownValidator.DEFAULT_LIST_MARKER);
         String formatOverride = config.get("format", String.class).orElse(null);
+        boolean checkExternalLinks = config.get("checkExternalLinks", Boolean.class)
+                .orElse(false);
+        int externalLinkTimeout = config.get("externalLinkTimeout", Integer.class)
+                .orElse(MarkdownValidator.DEFAULT_EXTERNAL_LINK_TIMEOUT_MS);
+        int externalLinkRateLimit = config.get("externalLinkRateLimit", Integer.class)
+                .orElse(MarkdownValidator.DEFAULT_EXTERNAL_LINK_RATE_LIMIT);
 
         MarkdownFormat format;
         if (formatOverride != null) {
@@ -50,6 +63,7 @@ public class MarkdownValidatorFactory implements ValidatorFactory {
             format = FormatDetector.detect(sourcePath);
         }
 
-        return new MarkdownValidator(lineLength, listMarker, format, new FrontmatterParser());
+        return new MarkdownValidator(lineLength, listMarker, format, new FrontmatterParser(),
+                checkExternalLinks, externalLinkTimeout, externalLinkRateLimit);
     }
 }

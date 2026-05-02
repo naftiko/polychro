@@ -17,6 +17,7 @@ import org.commonmark.node.Text;
 import org.commonmark.parser.IncludeSourceSpans;
 import org.commonmark.parser.Parser;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -33,6 +34,8 @@ class MarkdownValidator implements Validator {
     static final String NAME = "markdown";
     static final int DEFAULT_LINE_LENGTH = 120;
     static final String DEFAULT_LIST_MARKER = "-";
+    static final int DEFAULT_EXTERNAL_LINK_TIMEOUT_MS = 5000;
+    static final int DEFAULT_EXTERNAL_LINK_RATE_LIMIT = 10;
 
     private static final Parser PARSER = Parser.builder()
             .includeSourceSpans(IncludeSourceSpans.BLOCKS)
@@ -43,13 +46,28 @@ class MarkdownValidator implements Validator {
     private final String listMarker;
     private final MarkdownFormat format;
     private final FrontmatterParser frontmatterParser;
+    private final boolean checkExternalLinks;
+    private final RelativeLinkChecker relativeLinkChecker;
+    private final RelativeAnchorChecker relativeAnchorChecker;
+    private final ExternalLinkChecker externalLinkChecker;
 
     MarkdownValidator(int lineLength, String listMarker, MarkdownFormat format,
-                      FrontmatterParser frontmatterParser) {
+                      FrontmatterParser frontmatterParser, boolean checkExternalLinks,
+                      int externalLinkTimeoutMs, int externalLinkRateLimit) {
         this.lineLength = lineLength;
         this.listMarker = listMarker;
         this.format = format;
         this.frontmatterParser = frontmatterParser;
+        this.checkExternalLinks = checkExternalLinks;
+        this.relativeLinkChecker = new RelativeLinkChecker();
+        this.relativeAnchorChecker = new RelativeAnchorChecker();
+        this.externalLinkChecker = new ExternalLinkChecker(externalLinkTimeoutMs, externalLinkRateLimit);
+    }
+
+    MarkdownValidator(int lineLength, String listMarker, MarkdownFormat format,
+                      FrontmatterParser frontmatterParser) {
+        this(lineLength, listMarker, format, frontmatterParser, false,
+                DEFAULT_EXTERNAL_LINK_TIMEOUT_MS, DEFAULT_EXTERNAL_LINK_RATE_LIMIT);
     }
 
     @Override
@@ -94,6 +112,9 @@ class MarkdownValidator implements Validator {
         checkTrailingWhitespace(lines, diagnostics);
         checkListMarkers(lines, frontmatter.bodyStartLine(), diagnostics);
         checkBlankLineBeforeHeading(lines, diagnostics);
+
+        // Relative and external link checks
+        checkFileLinks(document, bodyStartLine, doc.sourcePath(), diagnostics);
 
         // Format-specific checks
         format.validate(doc, frontmatter, diagnostics);
@@ -257,6 +278,62 @@ class MarkdownValidator implements Validator {
                         new SourceRange(i + 1, 1, i + 1, 1)));
             }
         }
+    }
+
+    void checkFileLinks(Node document, int bodyStartLine, String sourcePath,
+                        List<Diagnostic> diagnostics) {
+        if (sourcePath == null) {
+            return; // Cannot resolve relative links without a source path
+        }
+
+        Path docPath = Path.of(sourcePath);
+        Path documentDir = docPath.getParent();
+        if (documentDir == null) {
+            return;
+        }
+
+        List<LinkInfo> allLinks = collectAllLinks(document, bodyStartLine);
+
+        // Split into relative and external
+        List<LinkInfo> relativeLinks = new ArrayList<>();
+        List<LinkInfo> externalLinks = new ArrayList<>();
+
+        for (LinkInfo link : allLinks) {
+            String target = link.target();
+            if (target.startsWith("#")) {
+                continue; // Internal anchor — handled by checkInternalLinks
+            }
+            if (target.startsWith("http://") || target.startsWith("https://")) {
+                externalLinks.add(link);
+            } else if (!target.startsWith("mailto:") && !target.startsWith("tel:")) {
+                relativeLinks.add(link);
+            }
+        }
+
+        // Relative file link checks (always on)
+        diagnostics.addAll(relativeLinkChecker.check(relativeLinks, documentDir));
+        diagnostics.addAll(relativeAnchorChecker.check(relativeLinks, documentDir));
+
+        // External link checks (opt-in)
+        if (checkExternalLinks) {
+            diagnostics.addAll(externalLinkChecker.check(externalLinks));
+        }
+    }
+
+    List<LinkInfo> collectAllLinks(Node document, int bodyStartLine) {
+        List<LinkInfo> links = new ArrayList<>();
+        document.accept(new AbstractVisitor() {
+            @Override
+            public void visit(Link link) {
+                String destination = link.getDestination();
+                if (destination != null && !destination.isBlank()) {
+                    int line = getNodeLine(link, bodyStartLine);
+                    links.add(new LinkInfo(destination, line));
+                }
+                visitChildren(link);
+            }
+        });
+        return links;
     }
 
     List<HeadingInfo> collectHeadings(Node document, int bodyStartLine) {
