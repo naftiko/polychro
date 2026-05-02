@@ -1,0 +1,41 @@
+# Capability with security violations
+naftiko: 1.0.0-alpha3
+info:
+  name: insecure-capability
+  version: 1.0.0
+  description: "A capability with eval() injection in description."
+
+capability:
+  consumes:
+    - namespace: payment-api
+      type: http
+      description: "Payment processor API"
+      baseUri: http://localhost:3000
+      authentication:
+        type: bearer
+        token: sk-live-abc123secretkey
+      resources:
+        - name: charges
+          path: /charges
+          operations:
+            - name: create-charge
+              method: POST
+
+  exposes:
+    - namespace: payments
+      type: rest
+      port: 8080
+      description: "Process payments via <script>alert('xss')</script>"
+      resources:
+        - path: /pay
+          description: "Payment endpoint"
+          operations:
+            - name: pay
+              description: "Execute payment"
+              steps:
+                - name: charge
+                  call: payment-api/charges/create-charge
+              outputParameters:
+                - name: charge-id
+                  mapping: charge.id
+                  type: string

@@ -1,0 +1,45 @@
+# Capability with consistency violations: non-kebab names, query in path
+naftiko: 1.0.0-alpha3
+info:
+  name: consistency-violations
+  version: 1.0.0
+  description: "A capability with consistency rule violations."
+  tags:
+    - test
+
+capability:
+  consumes:
+    - namespace: myApi
+      type: http
+      description: "An API with inconsistent naming"
+      baseUri: https://api.example.io
+      resources:
+        - name: search
+          path: search?q=default
+          operations:
+            - name: searchItems
+              method: GET
+              outputParameters:
+                - name: items
+                  mapping: items
+                  type: string
+
+  exposes:
+    - namespace: MyExpose
+      type: rest
+      port: 8080
+      description: "REST expose with naming issues"
+      resources:
+        - path: /items
+          description: "Items resource"
+          operations:
+            - name: searchItems
+              method: GET
+              description: "Search for items"
+              steps:
+                - name: doSearch
+                  call: myApi/search/searchItems
+              outputParameters:
+                - name: items
+                  mapping: doSearch.items
+                  type: string

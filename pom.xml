@@ -27,6 +27,7 @@
         <module>polychro-json-structure</module>
         <module>polychro-ruleset</module>
         <module>polychro-ruleset-polyglot</module>
+        <module>polychro-rulesets</module>
         <module>polychro-core</module>
         <module>polychro-capability</module>
         <module>polychro-cli</module>

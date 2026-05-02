@@ -1,0 +1,80 @@
+# polychro:mcp — MCP-specific adapter conventions
+extends: []
+
+aliases:
+  McpExposes: "$.capability.exposes[?(@.type == 'mcp')]"
+  McpResources: "$.capability.exposes[?(@.type == 'mcp')].resources[*]"
+  McpOperations: "$.capability.exposes[?(@.type == 'mcp')].resources[*].operations[*]"
+  McpInputParams: "$.capability.exposes[?(@.type == 'mcp')].resources[*].operations[*].inputParameters[*]"
+  McpOutputParams: "$.capability.exposes[?(@.type == 'mcp')].resources[*].operations[*].outputParameters[*]"
+
+rules:
+
+  mcp-tool-description-present:
+    message: "Every MCP tool (operation) must have a non-empty `description`."
+    description: "MCP tool descriptions are shown to agents for tool selection — without them, agents cannot decide whether to invoke the tool."
+    severity: error
+    recommended: true
+    given: "#McpOperations"
+    then:
+      field: "description"
+      function: truthy
+
+  mcp-input-parameter-type-valid:
+    message: "MCP input parameter type must be one of: string, number, boolean, array, object."
+    description: "The MCP protocol only supports these five JSON types for tool input parameters."
+    severity: error
+    recommended: true
+    given: "#McpInputParams.type"
+    then:
+      function: enumeration
+      functionOptions:
+        values:
+          - string
+          - number
+          - boolean
+          - array
+          - object
+
+  mcp-namespace-kebab-case:
+    message: "MCP expose namespace must be in kebab-case."
+    description: "MCP namespaces appear in tool names visible to agents — kebab-case is the convention."
+    severity: warn
+    recommended: true
+    given: "#McpExposes.namespace"
+    then:
+      function: casing
+      functionOptions:
+        type: kebab
+
+  mcp-output-no-integer:
+    message: "MCP output parameters must use `number`, not `integer` — MCP has no integer type."
+    description: "The MCP protocol represents all numeric values as `number`. Using `integer` causes type mismatch at runtime."
+    severity: error
+    recommended: true
+    given: "#McpOutputParams.type"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "^integer$"
+
+  mcp-operation-name-kebab-case:
+    message: "MCP tool names must be in kebab-case."
+    description: "Tool names are exposed directly to agents — consistent kebab-case naming avoids confusion."
+    severity: warn
+    recommended: true
+    given: "#McpOperations.name"
+    then:
+      function: casing
+      functionOptions:
+        type: kebab
+
+  mcp-input-parameter-description:
+    message: "MCP input parameters should have a `description`."
+    description: "Parameter descriptions help agents understand what values to provide when invoking a tool."
+    severity: warn
+    recommended: true
+    given: "#McpInputParams"
+    then:
+      field: "description"
+      function: truthy

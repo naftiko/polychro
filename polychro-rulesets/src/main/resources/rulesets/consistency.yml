@@ -1,0 +1,92 @@
+# polychro:consistency — Cross-object invariants and naming discipline
+extends: []
+
+aliases:
+  Consumes: "$.capability.consumes[*]"
+  ConsumesDirect: "$.consumes[*]"
+  Exposes: "$.capability.exposes[*]"
+  Operations: "$.capability.exposes[*].resources[*].operations[*]"
+  Steps: "$.capability.exposes[*].resources[*].operations[*].steps[*]"
+
+rules:
+
+  naming-convention-kebab:
+    message: "Identifiers must follow kebab-case convention."
+    description: "The Naftiko specification uses IdentifierKebab for all identifiers — mixed conventions cause lookup failures."
+    severity: warn
+    recommended: true
+    given:
+      - "#Consumes.namespace"
+      - "#ConsumesDirect.namespace"
+      - "#Exposes.namespace"
+      - "#Operations.name"
+      - "#Steps.name"
+    then:
+      function: casing
+      functionOptions:
+        type: kebab
+
+  consumer-namespace-unique:
+    message: "Consumer namespaces must be unique — duplicate namespaces cause ambiguous call resolution."
+    description: "When two consumers share a namespace, step `call` targets become ambiguous and the engine cannot determine which to invoke."
+    severity: error
+    recommended: true
+    given:
+      - "#Consumes.namespace"
+      - "#ConsumesDirect.namespace"
+    then:
+      function: truthy
+
+  expose-namespace-unique:
+    message: "Expose namespaces must be unique — duplicate namespaces cause deployment conflicts."
+    description: "Each exposed adapter occupies a unique namespace. Duplicates cause server registration failures at startup."
+    severity: error
+    recommended: true
+    given: "#Exposes.namespace"
+    then:
+      function: truthy
+
+  operation-name-present:
+    message: "Every operation must have a `name`."
+    description: "Operation names are used in URL routing, MCP tool identification, and step call targets."
+    severity: error
+    recommended: true
+    given: "#Operations"
+    then:
+      field: "name"
+      function: truthy
+
+  step-name-unique-in-operation:
+    message: "Step names must be unique within an operation."
+    description: "Step output is referenced by step name in output mappings. Duplicate names cause ambiguous resolution."
+    severity: error
+    recommended: true
+    given: "#Steps.name"
+    then:
+      function: truthy
+
+  resource-path-leading-slash:
+    message: "Consumed resource `path` must start with /."
+    description: "Resource paths are appended to baseUri — without a leading slash, the URL is malformed."
+    severity: warn
+    recommended: true
+    given:
+      - "$.consumes[?(@.type == 'http')].resources[*].path"
+      - "$.capability.consumes[?(@.type == 'http')].resources[*].path"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^/"
+
+  resource-path-no-query:
+    message: "Consumed resource `path` must not contain a query string — use parameters instead."
+    description: "Query strings in path templates are an anti-pattern. Use inputParameters with `in: query` instead."
+    severity: warn
+    recommended: true
+    given:
+      - "$.consumes[?(@.type == 'http')].resources[*].path"
+      - "$.capability.consumes[?(@.type == 'http')].resources[*].path"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "\\?"

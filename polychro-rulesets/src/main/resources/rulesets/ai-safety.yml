@@ -1,0 +1,71 @@
+# polychro:ai-safety — Catches patterns that fool schema validation but break at runtime
+# Extends polychro:governance for full baseline coverage.
+extends:
+  - governance.yml
+
+aliases:
+  Consumes: "$.capability.consumes[*]"
+  ConsumesDirect: "$.consumes[*]"
+  Exposes: "$.capability.exposes[*]"
+  Operations: "$.capability.exposes[*].resources[*].operations[*]"
+  Steps: "$.capability.exposes[*].resources[*].operations[*].steps[*]"
+
+rules:
+
+  # Override governance rules to elevate severity where safety demands it
+
+  consumer-base-uri-no-trailing-slash:
+    severity: error
+
+  consumer-base-uri-not-example:
+    severity: error
+
+  # ─── Runtime Safety Rules ───────────────────────────────────────────────────
+
+  no-trailing-slash:
+    message: "Consumer `baseUri` ends with `/` — causes double-slash in path resolution at runtime."
+    description: "When baseUri ends with / and resource paths start with /, the combined URL contains // which many servers reject or route incorrectly."
+    severity: error
+    recommended: true
+    given:
+      - "#Consumes.baseUri"
+      - "#ConsumesDirect.baseUri"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "/$"
+
+  empty-description:
+    message: "Description field is present but empty — worse than absent (signals completeness without substance)."
+    description: "An empty string description passes 'defined' checks but provides zero value. Either write a meaningful description or remove the field."
+    severity: warn
+    recommended: true
+    given:
+      - "$.info.description"
+      - "#Consumes.description"
+      - "#ConsumesDirect.description"
+      - "#Exposes.description"
+    then:
+      function: length
+      functionOptions:
+        min: 1
+
+  step-name-present:
+    message: "Every step must have a `name` for traceability."
+    description: "Step names appear in logs, error messages, and output parameter mappings. Unnamed steps break wiring."
+    severity: error
+    recommended: true
+    given: "#Steps"
+    then:
+      field: "name"
+      function: truthy
+
+  step-call-present:
+    message: "Every step must have a `call` target."
+    description: "A step without a call target does nothing — it is dead code in the orchestration pipeline."
+    severity: error
+    recommended: true
+    given: "#Steps"
+    then:
+      field: "call"
+      function: truthy

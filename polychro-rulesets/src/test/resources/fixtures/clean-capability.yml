@@ -1,0 +1,49 @@
+# A valid, clean Naftiko capability that passes all rulesets
+naftiko: 1.0.0-alpha3
+info:
+  name: clean-capability
+  version: 1.0.0
+  description: "A well-formed capability for integration testing with full compliance."
+  tags:
+    - integration
+    - test
+
+capability:
+  consumes:
+    - namespace: github-api
+      type: http
+      description: "GitHub REST API for repository operations."
+      baseUri: https://api.github.com
+      authentication:
+        type: bearer
+        token: "{{GITHUB_TOKEN}}"
+      resources:
+        - name: repos
+          path: /repos/{owner}/{repo}
+          operations:
+            - name: get-repo
+              method: GET
+              outputParameters:
+                - name: full-name
+                  mapping: full_name
+                  type: string
+
+  exposes:
+    - namespace: my-rest
+      type: rest
+      port: 8080
+      description: "Main REST API for repository data."
+      resources:
+        - path: /repos
+          description: "Repository information"
+          operations:
+            - name: get-repo
+              method: GET
+              description: "Fetch repository details from GitHub"
+              steps:
+                - name: fetch-repo
+                  call: github-api/repos/get-repo
+              outputParameters:
+                - name: repo-name
+                  mapping: fetch-repo.full-name
+                  type: string

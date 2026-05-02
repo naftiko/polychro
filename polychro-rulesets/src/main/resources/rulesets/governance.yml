@@ -1,0 +1,243 @@
+# polychro:governance — Default governance ruleset for Naftiko capabilities
+# The Naftiko equivalent of Spectral's default ruleset: structured into domain-specific
+# governance categories that mirror the capability specification's object model.
+extends: []
+
+aliases:
+  Consumes: "$.capability.consumes[*]"
+  ConsumesDirect: "$.consumes[*]"
+  Exposes: "$.capability.exposes[*]"
+  Operations: "$.capability.exposes[*].resources[*].operations[*]"
+  McpTools: "$.capability.exposes[?(@.type == 'mcp')].resources[*].operations[*]"
+  Steps: "$.capability.exposes[*].resources[*].operations[*].steps[*]"
+  Aggregates: "$.capability.aggregates[*].functions[*]"
+
+rules:
+
+  # ─── Metadata ───────────────────────────────────────────────────────────────
+
+  capability-name-present:
+    message: "Capability must declare `info.name`."
+    description: "Every capability needs a name for discoverability and identification."
+    severity: error
+    recommended: true
+    given: "$"
+    then:
+      field: "info"
+      function: defined
+
+  capability-description-present:
+    message: "Capability must have a description in `info.description`."
+    description: "Descriptions enable agents and humans to understand what a capability does without reading its implementation."
+    severity: warn
+    recommended: true
+    given: "$.info"
+    then:
+      field: "description"
+      function: truthy
+
+  capability-version-format:
+    message: "Capability `info.version` must follow semver format (e.g. 1.0.0)."
+    description: "Semantic versioning signals compatibility and change scope."
+    severity: warn
+    recommended: true
+    given: "$.info.version"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^\\d+\\.\\d+\\.\\d+"
+
+  capability-description-min-length:
+    message: "Capability description should be at least 20 characters."
+    description: "Short descriptions provide insufficient context for agent discovery."
+    severity: info
+    recommended: true
+    given: "$.info.description"
+    then:
+      function: length
+      functionOptions:
+        min: 20
+
+  # ─── Consumer ───────────────────────────────────────────────────────────────
+
+  consumer-base-uri-no-trailing-slash:
+    message: "Consumer `baseUri` must not have a trailing slash — causes double-slash in path resolution."
+    description: "A trailing slash on baseUri combined with a leading slash on resource paths produces // in the URL."
+    severity: warn
+    recommended: true
+    given:
+      - "#Consumes.baseUri"
+      - "#ConsumesDirect.baseUri"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "/$"
+
+  consumer-base-uri-not-example:
+    message: "Consumer `baseUri` must not point to example.com — use a real endpoint."
+    description: "example.com URIs indicate placeholder content that was never replaced with actual API endpoints."
+    severity: warn
+    recommended: true
+    given:
+      - "#Consumes.baseUri"
+      - "#ConsumesDirect.baseUri"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "example\\.com"
+
+  consumer-base-uri-https:
+    message: "Consumer `baseUri` must start with https:// or http://."
+    description: "Base URIs must be valid HTTP(S) URLs."
+    severity: warn
+    recommended: true
+    given:
+      - "#Consumes.baseUri"
+      - "#ConsumesDirect.baseUri"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^https?://"
+
+  consumer-type-declared:
+    message: "Consumer must declare a `type` (http, graphql, grpc, soap)."
+    description: "The type field determines how the framework connects to the upstream API."
+    severity: error
+    recommended: true
+    given:
+      - "#Consumes"
+      - "#ConsumesDirect"
+    then:
+      field: "type"
+      function: defined
+
+  consumer-description-present:
+    message: "Each consumer should have a `description` explaining its purpose."
+    description: "Agents use consumer descriptions to decide which upstream API to call."
+    severity: warn
+    recommended: true
+    given:
+      - "#Consumes"
+      - "#ConsumesDirect"
+    then:
+      field: "description"
+      function: truthy
+
+  # ─── Operations ─────────────────────────────────────────────────────────────
+
+  operation-description-present:
+    message: "Each exposed operation should have a `description`."
+    description: "Descriptions are essential for MCP tool discovery and REST API documentation."
+    severity: warn
+    recommended: true
+    given: "#Operations"
+    then:
+      field: "description"
+      function: truthy
+
+  operation-steps-non-empty:
+    message: "Exposed operations must have at least one step."
+    description: "An operation without steps produces no output — it is unreachable logic."
+    severity: error
+    recommended: true
+    given: "#Operations"
+    then:
+      field: "steps"
+      function: truthy
+
+  # ─── Orchestration ──────────────────────────────────────────────────────────
+
+  step-call-format:
+    message: "Step `call` must follow the format `namespace/resource/operation`."
+    description: "The call field identifies which consumed operation to invoke."
+    severity: error
+    recommended: true
+    given: "#Steps.call"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^[a-z][a-z0-9-]*/[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$"
+
+  # ─── Expose ─────────────────────────────────────────────────────────────────
+
+  expose-namespace-present:
+    message: "Each exposed adapter must declare a `namespace`."
+    description: "The namespace identifies the adapter and must be unique across all exposes."
+    severity: error
+    recommended: true
+    given: "#Exposes"
+    then:
+      field: "namespace"
+      function: truthy
+
+  expose-description-present:
+    message: "Each exposed adapter should have a `description`."
+    description: "Descriptions help teams understand what each adapter serves."
+    severity: warn
+    recommended: true
+    given: "#Exposes"
+    then:
+      field: "description"
+      function: truthy
+
+  expose-type-valid:
+    message: "Expose type must be one of: rest, mcp, skill, control."
+    description: "Only supported adapter types can be deployed by the framework."
+    severity: error
+    recommended: true
+    given: "#Exposes.type"
+    then:
+      function: enumeration
+      functionOptions:
+        values:
+          - rest
+          - mcp
+          - skill
+          - control
+
+  # ─── Tagging ────────────────────────────────────────────────────────────────
+
+  capability-tags-present:
+    message: "Capability should declare `info.tags` for discoverability."
+    description: "Tags enable filtering, grouping, and progressive adoption of capabilities."
+    severity: info
+    recommended: true
+    given: "$.info"
+    then:
+      field: "tags"
+      function: defined
+
+  tags-kebab-case:
+    message: "Tags must be in kebab-case."
+    description: "Consistent tag naming enables reliable filtering and matching."
+    severity: warn
+    recommended: true
+    given: "$.info.tags[*]"
+    then:
+      function: casing
+      functionOptions:
+        type: kebab
+
+  expose-namespace-kebab-case:
+    message: "Expose namespace must be in kebab-case."
+    description: "Namespaces are identifiers that appear in URLs and tool names — kebab-case is the standard."
+    severity: warn
+    recommended: true
+    given: "#Exposes.namespace"
+    then:
+      function: casing
+      functionOptions:
+        type: kebab
+
+  consumer-namespace-kebab-case:
+    message: "Consumer namespace must be in kebab-case."
+    description: "Namespaces are referenced in step call targets — consistent casing prevents wiring errors."
+    severity: warn
+    recommended: true
+    given:
+      - "#Consumes.namespace"
+      - "#ConsumesDirect.namespace"
+    then:
+      function: casing
+      functionOptions:
+        type: kebab

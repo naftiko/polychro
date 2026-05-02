@@ -1,0 +1,102 @@
+# polychro:security — Hardened security posture for production specs
+extends: []
+
+aliases:
+  Consumes: "$.capability.consumes[*]"
+  ConsumesDirect: "$.consumes[*]"
+  Exposes: "$.capability.exposes[*]"
+  Descriptions: "$.info.description"
+
+rules:
+
+  no-hardcoded-secrets:
+    message: "Authentication blocks must not contain literal tokens or passwords — use `externalRef`."
+    description: "Hardcoded secrets in YAML files are a critical security risk — they end up in version control and CI logs."
+    severity: error
+    recommended: true
+    given:
+      - "#Consumes.authentication.token"
+      - "#ConsumesDirect.authentication.token"
+      - "#Consumes.authentication.password"
+      - "#ConsumesDirect.authentication.password"
+      - "#Consumes.authentication.apiKey"
+      - "#ConsumesDirect.authentication.apiKey"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^\\{\\{"
+
+  no-eval-in-descriptions:
+    message: "Description fields must not contain `eval(`, `Function(`, or `javascript:` — injection vector."
+    description: "Agent-generated specs must not contain code execution vectors in text fields that may be rendered in UIs."
+    severity: error
+    recommended: true
+    given:
+      - "$.info.description"
+      - "$.info.label"
+      - "#Consumes.description"
+      - "#ConsumesDirect.description"
+      - "#Exposes.description"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "(eval\\(|Function\\(|javascript:)"
+
+  no-script-tags:
+    message: "Description fields must not contain `<script>` tags."
+    description: "Script tags in descriptions could lead to XSS if rendered in web UIs."
+    severity: error
+    recommended: true
+    given:
+      - "$.info.description"
+      - "$.info.label"
+      - "#Consumes.description"
+      - "#ConsumesDirect.description"
+      - "#Exposes.description"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "<script"
+
+  no-example-uris:
+    message: "Consumer `baseUri` must not contain `example.com`, `localhost`, or `127.0.0.1`."
+    description: "These placeholder URIs indicate incomplete configuration that must not reach production."
+    severity: warn
+    recommended: true
+    given:
+      - "#Consumes.baseUri"
+      - "#ConsumesDirect.baseUri"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "(example\\.com|localhost|127\\.0\\.0\\.1)"
+
+  external-ref-for-secrets:
+    message: "Authentication credentials must use `externalRef` — inline secrets are forbidden."
+    description: "Secrets must be sourced from external stores (Vault, k8s secrets, env vars) via externalRef or binds."
+    severity: error
+    recommended: true
+    given:
+      - "#Consumes.authentication.token"
+      - "#ConsumesDirect.authentication.token"
+      - "#Consumes.authentication.password"
+      - "#ConsumesDirect.authentication.password"
+      - "#Consumes.authentication.apiKey"
+      - "#ConsumesDirect.authentication.apiKey"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^\\{\\{"
+
+  no-http-base-uri:
+    message: "Consumer `baseUri` should use `https://` — insecure HTTP is discouraged for production."
+    description: "HTTP without TLS exposes credentials and data in transit. Use HTTPS unless explicitly overridden."
+    severity: warn
+    recommended: true
+    given:
+      - "#Consumes.baseUri"
+      - "#ConsumesDirect.baseUri"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "^http://"
