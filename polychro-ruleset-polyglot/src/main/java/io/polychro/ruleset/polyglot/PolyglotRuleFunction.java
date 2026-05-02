@@ -22,6 +22,7 @@ import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.ResourceLimits;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
+import org.graalvm.polyglot.io.IOAccess;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,7 +93,7 @@ class PolyglotRuleFunction implements RuleFunction {
         return Context.newBuilder(languageId)
                 .engine(engine)
                 .allowHostAccess(HostAccess.NONE)
-                .allowIO(false)
+                .allowIO(IOAccess.NONE)
                 .allowCreateThread(false)
                 .allowNativeAccess(false)
                 .allowHostClassLookup(className -> false)

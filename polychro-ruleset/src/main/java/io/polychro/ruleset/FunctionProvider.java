@@ -15,7 +15,6 @@ package io.polychro.ruleset;
 
 import java.util.List;
 import java.util.ServiceLoader;
-import java.util.stream.Collectors;
 
 /**
  * SPI for providing custom rule functions.

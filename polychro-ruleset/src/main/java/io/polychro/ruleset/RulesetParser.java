@@ -111,9 +111,8 @@ class RulesetParser {
             return Map.of();
         }
         Map<String, String> aliases = new LinkedHashMap<>();
-        var fields = node.fields();
-        while (fields.hasNext()) {
-            var entry = fields.next();
+        var fields = node.properties();
+        for (var entry : fields) {
             JsonNode value = entry.getValue();
             if (value.isTextual()) {
                 aliases.put(entry.getKey(), value.asText());
@@ -154,9 +153,8 @@ class RulesetParser {
             return Map.of();
         }
         Map<String, Rule> rules = new LinkedHashMap<>();
-        var fields = node.fields();
-        while (fields.hasNext()) {
-            var entry = fields.next();
+        var fields = node.properties();
+        for (var entry : fields) {
             String ruleName = entry.getKey();
             JsonNode ruleNode = entry.getValue();
             rules.put(ruleName, parseRule(ruleName, ruleNode));

@@ -13,7 +13,6 @@
  */
 package io.polychro.ruleset;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Document;
 import io.polychro.spi.Severity;

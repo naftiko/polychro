@@ -120,9 +120,8 @@ public class LinterConfig {
         Map<String, Map<String, Object>> validatorConfigs = new LinkedHashMap<>();
         if (root.has("config") && root.get("config").isObject()) {
             var configNode = root.get("config");
-            var fields = configNode.fields();
-            while (fields.hasNext()) {
-                var entry = fields.next();
+            var fields = configNode.properties();
+            for (var entry : fields) {
                 Map<String, Object> props = YAML_MAPPER.convertValue(entry.getValue(), Map.class);
                 validatorConfigs.put(entry.getKey(), props);
             }

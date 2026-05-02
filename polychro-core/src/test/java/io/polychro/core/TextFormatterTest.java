@@ -15,7 +15,6 @@ package io.polychro.core;
 
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Severity;
-import io.polychro.spi.SourceRange;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

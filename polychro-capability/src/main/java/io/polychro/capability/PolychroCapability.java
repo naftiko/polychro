@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.naftiko.Capability;
-import io.naftiko.engine.step.StepHandler;
 import io.naftiko.engine.step.StepHandlerRegistry;
 import io.naftiko.spec.NaftikoSpec;
 import io.polychro.core.Linter;
@@ -39,7 +38,7 @@ public class PolychroCapability extends Capability {
     /**
      * Builder for constructing a {@link PolychroCapability}.
      */
-    public static class Builder {
+    public static class Builder extends Capability.Builder {
 
         private LinterConfig linterConfig;
         private Path configPath;

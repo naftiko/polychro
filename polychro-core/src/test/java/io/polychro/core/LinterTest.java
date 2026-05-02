@@ -17,15 +17,9 @@ import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Document;
 import io.polychro.spi.Severity;
 import io.polychro.spi.Validator;
-import io.polychro.spi.ValidatorConfig;
-import io.polychro.spi.ValidatorFactory;
 import org.junit.jupiter.api.Test;
 
-import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Map;
-import java.util.ServiceLoader;
 
 import static org.junit.jupiter.api.Assertions.*;
 

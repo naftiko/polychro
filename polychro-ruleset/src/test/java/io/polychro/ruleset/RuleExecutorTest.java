@@ -15,7 +15,6 @@ package io.polychro.ruleset;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.MissingNode;
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Severity;
 import org.junit.jupiter.api.BeforeEach;

@@ -18,7 +18,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TextNode;
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Document;
-import io.polychro.spi.Severity;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

@@ -13,7 +13,6 @@
  */
 package io.polychro.markdown;
 
-import io.polychro.spi.Diagnostic;
 import io.polychro.spi.ValidatorConfig;
 import io.polychro.spi.Validator;
 import org.junit.jupiter.api.Test;

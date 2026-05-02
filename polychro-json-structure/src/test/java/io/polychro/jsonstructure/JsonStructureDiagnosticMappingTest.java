@@ -13,10 +13,7 @@
  */
 package io.polychro.jsonstructure;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.polychro.spi.Diagnostic;
-import io.polychro.spi.Document;
 import io.polychro.spi.Severity;
 import io.polychro.spi.SourceRange;
 import org.json_structure.validation.JsonLocation;
@@ -24,14 +21,9 @@ import org.json_structure.validation.ValidationError;
 import org.json_structure.validation.ValidationSeverity;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-import java.util.Map;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 class JsonStructureDiagnosticMappingTest {
-
-    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Test
     void mapSeverityShouldMapErrorToError() {

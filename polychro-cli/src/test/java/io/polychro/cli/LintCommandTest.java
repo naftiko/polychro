@@ -22,8 +22,6 @@ import io.polychro.core.TextFormatter;
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Severity;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;

@@ -15,7 +15,6 @@ package io.polychro.core;
 
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Document;
-import io.polychro.spi.Severity;
 import io.polychro.spi.Validator;
 import io.polychro.spi.ValidatorConfig;
 import io.polychro.spi.ValidatorFactory;
