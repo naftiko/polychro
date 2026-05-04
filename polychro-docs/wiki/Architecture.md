@@ -6,47 +6,47 @@ Polychro runs validators in a defined order. Each layer builds on the previous:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     Document Input                            │
-│              (YAML string, JSON string, file path)            │
+│                     Document Input                          │
+│              (YAML string, JSON string, file path)          │
 └─────────────────────┬───────────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              1. Well-Formedness Validator                     │
-│     Duplicate keys, encoding, depth limits, YAML traps       │
-│                                                              │
-│     ⚡ Fail-fast: if errors here, skip remaining layers      │
+│              1. Well-Formedness Validator                   │
+│     Duplicate keys, encoding, depth limits, YAML traps      │
+│                                                             │
+│     ⚡ Fail-fast: if errors here, skip remaining layers     │
 └─────────────────────┬───────────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              2. Schema Validator                              │
-│     JSON Schema Draft 2020-12 conformance                    │
+│              2. Schema Validator                            │
+│     JSON Schema Draft 2020-12 conformance                   │
 └─────────────────────┬───────────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              3. JSON Structure Validator (optional)           │
-│     Strict typing via JSON Structure standard                │
+│              3. JSON Structure Validator (optional)         │
+│     Strict typing via JSON Structure standard               │
 └─────────────────────┬───────────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              4. Ruleset Validator                             │
-│     Spectral-format rules with JSONPath + functions          │
-│     Built-in functions + polyglot custom functions           │
+│              4. Ruleset Validator                           │
+│     Spectral-format rules with JSONPath + functions         │
+│     Built-in functions + polyglot custom functions          │
 └─────────────────────┬───────────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              5. Markdown Validator (if applicable)            │
-│     Heading hierarchy, link validation                       │
+│              5. Markdown Validator (if applicable)          │
+│     Heading hierarchy, link validation                      │
 └─────────────────────┬───────────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              Merged Diagnostics                               │
-│     Deduplicated, sorted by severity, line-referenced        │
+│              Merged Diagnostics                             │
+│     Deduplicated, sorted by severity, line-referenced       │
 └─────────────────────────────────────────────────────────────┘
 ```
 

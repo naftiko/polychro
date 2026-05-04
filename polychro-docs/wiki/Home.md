@@ -15,7 +15,7 @@ When AI agents generate specifications at scale, deterministic linting is the es
 | JSON Schema Validation | Draft 2020-12 schema validation with structured diagnostics |
 | JSON Structure Validation | Strict typing via the [JSON Structure](https://json-structure.org/) standard |
 | Well-Formedness Checks | Duplicate keys, encoding, depth limits, YAML-specific traps |
-| Markdown Linting | Heading hierarchy, internal links, relative file references |
+| Markdown Linting | Heading hierarchy, internal links, relative file references, external link verification |
 | Unified Diagnostics | All validators produce the same `Diagnostic` format — one pipeline, one output |
 | Embeddable Java API | In-process linting for JVM applications — no subprocess, no Node.js |
 | Pluggable SPI | Add custom validators via `ServiceLoader` — zero framework coupling |
