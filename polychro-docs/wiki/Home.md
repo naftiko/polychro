@@ -1,4 +1,4 @@
-# Home
+<img src="https://naftiko.github.io/docs/images/logos/logo_polychro_horizontal.png" width="300">
 
 Welcome to Polychro, a deterministic linting engine for spec-driven development. Polychro validates YAML and JSON specification files — combining schema conformance, cross-object consistency rules, document well-formedness, and structural checks — in a single, embeddable pipeline.
 
