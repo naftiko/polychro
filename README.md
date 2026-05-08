@@ -8,7 +8,7 @@ Designed for AI agent loops where non-deterministic generation needs determinist
 
 | Feature | Description |
 |---|---|
-| CLI | Single binary — lint any YAML/JSON spec from the command line |
+| CLI | Single binary — lint any YAML/JSON/Mardown spec from the command line |
 | MCP Server Mode | Expose linting as MCP tools for AI agent consumption |
 | Native Executable | Standalone binaries for **Linux**, **macOS**, and **Windows** — no JVM required |
 | GitHub Action | Lint specs in CI with structured SARIF output |
