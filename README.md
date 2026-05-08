@@ -1,4 +1,4 @@
-# Polychro
+<img src="https://naftiko.github.io/docs/images/logos/logo_polychro_horizontal.png" width="300">
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
