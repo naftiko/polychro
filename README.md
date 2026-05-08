@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
-Polychro is a deterministic linting engine for spec-driven development. It validates YAML and JSON specification files — schema conformance, cross-object consistency rules, document well-formedness, and structural checks — in a single, embeddable pipeline with sub-second latency.
+Polychro is a deterministic linting engine for spec-driven development. It validates YAML, JSON and Markdown specification files — schema conformance, cross-object consistency rules, document well-formedness, and structural checks — in a single, embeddable pipeline with sub-second latency.
 
 Designed for AI agent loops where non-deterministic generation needs deterministic guardrails.
 
