@@ -206,6 +206,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow. Key rules:
 - **All GitHub interactions must be in English** — issues, PR titles/bodies, inline review
   comments, and commit messages.
 - Branch from `main`: `feat/`, `fix/`, or `chore/` prefix.
+- **Always `git fetch` + `git pull` (or rebase on origin) before starting any work** on an
+  existing branch — another agent or contributor may have pushed commits in the meantime.
 - Use [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `chore:` —
   no scopes for now.
 - `AGENTS.md` improvements are `feat:`, not `chore:`.
