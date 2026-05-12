@@ -152,16 +152,4 @@
         </pluginManagement>
     </build>
 
-    <repositories>
-        <!-- Workaround for naftiko/framework#433: restlet classes are not fully inlined
-             by the framework's shade plugin. Explicit dep + this repo fixes the gap. -->
-        <repository>
-            <id>talend-restlet</id>
-            <name>Talend Restlet Repository</name>
-            <url>https://maven.restlet.talend.com/</url>
-            <releases><enabled>true</enabled></releases>
-            <snapshots><enabled>false</enabled></snapshots>
-        </repository>
-    </repositories>
-
 </project>
