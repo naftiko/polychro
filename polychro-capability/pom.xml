@@ -51,6 +51,22 @@
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- Workaround for naftiko/framework#433: the framework's shade plugin does not fully
+             inline restlet classes, causing NoClassDefFoundError at test time. Remove this
+             dependency once the upstream issue is fixed. -->
+        <dependency>
+            <groupId>org.restlet</groupId>
+            <artifactId>org.restlet</artifactId>
+            <version>2.7.0-m2</version>
+        </dependency>
+
+        <!-- Workaround for naftiko/framework#433: same shading issue with the MCP SDK. -->
+        <dependency>
+            <groupId>io.modelcontextprotocol.sdk</groupId>
+            <artifactId>mcp-core</artifactId>
+            <version>1.0.0</version>
+        </dependency>
     </dependencies>
 
     <build>
