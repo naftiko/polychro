@@ -45,6 +45,12 @@ class CheckovRunner {
         try {
             Process process = startProcess(command);
 
+            if (Thread.interrupted()) {
+                process.destroyForcibly();
+                Thread.currentThread().interrupt();
+                return new CheckovExecutionResult(null, "Checkov interrupted", -1);
+            }
+
             boolean completed = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
 
             if (!completed) {
