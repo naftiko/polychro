@@ -28,4 +28,14 @@ Closes #<!-- issue number -->
 
 ## Agent Context (optional)
 
-<!-- If this PR was created or assisted by an AI agent, provide metadata below (YAML) -->
+<!-- If this PR was created or assisted by an AI agent, provide metadata below (YAML)
+
+agent_name:
+llm:
+tool:
+confidence:          # low | medium | high
+source_event:
+discovery_method:    # code_review | test_failure | user_report | runtime_observation
+files_suspected:
+  -
+-->
