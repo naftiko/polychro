@@ -85,8 +85,10 @@ public class AgentFormatter implements DiagnosticFormatter {
         summary.put("info", infos);
         root.set("summary", summary);
 
-        String json = root.toPrettyString();
-        root.put("tokens", estimateTokens(json));
+        // Compute token estimate on the JSON without the "tokens" field, then add it.
+        // This ensures the returned JSON and the counted JSON are the same object.
+        String jsonWithoutTokens = root.toPrettyString();
+        root.put("tokens", estimateTokens(jsonWithoutTokens));
 
         return root.toPrettyString();
     }
