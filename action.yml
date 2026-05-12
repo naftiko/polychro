@@ -60,12 +60,12 @@ runs:
           mkdir -p "$HOME/.polychro/bin"
           VERSION="${{ inputs.version }}"
           if [ "$VERSION" = "latest" ]; then
-            VERSION=$(curl -sL https://api.github.com/repos/naftiko/polychro/releases/latest | grep '"tag_name"' | sed 's/.*"v\(.*\)".*/\1/')
+            VERSION=$(curl -fSL https://api.github.com/repos/naftiko/polychro/releases/latest | grep '"tag_name"' | sed 's/.*"v\(.*\)".*/\1/')
           fi
           OS=$(uname -s | tr '[:upper:]' '[:lower:]')
           ARCH=$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/')
           BINARY="polychro-${OS}-${ARCH}"
-          curl -sL "https://github.com/naftiko/polychro/releases/download/v${VERSION}/${BINARY}" -o "$POLYCHRO_BIN"
+          curl -fSL "https://github.com/naftiko/polychro/releases/download/v${VERSION}/${BINARY}" -o "$POLYCHRO_BIN"
           chmod +x "$POLYCHRO_BIN"
         fi
         echo "$HOME/.polychro/bin" >> "$GITHUB_PATH"
@@ -102,7 +102,7 @@ runs:
         fi
 
         SARIF_FILE="${RUNNER_TEMP}/polychro-results.sarif"
-        polychro $ARGS $FILES > "$SARIF_FILE" 2>/tmp/polychro.err || true
+        polychro $ARGS $FILES > "$SARIF_FILE" 2>"${RUNNER_TEMP}/polychro.err" || true
 
         echo "sarif-file=$SARIF_FILE" >> "$GITHUB_OUTPUT"
 

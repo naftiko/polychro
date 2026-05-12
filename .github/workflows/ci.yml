@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ "**" ]
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   build:
     name: Build & Test (Java 21)
@@ -26,7 +30,8 @@ jobs:
           server-password: MAVEN_PASSWORD
 
       - name: Build and verify
-        # polychro-capability and polychro-cli require io.ikanos:ikanos from GitHub Packages.
+        # polychro-capability and polychro-cli require io.ikanos:ikanos-engine and
+        # io.ikanos:ikanos-spec from GitHub Packages.
         # setup-java injects credentials via server-id: github-naftiko (matches pom.xml repo id).
         run: mvn -B clean verify
         env:
