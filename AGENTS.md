@@ -94,6 +94,13 @@ mvn install -DskipTests
 cd ../polychro
 ```
 
+`io.ikanos:ikanos:1.0.0-alpha3-SNAPSHOT` is published to GitHub Packages
+(`maven.pkg.github.com/naftiko/ikanos`). **Note:** GitHub Packages Maven always requires
+authentication even for public packages — the CI workflow uses `setup-java` with
+`server-id: github-naftiko` + `secrets.GITHUB_TOKEN` to authenticate. Locally, configure
+`~/.m2/settings.xml` with a Personal Access Token (read:packages scope), or install
+the jar locally via `mvn install -DskipTests` from the ikanos repo.
+
 The CI workflow excludes `polychro-capability` and `polychro-cli` (`--pl '!polychro-capability,!polychro-cli'`) until the SNAPSHOT
 is published to GitHub Packages (`maven.pkg.github.com/naftiko/ikanos`). Once published,
 remove the exclusion and add the `setup-java` `server-id: github-naftiko` credentials block.
