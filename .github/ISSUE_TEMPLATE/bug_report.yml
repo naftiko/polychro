@@ -82,6 +82,11 @@ body:
         agent_name:
         llm:
         tool:
+        confidence:          # low | medium | high
+        source_event:
+        discovery_method:    # runtime_observation | code_review | test_failure | user_report
+        files_suspected:
+          -
       render: yaml
     validations:
       required: false
