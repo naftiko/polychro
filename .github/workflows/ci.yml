@@ -21,9 +21,14 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
+          server-id: github-naftiko
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
 
       - name: Build and verify
-        # polychro-capability depends on io.ikanos:ikanos which is not yet published
-        # to GitHub Packages. polychro-cli depends on polychro-capability.
-        # Both are excluded until the SNAPSHOT is available upstream.
-        run: mvn -B clean verify --pl '!polychro-capability,!polychro-cli'
+        # polychro-capability and polychro-cli require io.ikanos:ikanos from GitHub Packages.
+        # setup-java injects credentials via server-id: github-naftiko (matches pom.xml repo id).
+        run: mvn -B clean verify
+        env:
+          MAVEN_USERNAME: ${{ github.actor }}
+          MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
