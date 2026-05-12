@@ -1,0 +1,71 @@
+name: Feature Request
+description: Suggest a new feature or improvement for Polychro
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which component does this feature relate to?
+      options:
+        - Core Engine (polychro-core)
+        - CLI (polychro-cli)
+        - MCP Capability (polychro-capability)
+        - Validators (json-schema, json-structure, wellformedness, markdown, checkov)
+        - Rulesets (polychro-rulesets)
+        - GitHub Action (polychro-github-action)
+        - Go SDK (polychro-go)
+        - Node.js SDK (polychro-node)
+        - Python SDK (polychro-python)
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem & Motivation
+      description: What is the current limitation? What problem does this solve?
+      placeholder: As a user/agent, I can't currently...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative approaches you've considered?
+    validations:
+      required: false
+
+  - type: textarea
+    id: example
+    attributes:
+      label: Example
+      description: Illustrate with a CLI invocation, ruleset snippet, or usage example
+      render: yaml
+    validations:
+      required: false
+
+  - type: textarea
+    id: agent-context
+    attributes:
+      label: Agent Context (optional)
+      description: |
+        If this issue was created or assisted by an AI agent, paste agent metadata here (YAML).
+      placeholder: |
+        agent_name:
+        llm:
+        tool:
+      render: yaml
+    validations:
+      required: false
