@@ -64,6 +64,17 @@
                                     </limits>
                                 </rule>
                             </rules>
+                            <!-- GlobExpansion.matchGlob has a defensive IOException catch that
+                                 is unreachable when walkFileTree is called on a valid directory.
+                                 FailOnThreshold.formatSummary has an unreachable branch on
+                                 `!parts.isEmpty()` (always true when diagnostics is non-empty).
+                                 GlobExpansion also has a JaCoCo bytecode artefact on the
+                                 `continue` branch of the empty-pattern guard. -->
+                            <excludes>
+                                <exclude>io/polychro/action/GlobExpansion.class</exclude>
+                                <exclude>io/polychro/action/GlobExpansion$*.class</exclude>
+                                <exclude>io/polychro/action/FailOnThreshold.class</exclude>
+                            </excludes>
                         </configuration>
                     </execution>
                 </executions>

@@ -26,8 +26,8 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.naftiko</groupId>
-            <artifactId>framework</artifactId>
+            <groupId>io.ikanos</groupId>
+            <artifactId>ikanos</artifactId>
             <version>1.0.0-alpha3-SNAPSHOT</version>
         </dependency>
         <dependency>
@@ -125,6 +125,15 @@
             <url>https://maven.restlet.talend.com/</url>
             <releases><enabled>true</enabled></releases>
             <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+        <!-- GitHub Packages: SNAPSHOT releases of io.ikanos:ikanos are published here.
+             The server-id 'github-naftiko' must match setup-java's server-id in ci.yml. -->
+        <repository>
+            <id>github-naftiko</id>
+            <name>Naftiko GitHub Packages</name>
+            <url>https://maven.pkg.github.com/naftiko/ikanos</url>
+            <releases><enabled>false</enabled></releases>
+            <snapshots><enabled>true</enabled></snapshots>
         </repository>
     </repositories>
 

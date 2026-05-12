@@ -23,4 +23,6 @@ jobs:
           cache: maven
 
       - name: Build and verify
-        run: mvn -B clean verify
+        # polychro-capability depends on io.naftiko:ikanos which is not yet published
+        # to GitHub Packages. Exclude it until the SNAPSHOT is available upstream.
+        run: mvn -B clean verify --pl '!polychro-capability'

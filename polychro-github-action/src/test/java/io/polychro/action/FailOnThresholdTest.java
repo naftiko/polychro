@@ -141,4 +141,12 @@ class FailOnThresholdTest {
         List<Diagnostic> diagnostics = List.of(diag(Severity.WARN));
         assertEquals(0, FailOnThreshold.computeExitCode(diagnostics, "unknown"));
     }
+
+    @Test
+    void formatSummaryShouldIncludeHintCount() {
+        List<Diagnostic> diagnostics = List.of(diag(Severity.HINT));
+        String summary = FailOnThreshold.formatSummary(diagnostics);
+        assertTrue(summary.contains("1 issue(s) found"));
+        assertTrue(summary.contains("1 hint(s)"));
+    }
 }

@@ -17,8 +17,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -102,5 +105,25 @@ class GlobExpansionTest {
 
         List<Path> results = GlobExpansion.expand(tempDir, "*.yml,,");
         assertEquals(1, results.size());
+    }
+
+    @Test
+    void matchGlobShouldThrowUncheckedIoExceptionOnUnreadableDir(@TempDir Path outer) throws IOException {
+        boolean posix = FileSystems.getDefault().supportedFileAttributeViews().contains("posix");
+        if (!posix) {
+            // Skip on non-POSIX (Windows): directory locking is not reliable
+            return;
+        }
+
+        Path locked = outer.resolve("locked");
+        Files.createDirectory(locked);
+        Files.setPosixFilePermissions(locked, PosixFilePermissions.fromString("---------"));
+
+        try {
+            assertThrows(UncheckedIOException.class,
+                    () -> GlobExpansion.matchGlob(locked, "**/*.yml"));
+        } finally {
+            Files.setPosixFilePermissions(locked, PosixFilePermissions.fromString("rwx------"));
+        }
     }
 }

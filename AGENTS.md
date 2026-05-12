@@ -83,9 +83,9 @@ cd polychro-python && pip install -e ".[dev]" && pytest
 
 ### Known Bootstrap Issue — `polychro-capability`
 
-`polychro-capability` depends on `io.naftiko:framework:1.0.0-alpha3-SNAPSHOT`, which is not
-published to Maven Central. Before running `mvn -B clean verify` for the first time, install the
-framework locally:
+`polychro-capability` depends on `io.ikanos:ikanos:1.0.0-alpha3-SNAPSHOT` (the Naftiko framework,
+formerly named `framework`), which is not yet published to GitHub Packages or Maven Central.
+Before running `mvn -B clean verify` for the first time, install it locally:
 
 ```bash
 # From the ikanos repo root (local folder: ../framework/ — pending rename)
@@ -94,13 +94,16 @@ mvn install -DskipTests
 cd ../polychro
 ```
 
+The CI workflow excludes `polychro-capability` (`--pl '!polychro-capability'`) until the SNAPSHOT
+is published to GitHub Packages (`maven.pkg.github.com/naftiko/ikanos`). Once published,
+remove the exclusion and add the `setup-java` `server-id: github-naftiko` credentials block.
+
 The framework's `maven-shade-plugin` does not fully inline restlet and the MCP SDK into the
 published jar, causing `NoClassDefFoundError` at test time (tracked in
 [naftiko/framework#433](https://github.com/naftiko/framework/issues/433)).
 The workaround (explicit `org.restlet:org.restlet:2.7.0-m2` and
 `io.modelcontextprotocol.sdk:mcp-core:1.0.0` dependencies + Talend repository) is already
-applied in `polychro-capability/pom.xml` and the parent `pom.xml` — all 31
-`PolychroCapabilityTest` tests pass.
+applied in `polychro-capability/pom.xml` — all 31 `PolychroCapabilityTest` tests pass locally.
 
 **Separate known issue:** `polychro-rulesets` fails the JaCoCo coverage check on `main` — this
 is a pre-existing gap unrelated to the framework bootstrap.
