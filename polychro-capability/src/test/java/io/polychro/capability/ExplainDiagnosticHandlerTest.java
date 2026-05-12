@@ -13,7 +13,7 @@
  */package io.polychro.capability;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.naftiko.engine.step.StepHandlerContext;
+import io.ikanos.engine.step.StepHandlerContext;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;

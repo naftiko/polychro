@@ -15,9 +15,9 @@
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import io.naftiko.Capability;
-import io.naftiko.engine.step.StepHandlerRegistry;
-import io.naftiko.spec.NaftikoSpec;
+import io.ikanos.Capability;
+import io.ikanos.engine.step.StepHandlerRegistry;
+import io.ikanos.spec.IkanosSpec;
 import io.polychro.core.Linter;
 import io.polychro.core.LinterConfig;
 
@@ -35,7 +35,7 @@ import java.util.Map;
  */
 public class PolychroCapability extends Capability {
 
-    PolychroCapability(NaftikoSpec spec, StepHandlerRegistry registry) throws Exception {
+    PolychroCapability(IkanosSpec spec, StepHandlerRegistry registry) throws Exception {
         super(spec);
         setStepHandlerRegistry(registry);
     }
@@ -94,7 +94,7 @@ public class PolychroCapability extends Capability {
             LinterConfig effectiveConfig = resolveConfig();
             Linter linter = Linter.builder().config(effectiveConfig).build();
 
-            NaftikoSpec spec = loadSpec();
+            IkanosSpec spec = loadSpec();
             StepHandlerRegistry registry = new StepHandlerRegistry();
             registry.register("do-lint", new LintHandler(linter));
             registry.register("do-validate-schema", new ValidateSchemaHandler(effectiveConfig));
@@ -118,7 +118,7 @@ public class PolychroCapability extends Capability {
             return LinterConfig.defaults();
         }
 
-        private NaftikoSpec loadSpec() {
+        private IkanosSpec loadSpec() {
             try (InputStream is = getClass().getResourceAsStream("/polychro-capability.yml")) {
                 if (is == null) {
                     throw new IllegalStateException(
@@ -126,7 +126,7 @@ public class PolychroCapability extends Capability {
                 }
                 ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
                 mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-                return mapper.readValue(is, NaftikoSpec.class);
+                return mapper.readValue(is, IkanosSpec.class);
             } catch (IllegalStateException e) {
                 throw e;
             } catch (Exception e) {

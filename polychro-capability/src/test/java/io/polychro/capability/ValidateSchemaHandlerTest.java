@@ -13,7 +13,7 @@
  */package io.polychro.capability;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.naftiko.engine.step.StepHandlerContext;
+import io.ikanos.engine.step.StepHandlerContext;
 import io.polychro.core.LinterConfig;
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Severity;
