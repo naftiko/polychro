@@ -165,6 +165,39 @@ class CheckovRunnerProcessTest {
     }
 
     @Test
+    void runShouldHandleInterruptedExceptionDuringWait() throws IOException, InterruptedException {
+        Path yamlFile = tempDir.resolve("test.yaml");
+        Files.writeString(yamlFile, "name: test\n");
+
+        List<String> longCmd = longRunningCommand();
+        CheckovRunner runner = new CheckovRunner("checkov", 60, List.of(), null) {
+            @Override
+            Process startProcess(List<String> command) throws IOException {
+                // Do NOT set the interrupt flag here — let waitFor() receive it
+                return new ProcessBuilder(longCmd).start();
+            }
+        };
+
+        Thread testThread = Thread.currentThread();
+        Thread interrupter = new Thread(() -> {
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException ignored) {
+            }
+            testThread.interrupt();
+        });
+        interrupter.start();
+
+        CheckovRunner.CheckovExecutionResult result = runner.run(yamlFile, CheckovFramework.YAML);
+        interrupter.join();
+
+        assertFalse(result.isSuccess());
+        assertNotNull(result.error());
+        assertTrue(result.error().contains("interrupted"));
+        Thread.interrupted(); // clear flag
+    }
+
+    @Test
     void startProcessShouldReturnRunningProcess() throws IOException {
         List<String> cmd = quickCommand();
         CheckovRunner runner = new CheckovRunner(shellBinary(), 5, List.of(), null);
