@@ -94,7 +94,7 @@ mvn install -DskipTests
 cd ../polychro
 ```
 
-The CI workflow excludes `polychro-capability` (`--pl '!polychro-capability'`) until the SNAPSHOT
+The CI workflow excludes `polychro-capability` and `polychro-cli` (`--pl '!polychro-capability,!polychro-cli'`) until the SNAPSHOT
 is published to GitHub Packages (`maven.pkg.github.com/naftiko/ikanos`). Once published,
 remove the exclusion and add the `setup-java` `server-id: github-naftiko` credentials block.
 
