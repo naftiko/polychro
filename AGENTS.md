@@ -41,7 +41,7 @@ exposes its results as SARIF, JSON, text, or LLM-native (agent) output.
 | `polychro-core/src/main/java/io/polychro/core/Linter.java` | Orchestrator + Builder |
 | `polychro-core/src/main/java/io/polychro/core/AgentFormatter.java` | LLM-native JSON formatter |
 | `polychro-capability/src/main/java/io/polychro/capability/PolychroCapability.java` | MCP capability entry point |
-| `polychro-github-action/src/main/resources/action.yml` | GitHub Action definition (also at repo root) |
+| `action.yml` | GitHub Action definition (repo root) |
 | `pom.xml` | Parent POM — dependency versions, JaCoCo config, module list |
 
 ---
@@ -94,11 +94,16 @@ mvn install -DskipTests
 cd ../polychro
 ```
 
-Even after the local install, 7 tests in `PolychroCapabilityTest` fail with
-`NoClassDefFoundError: org/restlet/security/Verifier` due to a shading issue in the framework
-(tracked in [naftiko/framework#433](https://github.com/naftiko/framework/issues/433)).
-The workaround (explicit restlet dependency + Talend repository) is applied in
-`polychro-capability/pom.xml` and the parent `pom.xml`.
+The framework's `maven-shade-plugin` does not fully inline restlet and the MCP SDK into the
+published jar, causing `NoClassDefFoundError` at test time (tracked in
+[naftiko/framework#433](https://github.com/naftiko/framework/issues/433)).
+The workaround (explicit `org.restlet:org.restlet:2.7.0-m2` and
+`io.modelcontextprotocol.sdk:mcp-core:1.0.0` dependencies + Talend repository) is already
+applied in `polychro-capability/pom.xml` and the parent `pom.xml` — all 31
+`PolychroCapabilityTest` tests pass.
+
+**Separate known issue:** `polychro-rulesets` fails the JaCoCo coverage check on `main` — this
+is a pre-existing gap unrelated to the framework bootstrap.
 
 ---
 
@@ -202,11 +207,15 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow. Key rules:
 - Always read the repository templates before creating issues or PRs:
   - Issues: `.github/ISSUE_TEMPLATE/` — use the matching template, fill in all required fields.
   - PRs: `.github/PULL_REQUEST_TEMPLATE.md` — follow the structure exactly, do not improvise.
+- Before submitting a PR body, explicitly confirm to the user that the template has been followed
+  (section by section) — without necessarily displaying the full body unless asked.
 - When creating issues or PRs with multiline bodies via `gh`, **never construct the body as a
   string in the terminal** — always write the body to a temp `.md` file using the file creation
   tool, then pass it via `--body-file "/path/to/file.md"`.
-- Do **not** use `git push --force` — use `--force-with-lease`.
-- When the user corrects a mistake, note it immediately.
+- Do **not** use `git push --force` — use `--force-with-lease`. This applies everywhere:
+  feature branches, fix branches, rebases.
+- When the user corrects a mistake, note it immediately and propose an `AGENTS.md` update
+  if the correction reveals a missing or wrong rule.
 
 ---
 
