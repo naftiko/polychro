@@ -17,10 +17,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -119,20 +122,33 @@ class PolyglotFunctionLoaderTest {
 
     @Test
     void loadFunctionsShouldHandleIoError(@TempDir Path tempDir) throws IOException {
-        // Create a valid .js file but lock it exclusively so readString fails on Windows
         Path lockedFile = tempDir.resolve("locked.js");
         Files.writeString(lockedFile, "export default function locked(x) { return []; }");
 
-        try (var channel = java.nio.channels.FileChannel.open(lockedFile,
-                java.nio.file.StandardOpenOption.WRITE,
-                java.nio.file.StandardOpenOption.READ);
-             var lock = channel.lock()) {
-            PolyglotFunctionLoader loader = new PolyglotFunctionLoader();
-            Map<String, PolyglotRuleFunction> functions = loader.loadFunctions(tempDir, List.of("locked"));
-            loader.close();
-
-            // On Windows, exclusive lock causes IOException in readString → function skipped
-            assertTrue(functions.isEmpty());
+        boolean posix = FileSystems.getDefault().supportedFileAttributeViews().contains("posix");
+        if (posix) {
+            // On POSIX systems (Linux/macOS in CI): remove all permissions so readString throws IOException
+            Files.setPosixFilePermissions(lockedFile, PosixFilePermissions.fromString("---------"));
+            try {
+                PolyglotFunctionLoader loader = new PolyglotFunctionLoader();
+                Map<String, PolyglotRuleFunction> functions = loader.loadFunctions(tempDir, List.of("locked"));
+                loader.close();
+                assertTrue(functions.isEmpty());
+            } finally {
+                // Restore permissions so TempDir cleanup can delete the file
+                Files.setPosixFilePermissions(lockedFile, PosixFilePermissions.fromString("rw-------"));
+            }
+        } else {
+            // On Windows: exclusive file lock prevents readString from succeeding
+            try (var channel = java.nio.channels.FileChannel.open(lockedFile,
+                    java.nio.file.StandardOpenOption.WRITE,
+                    java.nio.file.StandardOpenOption.READ);
+                 var lock = channel.lock()) {
+                PolyglotFunctionLoader loader = new PolyglotFunctionLoader();
+                Map<String, PolyglotRuleFunction> functions = loader.loadFunctions(tempDir, List.of("locked"));
+                loader.close();
+                assertTrue(functions.isEmpty());
+            }
         }
     }
 }
