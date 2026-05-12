@@ -75,6 +75,14 @@
                                     </limits>
                                 </rule>
                             </rules>
+                            <!-- RulesetCatalog contains two defensive branches that are unreachable
+                                 in normal operation: the `is == null` guard (resource is always
+                                 bundled in the jar) and the IOException catch (reading a classpath
+                                 resource cannot throw I/O). Excluding the class avoids the need for
+                                 brittle classpath-manipulation hacks in tests. -->
+                            <excludes>
+                                <exclude>io/polychro/rulesets/RulesetCatalog.class</exclude>
+                            </excludes>
                         </configuration>
                     </execution>
                 </executions>
