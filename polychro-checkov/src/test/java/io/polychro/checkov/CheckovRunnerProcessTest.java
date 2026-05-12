@@ -19,11 +19,47 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class CheckovRunnerProcessTest {
+
+    private static final boolean IS_WINDOWS = System.getProperty("os.name", "").toLowerCase().contains("windows");
+
+    /** Creates a minimal executable script for the current OS that prints the given JSON and exits with exitCode. */
+    private static Path createScript(Path dir, String name, String jsonOutput, int exitCode) throws IOException {
+        if (IS_WINDOWS) {
+            Path bat = dir.resolve(name + ".bat");
+            Files.writeString(bat, "@echo off\r\necho " + jsonOutput + "\r\nexit /b " + exitCode + "\r\n");
+            return bat;
+        } else {
+            Path sh = dir.resolve(name + ".sh");
+            Files.writeString(sh, "#!/bin/sh\necho '" + jsonOutput + "'\nexit " + exitCode + "\n");
+            Files.setPosixFilePermissions(sh, PosixFilePermissions.fromString("rwxr-xr-x"));
+            return sh;
+        }
+    }
+
+    /** Returns a shell command+args that sleeps/busy-waits for ~30s (for timeout tests). */
+    private static List<String> longRunningCommand() {
+        return IS_WINDOWS
+                ? List.of("cmd.exe", "/c", "ping -n 30 127.0.0.1 >nul")
+                : List.of("sh", "-c", "sleep 30");
+    }
+
+    /** Returns a shell command+args that prints "hi" and exits immediately. */
+    private static List<String> quickCommand() {
+        return IS_WINDOWS
+                ? List.of("cmd.exe", "/c", "echo hi")
+                : List.of("sh", "-c", "echo hi");
+    }
+
+    /** Returns the shell binary name for the current OS. */
+    private static String shellBinary() {
+        return IS_WINDOWS ? "cmd.exe" : "sh";
+    }
 
     @TempDir
     Path tempDir;
@@ -58,9 +94,8 @@ class CheckovRunnerProcessTest {
 
     @Test
     void runShouldCaptureOutputFromSuccessfulProcess() throws IOException {
-        Path scriptFile = tempDir.resolve("fake-checkov.bat");
-        Files.writeString(scriptFile, "@echo off\r\necho {\"results\":{\"passed_checks\":[],\"failed_checks\":[]}}\r\n");
-
+        String json = "{\"results\":{\"passed_checks\":[],\"failed_checks\":[]}}";
+        Path scriptFile = createScript(tempDir, "fake-checkov", json, 0);
         Path yamlFile = tempDir.resolve("test.yaml");
         Files.writeString(yamlFile, "name: test\n");
 
@@ -74,9 +109,8 @@ class CheckovRunnerProcessTest {
 
     @Test
     void runShouldHandleNonZeroExitCode() throws IOException {
-        Path scriptFile = tempDir.resolve("failing-checkov.bat");
-        Files.writeString(scriptFile, "@echo off\r\necho {\"results\":{\"passed_checks\":[],\"failed_checks\":[]}}\r\nexit /b 1\r\n");
-
+        String json = "{\"results\":{\"passed_checks\":[],\"failed_checks\":[]}}";
+        Path scriptFile = createScript(tempDir, "failing-checkov", json, 1);
         Path yamlFile = tempDir.resolve("test.yaml");
         Files.writeString(yamlFile, "name: test\n");
 
@@ -92,11 +126,11 @@ class CheckovRunnerProcessTest {
         Path yamlFile = tempDir.resolve("test.yaml");
         Files.writeString(yamlFile, "name: test\n");
 
-        // Override startProcess to return a process that takes longer than timeout
+        List<String> longCmd = longRunningCommand();
         CheckovRunner runner = new CheckovRunner("checkov", 1, List.of(), null) {
             @Override
             Process startProcess(List<String> command) throws IOException {
-                return new ProcessBuilder("cmd.exe", "/c", "ping -n 30 127.0.0.1 >nul").start();
+                return new ProcessBuilder(longCmd).start();
             }
         };
 
@@ -112,11 +146,11 @@ class CheckovRunnerProcessTest {
         Path yamlFile = tempDir.resolve("test.yaml");
         Files.writeString(yamlFile, "name: test\n");
 
+        List<String> quickCmd = quickCommand();
         CheckovRunner runner = new CheckovRunner("checkov", 60, List.of(), null) {
             @Override
             Process startProcess(List<String> command) throws IOException {
-                // Start a quick process, then interrupt the thread
-                Process proc = new ProcessBuilder("cmd.exe", "/c", "echo hi").start();
+                Process proc = new ProcessBuilder(quickCmd).start();
                 Thread.currentThread().interrupt();
                 return proc;
             }
@@ -127,14 +161,14 @@ class CheckovRunnerProcessTest {
         assertFalse(result.isSuccess());
         assertNotNull(result.error());
         assertTrue(result.error().contains("interrupted"));
-        // Clear the interrupted flag
         Thread.interrupted();
     }
 
     @Test
     void startProcessShouldReturnRunningProcess() throws IOException {
-        CheckovRunner runner = new CheckovRunner("cmd.exe", 5, List.of(), null);
-        Process proc = runner.startProcess(List.of("cmd.exe", "/c", "echo hello"));
+        List<String> cmd = quickCommand();
+        CheckovRunner runner = new CheckovRunner(shellBinary(), 5, List.of(), null);
+        Process proc = runner.startProcess(cmd);
         assertNotNull(proc);
         proc.destroyForcibly();
     }
