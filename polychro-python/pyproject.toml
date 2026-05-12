@@ -25,7 +25,7 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://github.com/naftiko/polychro"
-Repository = "https://github.com/naftiko/polychro-python"
+Repository = "https://github.com/naftiko/polychro"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
