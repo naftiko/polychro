@@ -13,13 +13,12 @@ Schema validation alone is not enough. A document can be schema-valid yet broken
 
 ## The Solution
 
-Polychro fills this gap with **multi-layer validation in a single pipeline**:
+Polychro fills this gap with **composable validation layers applied consistently across semi-structured specifications** such as YAML, JSON, and Markdown:
 
-1. **Well-formedness** — catches YAML/JSON structural issues (duplicate keys, encoding problems, depth limits) before any semantic analysis begins
-2. **Schema validation** — JSON Schema Draft 2020-12 conformance ensures the document has the correct shape
-3. **JSON Structure** — optional strict typing layer for projects adopting the [JSON Structure](https://json-structure.org/) standard
-4. **Ruleset linting** — Spectral-format governance rules with `given`/`then` semantics check cross-object consistency, naming conventions, security invariants, and domain-specific constraints
-5. **Markdown validation** — heading hierarchy, internal links, and relative file references for documentation-as-code
+1. **Well-formedness validation** — catches document-level structural issues such as duplicate keys, encoding problems, and depth limits before any semantic analysis begins
+2. **Schema-model validation** — applies formal document models such as JSON Schema Draft 2020-12 or [JSON Structure](https://json-structure.org/), depending on what the specification adopts
+3. **Ruleset linting** — evaluates cross-object consistency, naming conventions, security invariants, and domain-specific constraints through declarative rules
+4. **Format-aware validation** — applies document-specific checks while preserving the same diagnostic model, such as heading hierarchy and hyperlink validation
 
 All layers produce the same `Diagnostic` format. One API call, one result type, sub-second latency.
 
@@ -43,6 +42,10 @@ All layers produce the same `Diagnostic` format. One API call, one result type, 
 
 ## Relationship to Naftiko
 
-Polychro is a standalone library — it has no dependency on the Naftiko Framework and can lint any YAML or JSON document. It ships with built-in rulesets optimized for Naftiko capability files, but the engine itself is format-agnostic.
+Polychro is a standalone open-source library sponsored by [Naftiko](https://github.com/naftiko). Its core linting engine has no dependency on [Ikanos](https://github.com/naftiko/ikanos), [Naftiko Fleet](https://github.com/naftiko/fleet), or any other Naftiko product, and can lint semi-structured specifications such as YAML, JSON, and Markdown on its own.
 
-When used with the Naftiko Framework, Polychro provides the validation layer for capability files — both at development time (CLI, IDE) and at runtime (MCP server mode for AI agents).
+It ships with built-in rulesets optimized for [Ikanos](https://github.com/naftiko/ikanos) capability files, and its optional capability module depends on [Ikanos](https://github.com/naftiko/ikanos) to expose MCP and Skills adapters, but the engine itself remains format-agnostic and extensible through its validator SPI.
+
+[Ikanos](https://github.com/naftiko/ikanos) is Naftiko's sister open-source project for spec-driven integration, and Polychro can serve as its validation layer for capability files — both at development time (CLI, IDE) and at runtime (MCP server mode for AI agents).
+
+[Naftiko](https://github.com/naftiko) is the vendor sponsoring both open-source projects and also offers [Naftiko Fleet](https://github.com/naftiko/fleet) as a product line for operating and governing capabilities at scale, with a free Community edition and premium editions. Polychro remains an independent open-source project whether or not you use [Ikanos](https://github.com/naftiko/ikanos) or [Naftiko Fleet](https://github.com/naftiko/fleet).

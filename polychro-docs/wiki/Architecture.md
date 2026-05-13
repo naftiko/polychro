@@ -2,7 +2,7 @@
 
 ## Execution Pipeline
 
-Polychro runs validators in a defined order. Each layer builds on the previous:
+Polychro runs validators in an ordered, composable sequence. Some layers are universal, while others apply only when a schema, stricter structure model, or format-specific validator is available for the document:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -12,7 +12,7 @@ Polychro runs validators in a defined order. Each layer builds on the previous:
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              1. Well-Formedness Validator                   │
+│              1. Well-Formedness Validation                  │
 │     Duplicate keys, encoding, depth limits, YAML traps      │
 │                                                             │
 │     ⚡ Fail-fast: if errors here, skip remaining layers     │
@@ -20,27 +20,22 @@ Polychro runs validators in a defined order. Each layer builds on the previous:
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              2. Schema Validator                            │
-│     JSON Schema Draft 2020-12 conformance                   │
+│              2. Schema-Model Validation                     │
+│     Formal document models, such as JSON Schema             │
+│     or JSON Structure                                       │
 └─────────────────────┬───────────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              3. JSON Structure Validator (optional)         │
-│     Strict typing via JSON Structure standard               │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────┐
-│              4. Ruleset Validator                           │
+│              3. Ruleset Validation                          │
 │     Spectral-format rules with JSONPath + functions         │
 │     Built-in functions + polyglot custom functions          │
 └─────────────────────┬───────────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              5. Markdown Validator (if applicable)          │
-│     Heading hierarchy, link validation                      │
+│              4. Format-Aware Validation (if applicable)     │
+│     Markdown heading hierarchy, link validation, etc.       │
 └─────────────────────┬───────────────────────────────────────┘
                       │
                       ▼

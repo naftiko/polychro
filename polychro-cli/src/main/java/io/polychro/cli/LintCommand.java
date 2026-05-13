@@ -151,7 +151,9 @@ public class LintCommand implements Runnable {
             configMap.put("ruleset", java.util.Map.of("path", ruleset.toString()));
         }
         if (schema != null) {
-            configMap.put("json-schema", java.util.Map.of("schema", schema.toString()));
+            java.util.Map<String, Object> schemaConfig = java.util.Map.of("schemaPath", schema.toString());
+            configMap.put("json-schema", schemaConfig);
+            configMap.put("json-structure", schemaConfig);
         }
 
         return new LinterConfig(validatorList, configMap, false, "json-schema");

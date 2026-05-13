@@ -166,7 +166,22 @@ public class Linter {
                 requestedNames = new ArrayList<>(factories.keySet());
             }
 
+            boolean useImplicitSchemaModel = config.validators().isEmpty() && hasSchemaModelConfig();
+            boolean schemaModelAdded = false;
+
             for (String name : requestedNames) {
+                if (SchemaModelValidator.NAME.equals(name)
+                        || (useImplicitSchemaModel && SchemaModelValidator.isSchemaValidatorName(name))) {
+                    if (!schemaModelAdded) {
+                        SchemaModelValidator schemaModelValidator = SchemaModelValidator.create(factories, config);
+                        if (schemaModelValidator != null) {
+                            validators.add(schemaModelValidator);
+                        }
+                        schemaModelAdded = true;
+                    }
+                    continue;
+                }
+
                 ValidatorFactory factory = factories.get(name);
                 if (factory != null) {
                     Map<String, Object> props = config.validatorConfigs()
@@ -177,6 +192,11 @@ public class Linter {
 
             validators.addAll(additionalValidators);
             return validators;
+        }
+
+        private boolean hasSchemaModelConfig() {
+            return config.validatorConfigs().containsKey(SchemaModelValidator.JSON_SCHEMA_NAME)
+                    || config.validatorConfigs().containsKey(SchemaModelValidator.JSON_STRUCTURE_NAME);
         }
     }
 }
