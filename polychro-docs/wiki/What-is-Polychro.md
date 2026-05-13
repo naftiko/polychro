@@ -24,7 +24,7 @@ All layers produce the same `Diagnostic` format. One API call, one result type, 
 
 ## Design Principles
 
-1. **Agent-embeddable by design.** The primary consumer is an AI agent calling `Linter.lint()` in a tight generate-validate-retry loop. Latency, programmatic API ergonomics, and structured diagnostics matter more than terminal output.
+1. **Agent-embeddable by design.** The primary consumer is an AI agent invoking the `lint` MCP tool or calling the CLI in a generate-validate-retry loop. Latency, structured diagnostics, and multiple integration modes (MCP server, CLI, GitHub Action, Java API) matter more than any single runtime.
 2. **Deterministic guardrails for non-deterministic systems.** AI agents produce creative output. Polychro provides rigid, rule-based constraints that guarantee domain invariants hold — regardless of which model generated the spec.
 3. **Modular by default.** Each validator is an independent module. Projects pick only what they need.
 4. **SPI over configuration.** Validators are discovered via `ServiceLoader`, not hardcoded. Drop a JAR on the classpath and it participates in linting.
@@ -34,11 +34,12 @@ All layers produce the same `Diagnostic` format. One API call, one result type, 
 
 | Audience | Use Case |
 |---|---|
-| **AI agent frameworks** | In-process validation in generate-validate-retry loops |
+| **AI agent frameworks** | MCP server integration in generate-validate-retry loops |
+| **DevOps/Platform engineers** | CI gates via GitHub Action or CLI |
 | **Spec-driven platforms** | Governance enforcement for YAML/JSON specifications |
 | **API teams** | Linting OpenAPI, AsyncAPI, or custom specs with Spectral-format rules |
-| **DevOps/Platform engineers** | CI gates via GitHub Action or CLI |
 | **Tool authors** | Pluggable SPI for custom validation logic |
+| **JVM applications** | In-process linting via the embeddable Java API |
 
 ## Relationship to Naftiko
 
@@ -48,4 +49,6 @@ It ships with built-in rulesets optimized for [Ikanos](https://github.com/naftik
 
 [Ikanos](https://github.com/naftiko/ikanos) is Naftiko's sister open-source project for spec-driven integration, and Polychro can serve as its validation layer for capability files — both at development time (CLI, IDE) and at runtime (MCP server mode for AI agents).
 
-[Naftiko](https://github.com/naftiko) is the vendor sponsoring both open-source projects and also offers [Naftiko Fleet](https://github.com/naftiko/fleet) as a product line for operating and governing capabilities at scale, with a free Community edition and premium editions. Polychro remains an independent open-source project whether or not you use [Ikanos](https://github.com/naftiko/ikanos) or [Naftiko Fleet](https://github.com/naftiko/fleet).
+Naftiko also offers [Naftiko Fleet](https://github.com/naftiko/fleet) as a product line for operating and governing capabilities at scale, with a free Community edition and premium editions.
+
+Polychro remains an independent open-source project whether or not you use [Ikanos](https://github.com/naftiko/ikanos) or [Naftiko Fleet](https://github.com/naftiko/fleet).

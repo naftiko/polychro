@@ -25,13 +25,13 @@ validators:
     # Reject documents with BOM markers
     rejectBom: true
 
-  schema:
+  json-schema:
     # Path to JSON Schema file (Draft 2020-12)
     path: schemas/my-schema.json
     # Collect all errors vs stop at first (default: true)
     collectAllErrors: true
 
-  jsonStructure:
+  json-structure:
     # Path to JSON Structure definition
     path: schemas/my-structure.json
 
@@ -79,6 +79,8 @@ CLI flags override configuration file values:
 
 ## Programmatic API
 
+> For JVM applications embedding Polychro as a library. CLI and MCP server users configure everything via `.polychro.yml` and CLI flags above.
+
 ```java
 Linter linter = Linter.builder()
     // Load from config file
@@ -93,7 +95,13 @@ Linter linter = Linter.builder()
 
 ### Selective Validators
 
-Include only the validators you need:
+Disable validators you don't need. Via CLI:
+
+```bash
+polychro lint --disable-ruleset --disable-markdown --schema my-schema.json my-spec.yml
+```
+
+Or via the Java API:
 
 ```java
 // Schema-only validation (fast path)

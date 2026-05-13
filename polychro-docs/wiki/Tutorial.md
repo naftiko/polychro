@@ -31,7 +31,7 @@ Rulesets catch domain-specific issues that schema alone cannot detect:
 ```yaml
 # .polychro.yml
 validators:
-  schema:
+  json-schema:
     path: my-schema.json
   ruleset:
     path: my-rules.yml
@@ -57,7 +57,7 @@ Well-formedness checks run before schema and ruleset validation. If a document h
 validators:
   wellformedness:
     maxDepth: 50
-  schema:
+  json-schema:
     path: my-schema.json
   ruleset:
     path: my-rules.yml
@@ -80,13 +80,7 @@ polychro lint --ruleset polychro:ai-safety my-spec.yml
 polychro lint --ruleset polychro:security my-spec.yml
 ```
 
-Via the Java API:
-
-```java
-Linter linter = Linter.builder()
-    .ruleset("polychro:ai-safety")
-    .build();
-```
+The same rulesets are available through the MCP server (`polychro serve --ruleset polychro:ai-safety`) and the Java API (`Linter.builder().ruleset("polychro:ai-safety").build()`).
 
 ## Step 5 — Polyglot Custom Functions
 
@@ -161,7 +155,7 @@ The `tokens` field pre-computes the context window cost — agents can decide wh
 
 ## Step 8 — Java API Embedding
 
-For JVM applications that need in-process linting (e.g., agent frameworks, CI tools):
+> For JVM applications that need in-process linting — such as agent frameworks or custom CI tools. Most users should use the CLI (Step 1) or MCP server (Step 6).
 
 ```java
 Linter linter = Linter.builder()
@@ -187,6 +181,6 @@ if (issues.stream().anyMatch(d -> d.severity() == Severity.ERROR)) {
 
 ## Next Steps
 
-- [[Guide ‐ Rulesets]] — Deep dive into ruleset authoring
-- [[Guide ‐ Configuration]] — Full configuration reference
-- [[Guide ‐ MCP Server]] — Expose Polychro as MCP tools
+- [Guide ‐ Rulesets](Guide-‐-Rulesets) — Deep dive into ruleset authoring
+- [Guide ‐ Configuration](Guide-‐-Configuration) — Full configuration reference
+- [Guide ‐ MCP Server](Guide-‐-MCP-Server) — Expose Polychro as MCP tools
