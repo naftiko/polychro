@@ -4,7 +4,7 @@
 
 ### What is Polychro?
 
-Polychro is a deterministic linting engine for semi-structured specifications such as YAML, JSON, and Markdown. It combines well-formedness, schema-model, ruleset, and format-aware validation in a single, embeddable pipeline.
+Polychro is a deterministic linting engine for semi-structured specifications such as YAML, JSON, and Markdown. It combines well-formedness, schema-model, ruleset, and format-aware validation in a single pipeline — available as a CLI, an MCP server, a GitHub Action, or an embeddable Java library.
 
 ### Why not just use JSON Schema validation?
 
@@ -12,7 +12,7 @@ Schema validation ensures a document has the correct *shape* — required fields
 
 ### Is Polychro tied to Naftiko?
 
-No. Polychro is a standalone library that can lint semi-structured specifications such as YAML, JSON, and Markdown. It ships with built-in rulesets optimized for Naftiko capability files, but the engine is format-agnostic and extensible through its validator SPI. You can write custom rulesets for OpenAPI, AsyncAPI, CloudEvents, or any specification.
+No. Polychro is a standalone open-source library sponsored by [Naftiko](https://github.com/naftiko). Its core linting engine has no dependency on [Ikanos](https://github.com/naftiko/ikanos), [Naftiko Fleet](https://github.com/naftiko/fleet), or any other Naftiko product, and can lint semi-structured specifications such as YAML, JSON, and Markdown on its own. It ships with built-in rulesets optimized for [Ikanos](https://github.com/naftiko/ikanos) capability files, but the engine is format-agnostic and extensible through its validator SPI. You can write custom rulesets for OpenAPI, AsyncAPI, CloudEvents, or any specification.
 
 ### What languages can I write custom functions in?
 
@@ -20,7 +20,7 @@ JavaScript, Python, and Groovy — all executed via GraalVM's Polyglot API in a 
 
 ### Does Polychro require Node.js?
 
-No. Polychro runs entirely on the JVM. There is no dependency on Node.js, npm, or any external process — except for `polychro-checkov`, which requires a local Checkov installation (Python).
+No. Polychro is a self-contained binary (CLI) or JVM library. There is no dependency on Node.js, npm, or any JavaScript runtime — except for `polychro-checkov`, which requires a local Checkov installation (Python).
 
 ## Usage
 
@@ -44,30 +44,34 @@ polychro lint --format sarif specs/ > results.sarif
 
 ### Can I use Polychro in an AI agent loop?
 
-Yes — this is the primary design goal. The Java API returns structured diagnostics in sub-second latency:
+Yes — this is the primary design goal. Run `polychro serve` to start an MCP server, and invoke the `lint` tool from any MCP-compatible agent:
+
+```bash
+polychro serve --port 3001
+```
+
+For direct integration in JVM-based agents, use the Java API:
 
 ```java
 Linter linter = Linter.builder().ruleset("polychro:ai-safety").build();
 List<Diagnostic> issues = linter.lint(Document.fromString(yaml, "yaml"));
 ```
 
-For agents using MCP, run `polychro serve` and invoke the `lint` tool.
-
 ### How do I suppress a specific rule?
 
-Exclude rules by tag or name in your configuration:
+Exclude rules by tag or name via CLI:
+
+```bash
+polychro lint --exclude-tags experimental my-spec.yml
+```
+
+Or in a configuration file:
 
 ```yaml
 validators:
   ruleset:
     excludeTags:
       - experimental
-```
-
-Or via CLI:
-
-```bash
-polychro lint --exclude-tags experimental my-spec.yml
 ```
 
 ### What output formats are supported?
@@ -85,7 +89,13 @@ Full pipeline (well-formedness + schema + ruleset) typically completes in under 
 
 ### Can I run validators selectively?
 
-Yes. Disable validators you don't need:
+Yes. Disable validators you don't need via CLI flags:
+
+```bash
+polychro lint --disable-ruleset --disable-markdown --schema my-schema.json my-spec.yml
+```
+
+Or via the Java API:
 
 ```java
 Linter linter = Linter.builder()
@@ -99,7 +109,7 @@ Linter linter = Linter.builder()
 
 ### How do I add a custom validator?
 
-Implement `ValidatorFactory` and `Validator`, register via `META-INF/services`, and add your JAR to the classpath. See [[Writing a Validator Plugin]] for a complete walkthrough.
+Implement `ValidatorFactory` and `Validator`, register via `META-INF/services`, and add your JAR to the classpath. See [Writing a Validator Plugin](Writing-a-Validator-Plugin) for a complete walkthrough.
 
 ### Can I extend built-in rulesets?
 

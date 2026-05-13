@@ -7,13 +7,13 @@ Polychro runs validators in an ordered, composable sequence. Some layers are uni
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                     Document Input                          │
-│              (YAML string, JSON string, file path)          │
+│         (YAML, JSON, Markdown, or other spec formats)       │
 └─────────────────────┬───────────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
 │              1. Well-Formedness Validation                  │
-│     Duplicate keys, encoding, depth limits, YAML traps      │
+│     Duplicate keys, encoding, depth limits, format traps    │
 │                                                             │
 │     ⚡ Fail-fast: if errors here, skip remaining layers     │
 └─────────────────────┬───────────────────────────────────────┘
@@ -95,7 +95,7 @@ When multiple validators report the same issue (e.g., a missing field caught by 
 
 ### Document Abstraction
 
-The `Document` interface abstracts over input sources:
+The `Document` interface abstracts over input sources. CLI and MCP server users never interact with it directly — the tool resolves documents from file paths or inline strings automatically. Plugin authors and Java API users work with `Document` when building custom validators:
 
 ```java
 // From string
@@ -111,6 +111,8 @@ Document doc = Document.fromStream(inputStream, "json");
 All validators receive the same `Document` instance — parsed once, validated many times.
 
 ## SPI Contracts
+
+> **Note:** This section is for plugin authors extending Polychro with custom validators. CLI, MCP server, and GitHub Action users do not need to interact with these interfaces.
 
 ### `Validator`
 
@@ -146,9 +148,9 @@ public record Diagnostic(
 
 ## Performance
 
-Polychro is designed for sub-second latency in agent feedback loops:
+Polychro is designed for sub-second latency — whether invoked from the CLI, an MCP tool call, or the Java API:
 
-- **No cold start** — `Linter` instances are reusable and thread-safe
+- **No cold start** — the native binary starts instantly; `Linter` instances are reusable and thread-safe in server and library modes
 - **Lazy parsing** — documents are parsed on first access, cached thereafter
-- **No external processes** — everything runs in the JVM
+- **In-process by default** — core validators run entirely in the JVM, but the SPI allows external-process bridges (e.g., Checkov spawns a subprocess and parses its output back into diagnostics)
 - **Polyglot sandboxing** — GraalVM contexts are pooled, not created per invocation

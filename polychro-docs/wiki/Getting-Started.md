@@ -103,6 +103,8 @@ my-spec.yml
 
 ## First Lint — Java API
 
+> For JVM applications that need in-process linting. Most users should start with the CLI or MCP server above.
+
 ```java
 import io.polychro.api.Document;
 import io.polychro.api.Diagnostic;
@@ -140,17 +142,17 @@ validators:
   wellformedness:
     maxDepth: 50
     maxKeyLength: 256
-  schema:
-    path: src/main/resources/schemas/my-schema.json
+  json-schema:
+    path: schemas/my-schema.json
   ruleset:
-    path: src/main/resources/rules/my-rules.yml
-    functionsDir: src/main/resources/rules/functions/
+    path: rules/my-rules.yml
+    functionsDir: rules/functions/
 ```
 
-See [[Guide ‐ Configuration]] for the full reference.
+See [Guide ‐ Configuration](Guide-‐-Configuration) for the full reference.
 
 ## Next Steps
 
-- [[Tutorial]] — Walk through a complete linting workflow
-- [[Guide ‐ Rulesets]] — Understand built-in rulesets and write custom rules
-- [[Architecture]] — Learn how the pipeline is structured
+- [Tutorial](Tutorial) — Walk through a complete linting workflow
+- [Guide ‐ Rulesets](Guide-‐-Rulesets) — Understand built-in rulesets and write custom rules
+- [Architecture](Architecture) — Learn how the pipeline is structured
