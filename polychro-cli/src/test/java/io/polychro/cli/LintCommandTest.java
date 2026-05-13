@@ -19,6 +19,7 @@ import org.junit.jupiter.api.io.TempDir;
 import io.polychro.core.JsonFormatter;
 import io.polychro.core.SarifFormatter;
 import io.polychro.core.TextFormatter;
+import io.polychro.core.LinterConfig;
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Severity;
 
@@ -116,6 +117,18 @@ class LintCommandTest {
         Path file = createFile("test.yml", "name: test\n");
         int exitCode = executeLint("--schema", "custom-schema.json", file.toString());
         assertEquals(0, exitCode);
+    }
+
+    @Test
+    void buildConfigFromFlagsShouldConfigureBothSchemaModels() {
+        LintCommand command = new LintCommand();
+        command.schema = Path.of("custom-schema.json");
+
+        LinterConfig config = command.buildConfigFromFlags();
+
+        assertEquals("custom-schema.json", config.validatorConfigs().get("json-schema").get("schemaPath"));
+        assertEquals("custom-schema.json",
+                config.validatorConfigs().get("json-structure").get("schemaPath"));
     }
 
     @Test

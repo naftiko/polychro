@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Step handler for the "do-validate-schema" step. Runs only the JSON Schema validator
+ * Step handler for the "do-validate-schema" step. Runs only the schema-model validator
  * on a document (fast path — no rules, no wellformedness).
  */
 class ValidateSchemaHandler implements StepHandler {
@@ -56,19 +56,26 @@ class ValidateSchemaHandler implements StepHandler {
     }
 
     LinterConfig buildSchemaConfig(String schema) {
-        Map<String, Object> schemaProps;
+        Map<String, Map<String, Object>> validatorConfigs;
         if (schema != null && !schema.isBlank()) {
-            schemaProps = Map.of("schema", schema);
+            Map<String, Object> schemaProps = Map.of("schemaPath", schema);
+            validatorConfigs = Map.of(
+                    "json-schema", schemaProps,
+                    "json-structure", schemaProps
+            );
         } else {
             Map<String, Map<String, Object>> base = baseConfig.validatorConfigs();
-            schemaProps = base.getOrDefault("json-schema", Map.of());
+            validatorConfigs = Map.of(
+                    "json-schema", base.getOrDefault("json-schema", Map.of()),
+                    "json-structure", base.getOrDefault("json-structure", Map.of())
+            );
         }
 
         return new LinterConfig(
-                List.of("json-schema"),
-                Map.of("json-schema", schemaProps),
+                List.of("schema-model"),
+                validatorConfigs,
                 false,
-                "json-schema"
+                baseConfig.defaultSchemaValidator()
         );
     }
 

@@ -107,6 +107,30 @@ class LinterBuilderTest {
     }
 
     @Test
+    void buildShouldUseSchemaModelWhenSchemaConfigIsPresent() {
+        ValidatorFactory wellformedness = new StubValidatorFactory("wellformedness");
+        ValidatorFactory jsonSchema = new StubValidatorFactory("json-schema");
+        ValidatorFactory jsonStructure = new StubValidatorFactory("json-structure");
+        ValidatorFactory ruleset = new StubValidatorFactory("ruleset");
+
+        LinterConfig config = new LinterConfig(
+                List.of(),
+                Map.of("json-schema", Map.of("schemaPath", "schema.json")),
+                false,
+                "json-schema"
+        );
+        Linter linter = Linter.builder()
+                .config(config)
+                .factories(List.of(wellformedness, jsonSchema, jsonStructure, ruleset))
+                .build();
+
+        assertEquals(3, linter.validators().size());
+        assertEquals("wellformedness", linter.validators().get(0).name());
+        assertEquals("schema-model", linter.validators().get(1).name());
+        assertEquals("ruleset", linter.validators().get(2).name());
+    }
+
+    @Test
     void buildShouldPassConfigToFactory() {
         CapturingValidatorFactory factory = new CapturingValidatorFactory("test");
 

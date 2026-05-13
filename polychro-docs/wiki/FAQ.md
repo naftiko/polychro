@@ -4,7 +4,7 @@
 
 ### What is Polychro?
 
-Polychro is a deterministic linting engine for YAML and JSON specification files. It combines schema validation, ruleset linting, well-formedness checks, and structural validation in a single, embeddable pipeline.
+Polychro is a deterministic linting engine for semi-structured specifications such as YAML, JSON, and Markdown. It combines well-formedness, schema-model, ruleset, and format-aware validation in a single, embeddable pipeline.
 
 ### Why not just use JSON Schema validation?
 
@@ -12,7 +12,7 @@ Schema validation ensures a document has the correct *shape* — required fields
 
 ### Is Polychro tied to Naftiko?
 
-No. Polychro is a standalone library that can lint any YAML or JSON document. It ships with built-in rulesets optimized for Naftiko capability files, but the engine is format-agnostic. You can write custom rulesets for OpenAPI, AsyncAPI, CloudEvents, or any specification.
+No. Polychro is a standalone library that can lint semi-structured specifications such as YAML, JSON, and Markdown. It ships with built-in rulesets optimized for Naftiko capability files, but the engine is format-agnostic and extensible through its validator SPI. You can write custom rulesets for OpenAPI, AsyncAPI, CloudEvents, or any specification.
 
 ### What languages can I write custom functions in?
 
