@@ -193,33 +193,58 @@ class MarkdownValidator implements Validator {
 
     void checkCodeBlockLanguage(Document projected, List<Diagnostic> diagnostics) {
         JsonNode blocks = projected.root().path("document").path("blocks");
-        if (blocks.isArray()) {
-            for (int i = 0; i < blocks.size(); i++) {
-                JsonNode block = blocks.get(i);
-                if (!"code-block".equals(block.path("type").asText())) {
-                    continue;
-                }
+        if (!blocks.isArray()) {
+            return;
+        }
 
+        checkCodeBlockLanguage(projected, diagnostics, blocks, "$.document.blocks");
+    }
+
+    void checkCodeBlockLanguage(Document projected, List<Diagnostic> diagnostics, JsonNode blocks, String blocksPath) {
+        for (int i = 0; i < blocks.size(); i++) {
+            JsonNode block = blocks.get(i);
+            String blockPath = blocksPath + "[" + i + "]";
+            if ("code-block".equals(block.path("type").asText())) {
                 JsonNode language = block.get("language");
                 if (language == null || language.isNull() || language.asText().isBlank()) {
                     diagnostics.add(new Diagnostic(Severity.INFO, "code-block-no-language",
                             "Fenced code block has no language annotation",
                             null,
-                            rangeFor(projected, "$.document.blocks[" + i + "]")));
+                            rangeFor(projected, blockPath)));
                 }
             }
+
+            JsonNode items = block.path("items");
+            if (!items.isArray()) {
+                continue;
+            }
+
+            for (int j = 0; j < items.size(); j++) {
+                JsonNode nestedBlocks = items.get(j).path("blocks");
+                if (nestedBlocks.isArray()) {
+                    checkCodeBlockLanguage(projected, diagnostics, nestedBlocks,
+                            blockPath + ".items[" + j + "].blocks");
+                }
+            }
+        }
+    }
+
+    void checkListMarkers(Document projected, List<Diagnostic> diagnostics) {
+        JsonNode blocks = projected.root().path("document").path("blocks");
+        if (blocks.isArray()) {
+            checkListMarkers(projected, diagnostics, blocks, "$.document.blocks");
             return;
         }
 
-        JsonNode codeBlocks = projected.root().path("document").path("codeBlocks");
-        for (int i = 0; i < codeBlocks.size(); i++) {
-            JsonNode codeBlock = codeBlocks.get(i);
-            JsonNode language = codeBlock.get("language");
-            if (language == null || language.isNull() || language.asText().isBlank()) {
-                diagnostics.add(new Diagnostic(Severity.INFO, "code-block-no-language",
-                        "Fenced code block has no language annotation",
+        JsonNode lists = projected.root().path("document").path("lists");
+        for (int i = 0; i < lists.size(); i++) {
+            JsonNode list = lists.get(i);
+            String marker = list.path("marker").asText();
+            if (!marker.equals(listMarker)) {
+                diagnostics.add(new Diagnostic(Severity.INFO, "inconsistent-list-marker",
+                        "Expected list marker '" + listMarker + "' but found '" + marker + "'",
                         null,
-                        rangeFor(projected, "$.document.codeBlocks[" + i + "]")));
+                        rangeFor(projected, "$.document.lists[" + i + "]")));
             }
         }
     }
@@ -269,35 +294,31 @@ class MarkdownValidator implements Validator {
         }
     }
 
-    void checkListMarkers(Document projected, List<Diagnostic> diagnostics) {
-        JsonNode blocks = projected.root().path("document").path("blocks");
-        if (blocks.isArray()) {
-            for (int i = 0; i < blocks.size(); i++) {
-                JsonNode block = blocks.get(i);
-                if (!"list".equals(block.path("type").asText())) {
-                    continue;
-                }
-
+    void checkListMarkers(Document projected, List<Diagnostic> diagnostics, JsonNode blocks, String blocksPath) {
+        for (int i = 0; i < blocks.size(); i++) {
+            JsonNode block = blocks.get(i);
+            String blockPath = blocksPath + "[" + i + "]";
+            if ("list".equals(block.path("type").asText())) {
                 String marker = block.path("marker").asText();
                 if (!marker.equals(listMarker)) {
                     diagnostics.add(new Diagnostic(Severity.INFO, "inconsistent-list-marker",
                             "Expected list marker '" + listMarker + "' but found '" + marker + "'",
                             null,
-                            rangeFor(projected, "$.document.blocks[" + i + "]")));
+                            rangeFor(projected, blockPath)));
                 }
             }
-            return;
-        }
 
-        JsonNode lists = projected.root().path("document").path("lists");
-        for (int i = 0; i < lists.size(); i++) {
-            JsonNode list = lists.get(i);
-            String marker = list.path("marker").asText();
-            if (!marker.equals(listMarker)) {
-                diagnostics.add(new Diagnostic(Severity.INFO, "inconsistent-list-marker",
-                        "Expected list marker '" + listMarker + "' but found '" + marker + "'",
-                        null,
-                        rangeFor(projected, "$.document.lists[" + i + "]")));
+            JsonNode items = block.path("items");
+            if (!items.isArray()) {
+                continue;
+            }
+
+            for (int j = 0; j < items.size(); j++) {
+                JsonNode nestedBlocks = items.get(j).path("blocks");
+                if (nestedBlocks.isArray()) {
+                    checkListMarkers(projected, diagnostics, nestedBlocks,
+                            blockPath + ".items[" + j + "].blocks");
+                }
             }
         }
     }
@@ -415,30 +436,37 @@ class MarkdownValidator implements Validator {
     List<ProjectedHeadingInfo> collectProjectedHeadings(Document projected) {
         List<ProjectedHeadingInfo> headings = new ArrayList<>();
         JsonNode blocks = projected.root().path("document").path("blocks");
-        if (blocks.isArray()) {
-            for (int i = 0; i < blocks.size(); i++) {
-                JsonNode block = blocks.get(i);
-                if (!"heading".equals(block.path("type").asText())) {
-                    continue;
-                }
-
-                headings.add(new ProjectedHeadingInfo(
-                        block.path("level").asInt(),
-                        block.path("text").asText(),
-                        "$.document.blocks[" + i + "]"));
-            }
+        if (!blocks.isArray()) {
             return headings;
         }
 
-        JsonNode headingNodes = projected.root().path("document").path("headings");
-        for (int i = 0; i < headingNodes.size(); i++) {
-            JsonNode heading = headingNodes.get(i);
-            headings.add(new ProjectedHeadingInfo(
-                    heading.path("level").asInt(),
-                    heading.path("text").asText(),
-                    "$.document.headings[" + i + "]"));
-        }
+        collectProjectedHeadings(headings, blocks, "$.document.blocks");
         return headings;
+    }
+
+    void collectProjectedHeadings(List<ProjectedHeadingInfo> headings, JsonNode blocks, String blocksPath) {
+        for (int i = 0; i < blocks.size(); i++) {
+            JsonNode block = blocks.get(i);
+            String blockPath = blocksPath + "[" + i + "]";
+            if ("heading".equals(block.path("type").asText())) {
+                headings.add(new ProjectedHeadingInfo(
+                        block.path("level").asInt(),
+                        block.path("text").asText(),
+                        blockPath));
+            }
+
+            JsonNode items = block.path("items");
+            if (!items.isArray()) {
+                continue;
+            }
+
+            for (int j = 0; j < items.size(); j++) {
+                JsonNode nestedBlocks = items.get(j).path("blocks");
+                if (nestedBlocks.isArray()) {
+                    collectProjectedHeadings(headings, nestedBlocks, blockPath + ".items[" + j + "].blocks");
+                }
+            }
+        }
     }
 
     List<ProjectedLinkInfo> collectProjectedInternalLinks(Document projected) {
