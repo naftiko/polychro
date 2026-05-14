@@ -88,6 +88,17 @@ class RelativeAnchorCheckerTest {
     }
 
     @Test
+    void checkShouldSkipNonHeadingBlocksWhenMatchingAnchor() throws IOException {
+        Files.writeString(tempDir.resolve("target.md"), "Intro paragraph\n\n## Section\n");
+
+        List<MarkdownValidator.LinkInfo> links = List.of(
+                new MarkdownValidator.LinkInfo("target.md#section", 1));
+
+        List<Diagnostic> diagnostics = checker.check(links, tempDir);
+        assertTrue(diagnostics.isEmpty());
+    }
+
+    @Test
     void checkShouldIgnoreLinksWithoutAnchor() throws IOException {
         Files.writeString(tempDir.resolve("target.md"), "# Title\n");
 

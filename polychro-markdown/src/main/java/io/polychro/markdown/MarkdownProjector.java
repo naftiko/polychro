@@ -45,8 +45,6 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
         ObjectNode root = JsonNodeFactory.instance.objectNode();
         ObjectNode document = root.putObject("document");
         ArrayNode blocks = document.putArray("blocks");
-        ArrayNode headings = document.putArray("headings");
-        ArrayNode codeBlocks = document.putArray("codeBlocks");
         MarkdownSourceMapBuilder sourceMapBuilder = new MarkdownSourceMapBuilder();
 
         if (parsed.frontmatter().data() != null) {
@@ -58,85 +56,67 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
 
         projectBlocks(parsed, blocks, sourceMapBuilder);
 
-        parsed.bodyDocument().accept(new AbstractVisitor() {
-            @Override
-            public void visit(Heading heading) {
-                int index = headings.size();
-                String path = "$.document.headings[" + index + "]";
-                ObjectNode projectedHeading = headings.addObject();
-                String text = MarkdownValidator.extractText(heading);
-                projectedHeading.put("level", heading.getLevel());
-                projectedHeading.put("text", text);
-                projectedHeading.put("anchor", MarkdownValidator.slugify(text));
-                sourceMapBuilder.put(path, rangeFor(heading, parsed.bodyStartLine()));
-            }
-
-            @Override
-            public void visit(FencedCodeBlock fencedCodeBlock) {
-                int index = codeBlocks.size();
-                String path = "$.document.codeBlocks[" + index + "]";
-                ObjectNode projectedCodeBlock = codeBlocks.addObject();
-                if (fencedCodeBlock.getInfo() == null) {
-                    projectedCodeBlock.putNull("language");
-                } else {
-                    projectedCodeBlock.put("language", fencedCodeBlock.getInfo());
-                }
-                projectedCodeBlock.put("content", fencedCodeBlock.getLiteral());
-                sourceMapBuilder.put(path, rangeFor(fencedCodeBlock, parsed.bodyStartLine()));
-            }
-        });
-
         return new Document(root, format(), sourcePath, sourceMapBuilder.build(), Map.of());
     }
 
     void projectBlocks(MarkdownParseResult parsed, ArrayNode blocks, MarkdownSourceMapBuilder sourceMapBuilder) {
-        for (org.commonmark.node.Node child = parsed.bodyDocument().getFirstChild(); child != null; child = child.getNext()) {
-            int index = blocks.size();
-            String path = "$.document.blocks[" + index + "]";
+        appendBlocks(parsed.bodyDocument(), blocks, "$.document.blocks", sourceMapBuilder, parsed.bodyStartLine());
+    }
 
-            if (child instanceof Heading heading) {
-                ObjectNode block = blocks.addObject();
-                String text = MarkdownValidator.extractText(heading);
-                block.put("type", "heading");
-                block.put("level", heading.getLevel());
-                block.put("text", text);
-                block.put("anchor", MarkdownValidator.slugify(text));
-                sourceMapBuilder.put(path, rangeFor(heading, parsed.bodyStartLine()));
-            } else if (child instanceof Paragraph paragraph) {
-                ObjectNode block = blocks.addObject();
-                block.put("type", "paragraph");
-                block.put("text", MarkdownValidator.extractText(paragraph));
-                ArrayNode paragraphLinks = block.putArray("links");
-                appendParagraphLinks(paragraph, paragraphLinks, path, sourceMapBuilder, parsed.bodyStartLine());
-                sourceMapBuilder.put(path, rangeFor(paragraph, parsed.bodyStartLine()));
-            } else if (child instanceof BulletList bulletList) {
-                ObjectNode block = blocks.addObject();
-                block.put("type", "list");
-                block.put("ordered", false);
-                block.put("marker", String.valueOf(bulletList.getBulletMarker()));
-                ArrayNode items = block.putArray("items");
-                appendListItems(bulletList, items, path, sourceMapBuilder, parsed.bodyStartLine());
-                sourceMapBuilder.put(path, rangeFor(bulletList, parsed.bodyStartLine()));
-            } else if (child instanceof OrderedList orderedList) {
-                ObjectNode block = blocks.addObject();
-                block.put("type", "list");
-                block.put("ordered", true);
-                block.put("marker", String.valueOf(orderedList.getDelimiter()));
-                block.put("startNumber", orderedList.getStartNumber());
-                ArrayNode items = block.putArray("items");
-                appendListItems(orderedList, items, path, sourceMapBuilder, parsed.bodyStartLine());
-                sourceMapBuilder.put(path, rangeFor(orderedList, parsed.bodyStartLine()));
-            } else if (child instanceof FencedCodeBlock fencedCodeBlock) {
-                ObjectNode block = blocks.addObject();
-                block.put("type", "code-block");
-                if (fencedCodeBlock.getInfo() == null) {
-                    block.putNull("language");
-                } else {
-                    block.put("language", fencedCodeBlock.getInfo());
-                }
-                block.put("content", fencedCodeBlock.getLiteral());
-                sourceMapBuilder.put(path, rangeFor(fencedCodeBlock, parsed.bodyStartLine()));
+    void appendBlocks(org.commonmark.node.Node parent, ArrayNode blocks, String blocksPath,
+                      MarkdownSourceMapBuilder sourceMapBuilder, int bodyStartLine) {
+        for (org.commonmark.node.Node child = parent.getFirstChild(); child != null; child = child.getNext()) {
+            int index = blocks.size();
+            String path = blocksPath + "[" + index + "]";
+
+            appendBlock(child, blocks, path, sourceMapBuilder, bodyStartLine);
+        }
+    }
+
+    void appendBlock(org.commonmark.node.Node child, ArrayNode blocks, String path,
+                     MarkdownSourceMapBuilder sourceMapBuilder, int bodyStartLine) {
+        if (child instanceof Heading heading) {
+            ObjectNode block = blocks.addObject();
+            String text = MarkdownValidator.extractText(heading);
+            block.put("type", "heading");
+            block.put("level", heading.getLevel());
+            block.put("text", text);
+            block.put("anchor", MarkdownValidator.slugify(text));
+            sourceMapBuilder.put(path, rangeFor(heading, bodyStartLine));
+        } else if (child instanceof Paragraph paragraph) {
+            ObjectNode block = blocks.addObject();
+            block.put("type", "paragraph");
+            block.put("text", MarkdownValidator.extractText(paragraph));
+            ArrayNode paragraphLinks = block.putArray("links");
+            appendParagraphLinks(paragraph, paragraphLinks, path, sourceMapBuilder, bodyStartLine);
+            sourceMapBuilder.put(path, rangeFor(paragraph, bodyStartLine));
+        } else if (child instanceof BulletList bulletList) {
+            ObjectNode block = blocks.addObject();
+            block.put("type", "list");
+            block.put("ordered", false);
+            block.put("marker", String.valueOf(bulletList.getBulletMarker()));
+            ArrayNode items = block.putArray("items");
+            appendListItems(bulletList, items, path, sourceMapBuilder, bodyStartLine);
+            sourceMapBuilder.put(path, rangeFor(bulletList, bodyStartLine));
+        } else if (child instanceof OrderedList orderedList) {
+            ObjectNode block = blocks.addObject();
+            block.put("type", "list");
+            block.put("ordered", true);
+            block.put("marker", String.valueOf(orderedList.getDelimiter()));
+            block.put("startNumber", orderedList.getStartNumber());
+            ArrayNode items = block.putArray("items");
+            appendListItems(orderedList, items, path, sourceMapBuilder, bodyStartLine);
+            sourceMapBuilder.put(path, rangeFor(orderedList, bodyStartLine));
+        } else if (child instanceof FencedCodeBlock fencedCodeBlock) {
+            ObjectNode block = blocks.addObject();
+            block.put("type", "code-block");
+            if (fencedCodeBlock.getInfo() == null) {
+                block.putNull("language");
+            } else {
+                block.put("language", fencedCodeBlock.getInfo());
             }
+            block.put("content", fencedCodeBlock.getLiteral());
+            sourceMapBuilder.put(path, rangeFor(fencedCodeBlock, bodyStartLine));
         }
     }
 
@@ -146,9 +126,9 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
             if (child instanceof ListItem listItem) {
                 int index = items.size();
                 ObjectNode item = items.addObject();
-                item.put("text", MarkdownValidator.extractText(listItem));
-                ArrayNode itemLinks = item.putArray("links");
-                appendListItemLinks(listItem, itemLinks, blockPath + ".items[" + index + "]",
+                item.put("text", extractListItemText(listItem));
+                ArrayNode itemBlocks = item.putArray("blocks");
+                appendBlocks(listItem, itemBlocks, blockPath + ".items[" + index + "].blocks",
                         sourceMapBuilder, bodyStartLine);
             }
         }
@@ -156,21 +136,26 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
 
     void appendListItemLinks(ListItem listItem, ArrayNode links, String itemPath,
                              MarkdownSourceMapBuilder sourceMapBuilder, int bodyStartLine) {
-        listItem.accept(new AbstractVisitor() {
-            @Override
-            public void visit(Link link) {
-                String destination = link.getDestination();
-                if (destination == null || destination.isBlank()) {
-                    visitChildren(link);
-                    return;
-                }
-
-                int index = links.size();
-                links.add(buildProjectedLink(link));
-                sourceMapBuilder.put(itemPath + ".links[" + index + "]", rangeFor(link, bodyStartLine));
-                visitChildren(link);
+        for (org.commonmark.node.Node child = listItem.getFirstChild(); child != null; child = child.getNext()) {
+            if (child instanceof Paragraph paragraph) {
+                appendParagraphLinks(paragraph, links, itemPath, sourceMapBuilder, bodyStartLine);
             }
-        });
+        }
+    }
+
+    String extractListItemText(ListItem listItem) {
+        StringBuilder text = new StringBuilder();
+        for (org.commonmark.node.Node child = listItem.getFirstChild(); child != null; child = child.getNext()) {
+            if (!(child instanceof Paragraph paragraph)) {
+                continue;
+            }
+
+            if (!text.isEmpty()) {
+                text.append('\n');
+            }
+            text.append(MarkdownValidator.extractText(paragraph));
+        }
+        return text.toString();
     }
 
     void appendParagraphLinks(Paragraph paragraph, ArrayNode links, String blockPath,
