@@ -13,11 +13,10 @@
  */
 package io.polychro.markdown;
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.TextNode;
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Document;
-import org.commonmark.node.Link;
-import org.commonmark.node.Paragraph;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -215,19 +214,15 @@ class MarkdownLinkValidationIntegrationTest {
     }
 
     @Test
-    void collectAllLinksShouldSkipNullDestination() {
+        void collectProjectedLinksShouldSkipBlankTarget() {
         MarkdownValidator validator = new MarkdownValidator(
                 120, "-", new GenericFormat(), new FrontmatterParser());
 
-        // Build a document with a Link node that has null destination
-        org.commonmark.node.Document cmDoc = new org.commonmark.node.Document();
-        Paragraph para = new Paragraph();
-        Link link = new Link();
-        link.setDestination(null);
-        para.appendChild(link);
-        cmDoc.appendChild(para);
+                var root = JsonNodeFactory.instance.objectNode();
+                root.putObject("document").putArray("links").addObject().put("target", "   ");
+                Document projected = new Document(root, "markdown", null);
 
-        List<MarkdownValidator.LinkInfo> links = validator.collectAllLinks(cmDoc, 0);
+                List<MarkdownValidator.LinkInfo> links = validator.collectProjectedLinks(projected);
         assertTrue(links.isEmpty());
     }
 }

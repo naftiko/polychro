@@ -22,7 +22,6 @@ import io.polychro.spi.Validator;
 import org.commonmark.node.AbstractVisitor;
 import org.commonmark.node.Code;
 import org.commonmark.node.Heading;
-import org.commonmark.node.Link;
 import org.commonmark.node.Node;
 import org.commonmark.node.Text;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -118,11 +117,11 @@ class MarkdownValidator implements Validator {
         checkCodeBlockLanguage(projected, diagnostics);
         checkLineLength(lines, diagnostics);
         checkTrailingWhitespace(lines, diagnostics);
-        checkListMarkers(lines, frontmatter.bodyStartLine(), diagnostics);
+        checkListMarkers(projected, diagnostics);
         checkBlankLineBeforeHeading(lines, diagnostics);
 
         // Relative and external link checks
-        checkFileLinks(parsed.bodyDocument(), parsed.bodyStartLine(), doc.sourcePath(), diagnostics);
+        checkFileLinks(projected, doc.sourcePath(), diagnostics);
 
         // Format-specific checks
         format.validate(projected, diagnostics);
@@ -252,20 +251,16 @@ class MarkdownValidator implements Validator {
         }
     }
 
-    void checkListMarkers(String[] lines, int bodyStartLine, List<Diagnostic> diagnostics) {
-        for (int i = bodyStartLine - 1; i < lines.length; i++) {
-            String trimmed = lines[i].stripLeading();
-            if (trimmed.length() >= 2) {
-                char first = trimmed.charAt(0);
-                if ((first == '-' || first == '*' || first == '+') && trimmed.charAt(1) == ' ') {
-                    String marker = String.valueOf(first);
-                    if (!marker.equals(listMarker)) {
-                        diagnostics.add(new Diagnostic(Severity.INFO, "inconsistent-list-marker",
-                                "Expected list marker '" + listMarker + "' but found '" + marker + "'",
-                                null,
-                                new SourceRange(i + 1, 1, i + 1, 2)));
-                    }
-                }
+    void checkListMarkers(Document projected, List<Diagnostic> diagnostics) {
+        JsonNode lists = projected.root().path("document").path("lists");
+        for (int i = 0; i < lists.size(); i++) {
+            JsonNode list = lists.get(i);
+            String marker = list.path("marker").asText();
+            if (!marker.equals(listMarker)) {
+                diagnostics.add(new Diagnostic(Severity.INFO, "inconsistent-list-marker",
+                        "Expected list marker '" + listMarker + "' but found '" + marker + "'",
+                        null,
+                        rangeFor(projected, "$.document.lists[" + i + "]")));
             }
         }
     }
@@ -286,7 +281,7 @@ class MarkdownValidator implements Validator {
         }
     }
 
-    void checkFileLinks(Node document, int bodyStartLine, String sourcePath,
+    void checkFileLinks(Document projected, String sourcePath,
                         List<Diagnostic> diagnostics) {
         if (sourcePath == null) {
             return; // Cannot resolve relative links without a source path
@@ -298,7 +293,7 @@ class MarkdownValidator implements Validator {
             return;
         }
 
-        List<LinkInfo> allLinks = collectAllLinks(document, bodyStartLine);
+        List<LinkInfo> allLinks = collectProjectedLinks(projected);
 
         // Split into relative and external
         List<LinkInfo> relativeLinks = new ArrayList<>();
@@ -326,19 +321,19 @@ class MarkdownValidator implements Validator {
         }
     }
 
-    List<LinkInfo> collectAllLinks(Node document, int bodyStartLine) {
+    List<LinkInfo> collectProjectedLinks(Document projected) {
         List<LinkInfo> links = new ArrayList<>();
-        document.accept(new AbstractVisitor() {
-            @Override
-            public void visit(Link link) {
-                String destination = link.getDestination();
-                if (destination != null && !destination.isBlank()) {
-                    int line = getNodeLine(link, bodyStartLine);
-                    links.add(new LinkInfo(destination, line));
-                }
-                visitChildren(link);
+        JsonNode linkNodes = projected.root().path("document").path("links");
+        for (int i = 0; i < linkNodes.size(); i++) {
+            JsonNode link = linkNodes.get(i);
+            String target = link.path("target").asText();
+            if (target.isBlank()) {
+                continue;
             }
-        });
+
+            SourceRange range = rangeFor(projected, "$.document.links[" + i + "]");
+            links.add(new LinkInfo(target, range.startLine()));
+        }
         return links;
     }
 
