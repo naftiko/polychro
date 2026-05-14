@@ -46,9 +46,7 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
         ObjectNode document = root.putObject("document");
         ArrayNode blocks = document.putArray("blocks");
         ArrayNode headings = document.putArray("headings");
-        ArrayNode links = document.putArray("links");
         ArrayNode codeBlocks = document.putArray("codeBlocks");
-        ArrayNode lists = document.putArray("lists");
         MarkdownSourceMapBuilder sourceMapBuilder = new MarkdownSourceMapBuilder();
 
         if (parsed.frontmatter().data() != null) {
@@ -74,21 +72,6 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
             }
 
             @Override
-            public void visit(Link link) {
-                String destination = link.getDestination();
-                if (destination == null || destination.isBlank()) {
-                    visitChildren(link);
-                    return;
-                }
-
-                int index = links.size();
-                String path = "$.document.links[" + index + "]";
-                links.add(buildProjectedLink(link));
-                sourceMapBuilder.put(path, rangeFor(link, parsed.bodyStartLine()));
-                visitChildren(link);
-            }
-
-            @Override
             public void visit(FencedCodeBlock fencedCodeBlock) {
                 int index = codeBlocks.size();
                 String path = "$.document.codeBlocks[" + index + "]";
@@ -100,17 +83,6 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
                 }
                 projectedCodeBlock.put("content", fencedCodeBlock.getLiteral());
                 sourceMapBuilder.put(path, rangeFor(fencedCodeBlock, parsed.bodyStartLine()));
-            }
-
-            @Override
-            public void visit(BulletList bulletList) {
-                int index = lists.size();
-                String path = "$.document.lists[" + index + "]";
-                ObjectNode projectedList = lists.addObject();
-                projectedList.put("kind", "bullet");
-                projectedList.put("marker", String.valueOf(bulletList.getBulletMarker()));
-                sourceMapBuilder.put(path, rangeFor(bulletList, parsed.bodyStartLine()));
-                visitChildren(bulletList);
             }
         });
 

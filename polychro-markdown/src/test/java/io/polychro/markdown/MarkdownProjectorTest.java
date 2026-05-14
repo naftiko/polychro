@@ -61,8 +61,6 @@ class MarkdownProjectorTest {
         assertEquals("code-block", projected.root().path("document").path("blocks").get(3).path("type").asText());
         assertEquals("Title", projected.root().path("document").path("headings").get(0).path("text").asText());
         assertEquals("title", projected.root().path("document").path("headings").get(0).path("anchor").asText());
-        assertEquals("-", projected.root().path("document").path("lists").get(0).path("marker").asText());
-        assertEquals("internal-anchor", projected.root().path("document").path("links").get(0).path("kind").asText());
         assertEquals("", projected.root().path("document").path("codeBlocks").get(0).path("language").asText());
     }
 
@@ -92,10 +90,10 @@ class MarkdownProjectorTest {
         assertEquals(new SourceRange(9, 1, 9, 1), projected.sourceMap().resolve("$.document.blocks[2]"));
         assertEquals(new SourceRange(11, 1, 11, 1), projected.sourceMap().resolve("$.document.blocks[3]"));
         assertEquals(new SourceRange(5, 1, 5, 1), projected.sourceMap().resolve("$.document.headings[0]"));
-        assertEquals(new SourceRange(7, 1, 7, 1), projected.sourceMap().resolve("$.document.lists[0]"));
         assertEquals(new SourceRange(9, 1, 9, 1), projected.sourceMap().resolve("$.document.blocks[2].links[0]"));
-        assertEquals(new SourceRange(9, 1, 9, 1), projected.sourceMap().resolve("$.document.links[0]"));
         assertEquals(new SourceRange(11, 1, 11, 1), projected.sourceMap().resolve("$.document.codeBlocks[0]"));
+        assertNull(projected.sourceMap().resolve("$.document.lists[0]"));
+        assertNull(projected.sourceMap().resolve("$.document.links[0]"));
     }
 
     @Test
@@ -191,7 +189,7 @@ class MarkdownProjectorTest {
                 new MarkdownParseResult("", new FrontmatterResult(null, "", 1, null), body),
                 null);
 
-        assertEquals(0, projected.root().path("document").path("links").size());
+        assertEquals(0, projected.root().path("document").path("blocks").get(0).path("links").size());
     }
 
     @Test
@@ -200,6 +198,6 @@ class MarkdownProjectorTest {
 
         Document projected = projector.project(parsed, "docs/example.md");
 
-        assertEquals("relative", projected.root().path("document").path("links").get(0).path("kind").asText());
+        assertEquals("relative", projected.root().path("document").path("blocks").get(0).path("links").get(0).path("kind").asText());
     }
 }
