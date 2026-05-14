@@ -187,6 +187,25 @@ class MarkdownLinkValidationIntegrationTest {
         }
 
     @Test
+    void validateShouldCheckLinksNestedInNestedListItems() throws IOException {
+        Path target = tempDir.resolve("exists.md");
+        Files.writeString(target, "# Exists\n");
+
+        Path docFile = tempDir.resolve("doc.md");
+        Files.writeString(docFile, "# Title\n\n- Parent\n  - [valid](exists.md)\n  - [broken](missing.md)\n");
+
+        MarkdownValidator validator = new MarkdownValidator(
+                120, "-", new GenericFormat(), new FrontmatterParser());
+
+        Document doc = new Document(new TextNode(Files.readString(docFile)), docFile.toString());
+        List<Diagnostic> diagnostics = validator.validate(doc);
+
+        long brokenRelative = diagnostics.stream()
+                .filter(d -> d.code().equals("broken-relative-link")).count();
+        assertEquals(1, brokenRelative);
+    }
+
+    @Test
     void validateShouldIgnoreBlankDestinationLinks() throws IOException {
         // [text]() produces a blank destination — should not be collected as a link
         Path docFile = tempDir.resolve("doc.md");
@@ -373,5 +392,59 @@ class MarkdownLinkValidationIntegrationTest {
                 assertEquals(1, links.size());
                 assertEquals("#title", links.getFirst().target());
                 assertEquals("$.document.blocks[0].items[0].links[0]", links.getFirst().path());
+            }
+
+            @Test
+            void collectProjectedLinksShouldIncludeNestedListItemBlockLinksWhenBlocksPresent() {
+                MarkdownValidator validator = new MarkdownValidator(
+                        120, "-", new GenericFormat(), new FrontmatterParser());
+
+                var root = JsonNodeFactory.instance.objectNode();
+                var document = root.putObject("document");
+                document.putArray("blocks")
+                        .addObject()
+                        .putArray("items")
+                        .addObject()
+                        .putArray("blocks")
+                        .addObject()
+                        .put("type", "list")
+                        .putArray("items")
+                        .addObject()
+                        .putArray("links")
+                        .addObject()
+                        .put("target", "guide.md");
+                Document projected = new Document(root, "markdown", null);
+
+                List<MarkdownValidator.LinkInfo> links = validator.collectProjectedLinks(projected);
+                assertEquals(1, links.size());
+                assertEquals("guide.md", links.getFirst().target());
+            }
+
+            @Test
+            void collectProjectedInternalLinksShouldIncludeNestedListItemBlockLinksWhenBlocksPresent() {
+                MarkdownValidator validator = new MarkdownValidator(
+                        120, "-", new GenericFormat(), new FrontmatterParser());
+
+                var root = JsonNodeFactory.instance.objectNode();
+                var document = root.putObject("document");
+                document.putArray("blocks")
+                        .addObject()
+                        .putArray("items")
+                        .addObject()
+                        .putArray("blocks")
+                        .addObject()
+                        .put("type", "list")
+                        .putArray("items")
+                        .addObject()
+                        .putArray("links")
+                        .addObject()
+                        .put("target", "#title")
+                        .put("kind", "internal-anchor");
+                Document projected = new Document(root, "markdown", null);
+
+                List<MarkdownValidator.ProjectedLinkInfo> links = validator.collectProjectedInternalLinks(projected);
+                assertEquals(1, links.size());
+                assertEquals("#title", links.getFirst().target());
+                assertEquals("$.document.blocks[0].items[0].blocks[0].items[0].links[0]", links.getFirst().path());
             }
 }

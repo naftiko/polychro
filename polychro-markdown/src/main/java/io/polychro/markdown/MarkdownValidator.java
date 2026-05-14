@@ -21,7 +21,6 @@ import io.polychro.spi.Validator;
 
 import org.commonmark.node.AbstractVisitor;
 import org.commonmark.node.Code;
-import org.commonmark.node.Heading;
 import org.commonmark.node.Node;
 import org.commonmark.node.Text;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -364,17 +363,7 @@ class MarkdownValidator implements Validator {
         JsonNode blocks = projected.root().path("document").path("blocks");
         if (blocks.isArray()) {
             for (int i = 0; i < blocks.size(); i++) {
-                JsonNode block = blocks.get(i);
-                collectProjectedLinks(links, projected, block.path("links"), "$.document.blocks[" + i + "].links");
-                JsonNode items = block.path("items");
-                if (!items.isArray()) {
-                    continue;
-                }
-
-                for (int j = 0; j < items.size(); j++) {
-                    collectProjectedLinks(links, projected, items.get(j).path("links"),
-                            "$.document.blocks[" + i + "].items[" + j + "].links");
-                }
+                collectProjectedBlockLinks(links, projected, blocks.get(i), "$.document.blocks[" + i + "]");
             }
             return links;
         }
@@ -457,17 +446,7 @@ class MarkdownValidator implements Validator {
         JsonNode blocks = projected.root().path("document").path("blocks");
         if (blocks.isArray()) {
             for (int i = 0; i < blocks.size(); i++) {
-                JsonNode block = blocks.get(i);
-                collectProjectedInternalLinks(links, block.path("links"), "$.document.blocks[" + i + "].links");
-                JsonNode items = block.path("items");
-                if (!items.isArray()) {
-                    continue;
-                }
-
-                for (int j = 0; j < items.size(); j++) {
-                    collectProjectedInternalLinks(links, items.get(j).path("links"),
-                            "$.document.blocks[" + i + "].items[" + j + "].links");
-                }
+                collectProjectedInternalBlockLinks(links, blocks.get(i), "$.document.blocks[" + i + "]");
             }
             return links;
         }
@@ -498,6 +477,54 @@ class MarkdownValidator implements Validator {
 
             SourceRange range = rangeFor(projected, pathPrefix + "[" + i + "]");
             links.add(new LinkInfo(target, range.startLine()));
+        }
+    }
+
+    void collectProjectedBlockLinks(List<LinkInfo> links, Document projected, JsonNode block, String blockPath) {
+        collectProjectedLinks(links, projected, block.path("links"), blockPath + ".links");
+        JsonNode items = block.path("items");
+        if (!items.isArray()) {
+            return;
+        }
+
+        for (int i = 0; i < items.size(); i++) {
+            collectProjectedItemLinks(links, projected, items.get(i), blockPath + ".items[" + i + "]");
+        }
+    }
+
+    void collectProjectedItemLinks(List<LinkInfo> links, Document projected, JsonNode item, String itemPath) {
+        collectProjectedLinks(links, projected, item.path("links"), itemPath + ".links");
+        JsonNode blocks = item.path("blocks");
+        if (!blocks.isArray()) {
+            return;
+        }
+
+        for (int i = 0; i < blocks.size(); i++) {
+            collectProjectedBlockLinks(links, projected, blocks.get(i), itemPath + ".blocks[" + i + "]");
+        }
+    }
+
+    void collectProjectedInternalBlockLinks(List<ProjectedLinkInfo> links, JsonNode block, String blockPath) {
+        collectProjectedInternalLinks(links, block.path("links"), blockPath + ".links");
+        JsonNode items = block.path("items");
+        if (!items.isArray()) {
+            return;
+        }
+
+        for (int i = 0; i < items.size(); i++) {
+            collectProjectedInternalItemLinks(links, items.get(i), blockPath + ".items[" + i + "]");
+        }
+    }
+
+    void collectProjectedInternalItemLinks(List<ProjectedLinkInfo> links, JsonNode item, String itemPath) {
+        collectProjectedInternalLinks(links, item.path("links"), itemPath + ".links");
+        JsonNode blocks = item.path("blocks");
+        if (!blocks.isArray()) {
+            return;
+        }
+
+        for (int i = 0; i < blocks.size(); i++) {
+            collectProjectedInternalBlockLinks(links, blocks.get(i), itemPath + ".blocks[" + i + "]");
         }
     }
 
