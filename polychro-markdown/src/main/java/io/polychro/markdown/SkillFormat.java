@@ -29,15 +29,15 @@ class SkillFormat implements MarkdownFormat {
     private static final List<String> REQUIRED_FRONTMATTER_FIELDS = List.of("name", "description");
 
     @Override
-    public void validate(Document doc, FrontmatterResult frontmatter, List<Diagnostic> diagnostics) {
-        if (!frontmatter.hasFrontmatter()) {
+    public void validate(Document doc, List<Diagnostic> diagnostics) {
+        JsonNode data = frontmatter(doc);
+        if (data == null) {
             diagnostics.add(new Diagnostic(Severity.ERROR, "skill-missing-frontmatter",
                     "SKILL.md requires YAML frontmatter with 'name' and 'description'",
                     null, new SourceRange(1, 1, 1, 1)));
             return;
         }
 
-        JsonNode data = frontmatter.data();
         for (String field : REQUIRED_FRONTMATTER_FIELDS) {
             if (!data.has(field) || data.get(field).isNull()) {
                 diagnostics.add(new Diagnostic(Severity.ERROR, "skill-missing-field",
@@ -58,9 +58,8 @@ class SkillFormat implements MarkdownFormat {
                     null, new SourceRange(1, 1, 1, 1)));
         }
 
-        // Body must have at least one ## section
-        String body = frontmatter.body();
-        if (body != null && !body.contains("\n## ") && !body.startsWith("## ")) {
+        // Skills should expose at least one projected section heading.
+        if (!hasHeadingAtOrAboveLevel(doc, 2)) {
             diagnostics.add(new Diagnostic(Severity.WARN, "skill-no-sections",
                     "SKILL.md body should have at least one ## section",
                     null, null));

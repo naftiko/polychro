@@ -13,6 +13,7 @@
  */
 package io.polychro.markdown;
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.TextNode;
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Document;
@@ -30,6 +31,22 @@ class AgentsFormatTest {
 
     private Document doc(String content) {
         return new Document(new TextNode(content), "AGENTS.md");
+    }
+
+    private Document projectedDoc(com.fasterxml.jackson.databind.JsonNode frontmatter,
+                                  com.fasterxml.jackson.databind.JsonNode... headings) {
+        var root = JsonNodeFactory.instance.objectNode();
+        var document = root.putObject("document");
+        if (frontmatter == null) {
+            document.putNull("frontmatter");
+        } else {
+            document.set("frontmatter", frontmatter);
+        }
+        var headingArray = document.putArray("headings");
+        for (var heading : headings) {
+            headingArray.add(heading);
+        }
+        return new Document(root, "markdown", "AGENTS.md");
     }
 
     @Test
@@ -81,18 +98,27 @@ class AgentsFormatTest {
     @Test
     void containsSectionShouldReturnFalseForEmptyBody() {
         AgentsFormat format = new AgentsFormat();
-        boolean found = format.containsSection("", "Build & Test");
+        boolean found = format.containsSection(projectedDoc(null), "Build & Test");
         assertTrue(!found);
     }
 
     @Test
-    void validateShouldHandleNullBody() {
+    void validateShouldHandleMissingProjectedHeadings() {
         AgentsFormat format = new AgentsFormat();
-        FrontmatterResult result = new FrontmatterResult(null, null, 1, null);
         List<Diagnostic> diagnostics = new java.util.ArrayList<>();
-        Document nullDoc = new Document(null, "AGENTS.md");
-        format.validate(nullDoc, result, diagnostics);
-        // Should not throw, should report missing sections
+        format.validate(projectedDoc(null), diagnostics);
         assertTrue(diagnostics.stream().anyMatch(d -> d.code().equals("agents-missing-section")));
+    }
+
+    @Test
+    void containsSectionShouldUseProjectedHeadings() {
+        AgentsFormat format = new AgentsFormat();
+        var heading = JsonNodeFactory.instance.objectNode();
+        heading.put("level", 2);
+        heading.put("text", "Build & Test");
+
+        boolean found = format.containsSection(projectedDoc(null, heading), "Build & Test");
+
+        assertTrue(found);
     }
 }
