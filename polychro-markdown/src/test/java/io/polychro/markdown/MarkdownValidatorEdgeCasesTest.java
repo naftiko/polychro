@@ -238,6 +238,53 @@ class MarkdownValidatorEdgeCasesTest {
     }
 
     @Test
+    void checkListMarkersShouldPreferProjectedBlocksWhenPresent() {
+        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        var document = root.putObject("document");
+        document.putArray("blocks")
+                .addObject()
+                .put("type", "list")
+                .put("marker", "*");
+        document.putArray("lists")
+                .addObject()
+                .put("marker", "-");
+
+        List<Diagnostic> diagnostics = new java.util.ArrayList<>();
+        validator.checkListMarkers(new Document(root, "markdown", null), diagnostics);
+
+        assertEquals(1, diagnostics.size());
+        assertEquals("inconsistent-list-marker", diagnostics.getFirst().code());
+        assertEquals(new io.polychro.spi.SourceRange(1, 1, 1, 1), diagnostics.getFirst().range());
+    }
+
+    @Test
+    void checkListMarkersShouldFallbackToLegacyListsWhenBlocksMissing() {
+        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        root.putObject("document").putArray("lists")
+                .addObject()
+                .put("marker", "*");
+
+        List<Diagnostic> diagnostics = new java.util.ArrayList<>();
+        validator.checkListMarkers(new Document(root, "markdown", null), diagnostics);
+
+        assertEquals(1, diagnostics.size());
+        assertEquals("inconsistent-list-marker", diagnostics.getFirst().code());
+    }
+
+    @Test
+    void checkListMarkersShouldIgnoreMatchingLegacyListMarkerWhenBlocksMissing() {
+        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        root.putObject("document").putArray("lists")
+                .addObject()
+                .put("marker", "-");
+
+        List<Diagnostic> diagnostics = new java.util.ArrayList<>();
+        validator.checkListMarkers(new Document(root, "markdown", null), diagnostics);
+
+        assertTrue(diagnostics.isEmpty());
+    }
+
+    @Test
     void checkCodeBlockLanguageShouldHandleLegacyBlankLanguage() {
         var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
         root.putObject("document").putArray("codeBlocks")
