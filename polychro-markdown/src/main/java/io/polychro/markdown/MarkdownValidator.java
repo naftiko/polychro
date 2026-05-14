@@ -342,6 +342,29 @@ class MarkdownValidator implements Validator {
 
     List<LinkInfo> collectProjectedLinks(Document projected) {
         List<LinkInfo> links = new ArrayList<>();
+        JsonNode blocks = projected.root().path("document").path("blocks");
+        if (blocks.isArray()) {
+            for (int i = 0; i < blocks.size(); i++) {
+                JsonNode block = blocks.get(i);
+                JsonNode blockLinks = block.path("links");
+                if (!blockLinks.isArray()) {
+                    continue;
+                }
+
+                for (int j = 0; j < blockLinks.size(); j++) {
+                    JsonNode link = blockLinks.get(j);
+                    String target = link.path("target").asText();
+                    if (target.isBlank()) {
+                        continue;
+                    }
+
+                    SourceRange range = rangeFor(projected, "$.document.blocks[" + i + "].links[" + j + "]");
+                    links.add(new LinkInfo(target, range.startLine()));
+                }
+            }
+            return links;
+        }
+
         JsonNode linkNodes = projected.root().path("document").path("links");
         for (int i = 0; i < linkNodes.size(); i++) {
             JsonNode link = linkNodes.get(i);
@@ -417,6 +440,27 @@ class MarkdownValidator implements Validator {
 
     List<ProjectedLinkInfo> collectProjectedInternalLinks(Document projected) {
         List<ProjectedLinkInfo> links = new ArrayList<>();
+        JsonNode blocks = projected.root().path("document").path("blocks");
+        if (blocks.isArray()) {
+            for (int i = 0; i < blocks.size(); i++) {
+                JsonNode block = blocks.get(i);
+                JsonNode blockLinks = block.path("links");
+                if (!blockLinks.isArray()) {
+                    continue;
+                }
+
+                for (int j = 0; j < blockLinks.size(); j++) {
+                    JsonNode link = blockLinks.get(j);
+                    if ("internal-anchor".equals(link.path("kind").asText())) {
+                        links.add(new ProjectedLinkInfo(
+                                link.path("target").asText(),
+                                "$.document.blocks[" + i + "].links[" + j + "]"));
+                    }
+                }
+            }
+            return links;
+        }
+
         JsonNode linkNodes = projected.root().path("document").path("links");
         for (int i = 0; i < linkNodes.size(); i++) {
             JsonNode link = linkNodes.get(i);
