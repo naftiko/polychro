@@ -53,21 +53,33 @@ interface MarkdownFormat {
         }
 
         JsonNode blocks = doc.root().path("document").path("blocks");
-        if (blocks.isArray()) {
-            List<JsonNode> headings = new ArrayList<>();
-            for (JsonNode block : blocks) {
-                if ("heading".equals(block.path("type").asText())) {
-                    headings.add(block);
-                }
-            }
-            return headings;
-        }
-
-        JsonNode headings = doc.root().path("document").path("headings");
-        if (!headings.isArray()) {
+        if (!blocks.isArray()) {
             return Collections.emptyList();
         }
+
+        List<JsonNode> headings = new ArrayList<>();
+        collectHeadingBlocks(headings, blocks);
         return headings;
+    }
+
+    private static void collectHeadingBlocks(List<JsonNode> headings, JsonNode blocks) {
+        for (JsonNode block : blocks) {
+            if ("heading".equals(block.path("type").asText())) {
+                headings.add(block);
+            }
+
+            JsonNode items = block.path("items");
+            if (!items.isArray()) {
+                continue;
+            }
+
+            for (JsonNode item : items) {
+                JsonNode nestedBlocks = item.path("blocks");
+                if (nestedBlocks.isArray()) {
+                    collectHeadingBlocks(headings, nestedBlocks);
+                }
+            }
+        }
     }
 
     default boolean hasHeading(Document doc, String text, int minLevel) {

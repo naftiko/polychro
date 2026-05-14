@@ -88,9 +88,9 @@ class MarkdownFormatTest {
     }
 
     @Test
-    void headingsShouldReturnEmptyWhenProjectedHeadingsAreNotAnArray() {
+    void headingsShouldReturnEmptyWhenProjectedBlocksAreNotAnArray() {
         var root = JsonNodeFactory.instance.objectNode();
-        root.putObject("document").putObject("headings");
+        root.putObject("document").putObject("blocks");
 
         int count = 0;
         for (var ignored : format.headings(new Document(root, "markdown", null))) {
@@ -101,7 +101,7 @@ class MarkdownFormatTest {
     }
 
     @Test
-    void headingsShouldReturnEmptyWhenProjectedHeadingsAreMissing() {
+    void headingsShouldReturnEmptyWhenProjectedBlocksAreMissing() {
         var root = JsonNodeFactory.instance.objectNode();
         root.putObject("document");
 
@@ -114,12 +114,13 @@ class MarkdownFormatTest {
     }
 
     @Test
-    void headingsShouldReturnProjectedHeadingsWhenArrayIsPresent() {
+    void headingsShouldReturnProjectedHeadingsWhenBlockArrayIsPresent() {
         var heading = JsonNodeFactory.instance.objectNode();
+        heading.put("type", "heading");
         heading.put("level", 2);
         heading.put("text", "Overview");
         var root = JsonNodeFactory.instance.objectNode();
-        root.putObject("document").putArray("headings").add(heading);
+        root.putObject("document").putArray("blocks").add(heading);
 
         int count = 0;
         for (var projectedHeading : format.headings(new Document(root, "markdown", null))) {
@@ -136,13 +137,43 @@ class MarkdownFormatTest {
         blockHeading.put("type", "heading");
         blockHeading.put("level", 2);
         blockHeading.put("text", "Overview");
-        var legacyHeading = JsonNodeFactory.instance.objectNode();
-        legacyHeading.put("level", 2);
-        legacyHeading.put("text", "Legacy");
+        var nestedHeading = JsonNodeFactory.instance.objectNode();
+        nestedHeading.put("type", "heading");
+        nestedHeading.put("level", 3);
+        nestedHeading.put("text", "Nested");
         var root = JsonNodeFactory.instance.objectNode();
         var document = root.putObject("document");
-        document.putArray("blocks").add(blockHeading);
-        document.putArray("headings").add(legacyHeading);
+        document.putArray("blocks")
+                .add(blockHeading)
+                .addObject()
+                .put("type", "list")
+                .putArray("items")
+                .addObject()
+                .putArray("blocks")
+                .add(nestedHeading);
+
+        int count = 0;
+        for (var projectedHeading : format.headings(new Document(root, "markdown", null))) {
+            assertEquals(count == 0 ? "Overview" : "Nested", projectedHeading.path("text").asText());
+            count++;
+        }
+
+        assertEquals(2, count);
+    }
+
+    @Test
+    void headingsShouldIgnoreItemsWithoutNestedBlocks() {
+        var heading = JsonNodeFactory.instance.objectNode();
+        heading.put("type", "heading");
+        heading.put("level", 2);
+        heading.put("text", "Overview");
+        var root = JsonNodeFactory.instance.objectNode();
+        root.putObject("document").putArray("blocks")
+                .add(heading)
+                .addObject()
+                .put("type", "list")
+                .putArray("items")
+                .addObject();
 
         int count = 0;
         for (var projectedHeading : format.headings(new Document(root, "markdown", null))) {
@@ -156,10 +187,11 @@ class MarkdownFormatTest {
     @Test
     void hasHeadingShouldReturnTrueForMatchingHeadingAndLevel() {
         var heading = JsonNodeFactory.instance.objectNode();
+        heading.put("type", "heading");
         heading.put("level", 2);
         heading.put("text", "Overview");
         var root = JsonNodeFactory.instance.objectNode();
-        root.putObject("document").putArray("headings").add(heading);
+        root.putObject("document").putArray("blocks").add(heading);
 
         assertTrue(format.hasHeading(new Document(root, "markdown", null), "Overview", 2));
     }
@@ -167,10 +199,11 @@ class MarkdownFormatTest {
     @Test
     void hasHeadingShouldReturnFalseWhenHeadingLevelIsTooLow() {
         var heading = JsonNodeFactory.instance.objectNode();
+        heading.put("type", "heading");
         heading.put("level", 1);
         heading.put("text", "Overview");
         var root = JsonNodeFactory.instance.objectNode();
-        root.putObject("document").putArray("headings").add(heading);
+        root.putObject("document").putArray("blocks").add(heading);
 
         assertFalse(format.hasHeading(new Document(root, "markdown", null), "Overview", 2));
     }
@@ -178,10 +211,11 @@ class MarkdownFormatTest {
     @Test
     void hasHeadingShouldReturnFalseWhenHeadingTextDoesNotMatch() {
         var heading = JsonNodeFactory.instance.objectNode();
+        heading.put("type", "heading");
         heading.put("level", 2);
         heading.put("text", "Overview");
         var root = JsonNodeFactory.instance.objectNode();
-        root.putObject("document").putArray("headings").add(heading);
+        root.putObject("document").putArray("blocks").add(heading);
 
         assertFalse(format.hasHeading(new Document(root, "markdown", null), "Other", 2));
     }
@@ -189,10 +223,11 @@ class MarkdownFormatTest {
     @Test
     void hasHeadingAtOrAboveLevelShouldReturnFalseWhenNoHeadingMatches() {
         var heading = JsonNodeFactory.instance.objectNode();
+        heading.put("type", "heading");
         heading.put("level", 1);
         heading.put("text", "Intro");
         var root = JsonNodeFactory.instance.objectNode();
-        root.putObject("document").putArray("headings").add(heading);
+        root.putObject("document").putArray("blocks").add(heading);
 
         assertFalse(format.hasHeadingAtOrAboveLevel(new Document(root, "markdown", null), 2));
     }
@@ -200,10 +235,11 @@ class MarkdownFormatTest {
     @Test
     void hasHeadingAtOrAboveLevelShouldReturnTrueWhenHeadingMatches() {
         var heading = JsonNodeFactory.instance.objectNode();
+        heading.put("type", "heading");
         heading.put("level", 3);
         heading.put("text", "Details");
         var root = JsonNodeFactory.instance.objectNode();
-        root.putObject("document").putArray("headings").add(heading);
+        root.putObject("document").putArray("blocks").add(heading);
 
         assertTrue(format.hasHeadingAtOrAboveLevel(new Document(root, "markdown", null), 2));
     }
