@@ -13,6 +13,7 @@
  */
 package io.polychro.markdown;
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import io.polychro.spi.Document;
 import io.polychro.spi.SourceRange;
 import org.junit.jupiter.api.Test;
@@ -48,6 +49,14 @@ class MarkdownProjectorTest {
 
         assertEquals("markdown", projected.format());
         assertEquals("demo", projected.root().path("document").path("frontmatter").path("name").asText());
+        assertEquals("heading", projected.root().path("document").path("blocks").get(0).path("type").asText());
+        assertEquals("Title", projected.root().path("document").path("blocks").get(0).path("text").asText());
+        assertEquals("list", projected.root().path("document").path("blocks").get(1).path("type").asText());
+        assertEquals("-", projected.root().path("document").path("blocks").get(1).path("marker").asText());
+        assertEquals("Item", projected.root().path("document").path("blocks").get(1).path("items").get(0).path("text").asText());
+        assertEquals("paragraph", projected.root().path("document").path("blocks").get(2).path("type").asText());
+        assertEquals("link", projected.root().path("document").path("blocks").get(2).path("text").asText());
+        assertEquals("code-block", projected.root().path("document").path("blocks").get(3).path("type").asText());
         assertEquals("Title", projected.root().path("document").path("headings").get(0).path("text").asText());
         assertEquals("title", projected.root().path("document").path("headings").get(0).path("anchor").asText());
         assertEquals("-", projected.root().path("document").path("lists").get(0).path("marker").asText());
@@ -76,10 +85,41 @@ class MarkdownProjectorTest {
         Document projected = projector.project(parsed, "docs/example.md");
 
         assertEquals(new SourceRange(1, 1, 3, 1), projected.sourceMap().resolve("$.document.frontmatter"));
+        assertEquals(new SourceRange(5, 1, 5, 1), projected.sourceMap().resolve("$.document.blocks[0]"));
+        assertEquals(new SourceRange(7, 1, 7, 1), projected.sourceMap().resolve("$.document.blocks[1]"));
+        assertEquals(new SourceRange(9, 1, 9, 1), projected.sourceMap().resolve("$.document.blocks[2]"));
+        assertEquals(new SourceRange(11, 1, 11, 1), projected.sourceMap().resolve("$.document.blocks[3]"));
         assertEquals(new SourceRange(5, 1, 5, 1), projected.sourceMap().resolve("$.document.headings[0]"));
         assertEquals(new SourceRange(7, 1, 7, 1), projected.sourceMap().resolve("$.document.lists[0]"));
         assertEquals(new SourceRange(9, 1, 9, 1), projected.sourceMap().resolve("$.document.links[0]"));
         assertEquals(new SourceRange(11, 1, 11, 1), projected.sourceMap().resolve("$.document.codeBlocks[0]"));
+    }
+
+    @Test
+    void projectShouldExposeOrderedListsAsBlocks() {
+        MarkdownParseResult parsed = parserFacade.parse("""
+                3. Third
+                4. Fourth
+                """);
+
+        Document projected = projector.project(parsed, null);
+
+        assertEquals("list", projected.root().path("document").path("blocks").get(0).path("type").asText());
+        assertEquals(true, projected.root().path("document").path("blocks").get(0).path("ordered").asBoolean());
+        assertEquals(".", projected.root().path("document").path("blocks").get(0).path("marker").asText());
+        assertEquals(3, projected.root().path("document").path("blocks").get(0).path("startNumber").asInt());
+        assertEquals("Third", projected.root().path("document").path("blocks").get(0).path("items").get(0).path("text").asText());
+    }
+
+    @Test
+    void appendListItemsShouldIgnoreNonListItemChildren() {
+        org.commonmark.node.BulletList bulletList = new org.commonmark.node.BulletList();
+        bulletList.appendChild(new org.commonmark.node.Paragraph());
+
+        var items = JsonNodeFactory.instance.arrayNode();
+        projector.appendListItems(bulletList, items);
+
+        assertEquals(0, items.size());
     }
 
     @Test
