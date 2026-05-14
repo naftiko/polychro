@@ -155,6 +155,26 @@ class DocumentTest {
     }
 
     @Test
+    void fromStringShouldPreserveMarkdownAsTextWhenFormatIsExplicit() {
+        Document doc = Document.fromString("# Hello\n", "markdown");
+
+        assertNotNull(doc.root());
+        assertTrue(doc.root().isTextual());
+        assertEquals("# Hello\n", doc.root().asText());
+        assertEquals("markdown", doc.format());
+    }
+
+    @Test
+    void fromStringShouldPreserveHtmlAsTextWhenFormatIsExplicit() {
+        Document doc = Document.fromString("<html><body>Hello</body></html>", "html");
+
+        assertNotNull(doc.root());
+        assertTrue(doc.root().isTextual());
+        assertEquals("<html><body>Hello</body></html>", doc.root().asText());
+        assertEquals("html", doc.format());
+    }
+
+    @Test
     void fromStringShouldAutoDetectJson() {
         Document doc = Document.fromString("{\"key\": \"value\"}", null);
         assertNotNull(doc.root());
@@ -184,6 +204,28 @@ class DocumentTest {
         assertNotNull(doc.root());
         assertEquals("hello", doc.root().get("name").asText());
         assertEquals("xml", doc.format());
+    }
+
+    @Test
+    void fromStringShouldUseMarkdownSourcePathBeforeContentDetection() {
+        Document doc = Document.fromString("# Hello\n", null, "docs/example.md");
+
+        assertNotNull(doc.root());
+        assertTrue(doc.root().isTextual());
+        assertEquals("# Hello\n", doc.root().asText());
+        assertEquals("markdown", doc.format());
+        assertEquals("docs/example.md", doc.sourcePath());
+    }
+
+    @Test
+    void fromStringShouldUseHtmlSourcePathBeforeContentDetection() {
+        Document doc = Document.fromString("<html><body>Hello</body></html>", null, "site/index.html");
+
+        assertNotNull(doc.root());
+        assertTrue(doc.root().isTextual());
+        assertEquals("<html><body>Hello</body></html>", doc.root().asText());
+        assertEquals("html", doc.format());
+        assertEquals("site/index.html", doc.sourcePath());
     }
 
     @Test

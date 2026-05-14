@@ -63,7 +63,7 @@ class LintCommandHelpTest {
     @Test
     void helpShouldContainDescription() {
         String help = getHelpOutput();
-        assertTrue(help.contains("Lint one or more YAML/JSON/XML files"));
+        assertTrue(help.contains("Lint one or more YAML/JSON/XML/Markdown/HTML files"));
     }
 
     @Test

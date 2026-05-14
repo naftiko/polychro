@@ -21,6 +21,7 @@ import io.polychro.core.SarifFormatter;
 import io.polychro.core.TextFormatter;
 import io.polychro.core.LinterConfig;
 import io.polychro.spi.Diagnostic;
+import io.polychro.spi.Document;
 import io.polychro.spi.Severity;
 
 import java.nio.file.Files;
@@ -59,6 +60,37 @@ class LintCommandTest {
         Path file = createFile("test.xml", "<root><name>test</name></root>");
         int exitCode = executeLint(file.toString());
         assertEquals(0, exitCode);
+    }
+
+    @Test
+    void lintShouldReturnZeroForValidMarkdownFile() throws Exception {
+        Path file = createFile("test.md", "# Heading\n\nParagraph\n");
+        int exitCode = executeLint(file.toString());
+        assertEquals(0, exitCode);
+    }
+
+    @Test
+    void loadDocumentShouldPreserveMarkdownAsText() throws Exception {
+        Path file = createFile("notes.md", "# Heading\n");
+
+        Document doc = LintCommand.loadDocument(file, new java.io.PrintWriter(java.io.Writer.nullWriter()));
+
+        assertNotNull(doc);
+        assertEquals("markdown", doc.format());
+        assertTrue(doc.root().isTextual());
+        assertEquals("# Heading\n", doc.root().asText());
+    }
+
+    @Test
+    void loadDocumentShouldPreserveHtmlAsText() throws Exception {
+        Path file = createFile("index.html", "<html><body>Hello</body></html>");
+
+        Document doc = LintCommand.loadDocument(file, new java.io.PrintWriter(java.io.Writer.nullWriter()));
+
+        assertNotNull(doc);
+        assertEquals("html", doc.format());
+        assertTrue(doc.root().isTextual());
+        assertEquals("<html><body>Hello</body></html>", doc.root().asText());
     }
 
     @Test

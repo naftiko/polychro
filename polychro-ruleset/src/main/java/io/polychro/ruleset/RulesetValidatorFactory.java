@@ -18,6 +18,7 @@ import io.polychro.spi.ValidatorConfig;
 import io.polychro.spi.ValidatorFactory;
 
 import java.nio.file.Path;
+import java.util.Set;
 
 /**
  * Factory for creating {@link RulesetValidator} instances.
@@ -32,9 +33,17 @@ import java.nio.file.Path;
  */
 public class RulesetValidatorFactory implements ValidatorFactory {
 
+    private static final Set<String> SUPPORTED_FORMATS = Set.of(
+            "json", "yaml", "xml", "markdown", "html");
+
     @Override
     public String name() {
         return "ruleset";
+    }
+
+    @Override
+    public Set<String> supportedFormats() {
+        return SUPPORTED_FORMATS;
     }
 
     @Override
