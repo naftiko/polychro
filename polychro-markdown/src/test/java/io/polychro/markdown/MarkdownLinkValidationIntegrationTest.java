@@ -225,4 +225,90 @@ class MarkdownLinkValidationIntegrationTest {
                 List<MarkdownValidator.LinkInfo> links = validator.collectProjectedLinks(projected);
         assertTrue(links.isEmpty());
     }
+
+        @Test
+        void collectProjectedLinksShouldPreferBlockLinksWhenPresent() {
+                MarkdownValidator validator = new MarkdownValidator(
+                                120, "-", new GenericFormat(), new FrontmatterParser());
+
+                var blockLink = JsonNodeFactory.instance.objectNode();
+                blockLink.put("target", "target.md");
+                var root = JsonNodeFactory.instance.objectNode();
+                var document = root.putObject("document");
+                document.putArray("blocks").addObject().putArray("links").add(blockLink);
+                document.putArray("links").addObject().put("target", "legacy.md");
+                Document projected = new Document(root, "markdown", null);
+
+                List<MarkdownValidator.LinkInfo> links = validator.collectProjectedLinks(projected);
+                assertEquals(1, links.size());
+                assertEquals("target.md", links.getFirst().target());
+        }
+
+            @Test
+            void collectProjectedLinksShouldSkipBlankBlockTarget() {
+                MarkdownValidator validator = new MarkdownValidator(
+                        120, "-", new GenericFormat(), new FrontmatterParser());
+
+                var root = JsonNodeFactory.instance.objectNode();
+                root.putObject("document").putArray("blocks").addObject().putArray("links").addObject().put("target", "  ");
+                Document projected = new Document(root, "markdown", null);
+
+                List<MarkdownValidator.LinkInfo> links = validator.collectProjectedLinks(projected);
+                assertTrue(links.isEmpty());
+            }
+
+            @Test
+            void collectProjectedLinksShouldFallbackToLegacyLinksWhenBlocksMissing() {
+                MarkdownValidator validator = new MarkdownValidator(
+                        120, "-", new GenericFormat(), new FrontmatterParser());
+
+                var root = JsonNodeFactory.instance.objectNode();
+                root.putObject("document").putArray("links").addObject().put("target", "legacy.md");
+                Document projected = new Document(root, "markdown", null);
+
+                List<MarkdownValidator.LinkInfo> links = validator.collectProjectedLinks(projected);
+                assertEquals(1, links.size());
+                assertEquals("legacy.md", links.getFirst().target());
+            }
+
+            @Test
+            void collectProjectedInternalLinksShouldPreferBlockLinksWhenPresent() {
+                MarkdownValidator validator = new MarkdownValidator(
+                        120, "-", new GenericFormat(), new FrontmatterParser());
+
+                var internalLink = JsonNodeFactory.instance.objectNode();
+                internalLink.put("target", "#title");
+                internalLink.put("kind", "internal-anchor");
+                var externalLink = JsonNodeFactory.instance.objectNode();
+                externalLink.put("target", "https://example.com");
+                externalLink.put("kind", "external");
+                var root = JsonNodeFactory.instance.objectNode();
+                root.putObject("document").putArray("blocks")
+                        .addObject().putArray("links").add(internalLink).add(externalLink);
+                Document projected = new Document(root, "markdown", null);
+
+                List<MarkdownValidator.ProjectedLinkInfo> links = validator.collectProjectedInternalLinks(projected);
+                assertEquals(1, links.size());
+                assertEquals("#title", links.getFirst().target());
+                assertEquals("$.document.blocks[0].links[0]", links.getFirst().path());
+            }
+
+            @Test
+            void collectProjectedInternalLinksShouldFallbackToLegacyLinksWhenBlocksMissing() {
+                MarkdownValidator validator = new MarkdownValidator(
+                        120, "-", new GenericFormat(), new FrontmatterParser());
+
+                var root = JsonNodeFactory.instance.objectNode();
+                var document = root.putObject("document");
+                document.putArray("links")
+                        .addObject().put("target", "#title").put("kind", "internal-anchor");
+                document.withArray("links")
+                        .addObject().put("target", "guide.md").put("kind", "relative");
+                Document projected = new Document(root, "markdown", null);
+
+                List<MarkdownValidator.ProjectedLinkInfo> links = validator.collectProjectedInternalLinks(projected);
+                assertEquals(1, links.size());
+                assertEquals("#title", links.getFirst().target());
+                assertEquals("$.document.links[0]", links.getFirst().path());
+            }
 }
