@@ -183,9 +183,22 @@ class MarkdownValidatorEdgeCasesTest {
     }
 
     @Test
-    void checkCodeBlockLanguageShouldFallbackWhenSourceMapRangeIsMissing() {
+    void checkCodeBlockLanguageShouldIgnoreDocumentWithoutProjectedBlocks() {
+        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        root.putObject("document");
+
+        List<Diagnostic> diagnostics = new java.util.ArrayList<>();
+        validator.checkCodeBlockLanguage(new Document(root, "markdown", null), diagnostics);
+
+        assertTrue(diagnostics.isEmpty());
+    }
+
+    @Test
+    void checkCodeBlockLanguageShouldFallbackWhenProjectedBlockRangeIsMissing() {
         com.fasterxml.jackson.databind.node.ObjectNode root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
-        root.putObject("document").putArray("codeBlocks").addObject();
+        root.putObject("document").putArray("blocks")
+                .addObject()
+                .put("type", "code-block");
 
         List<Diagnostic> diagnostics = new java.util.ArrayList<>();
         validator.checkCodeBlockLanguage(new Document(root, "markdown", null), diagnostics);
@@ -285,10 +298,16 @@ class MarkdownValidatorEdgeCasesTest {
     }
 
     @Test
-    void checkCodeBlockLanguageShouldHandleLegacyBlankLanguage() {
+    void checkCodeBlockLanguageShouldHandleNestedBlankLanguage() {
         var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
-        root.putObject("document").putArray("codeBlocks")
+        root.putObject("document").putArray("blocks")
                 .addObject()
+                .put("type", "list")
+                .putArray("items")
+                .addObject()
+                .putArray("blocks")
+                .addObject()
+                .put("type", "code-block")
                 .put("language", "   ");
 
         List<Diagnostic> diagnostics = new java.util.ArrayList<>();
@@ -299,10 +318,16 @@ class MarkdownValidatorEdgeCasesTest {
     }
 
     @Test
-    void checkCodeBlockLanguageShouldHandleLegacyNullLanguageNode() {
+    void checkCodeBlockLanguageShouldHandleNestedNullLanguageNode() {
         var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
-        root.putObject("document").putArray("codeBlocks")
+        root.putObject("document").putArray("blocks")
                 .addObject()
+                .put("type", "list")
+                .putArray("items")
+                .addObject()
+                .putArray("blocks")
+                .addObject()
+                .put("type", "code-block")
                 .putNull("language");
 
         List<Diagnostic> diagnostics = new java.util.ArrayList<>();
@@ -313,10 +338,16 @@ class MarkdownValidatorEdgeCasesTest {
     }
 
     @Test
-    void checkCodeBlockLanguageShouldIgnoreLegacyCodeBlockWithLanguage() {
+    void checkCodeBlockLanguageShouldIgnoreNestedCodeBlockWithLanguage() {
         var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
-        root.putObject("document").putArray("codeBlocks")
+        root.putObject("document").putArray("blocks")
                 .addObject()
+                .put("type", "list")
+                .putArray("items")
+                .addObject()
+                .putArray("blocks")
+                .addObject()
+                .put("type", "code-block")
                 .put("language", "yaml");
 
         List<Diagnostic> diagnostics = new java.util.ArrayList<>();
@@ -326,18 +357,95 @@ class MarkdownValidatorEdgeCasesTest {
     }
 
     @Test
-    void collectProjectedHeadingsShouldFallbackToLegacyHeadingsWhenBlocksMissing() {
+    void checkCodeBlockLanguageShouldIgnoreListItemWithoutNestedBlocks() {
+        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        root.putObject("document").putArray("blocks")
+                .addObject()
+                .put("type", "list")
+                .putArray("items")
+                .addObject();
+
+        List<Diagnostic> diagnostics = new java.util.ArrayList<>();
+        validator.checkCodeBlockLanguage(new Document(root, "markdown", null), diagnostics);
+
+        assertTrue(diagnostics.isEmpty());
+    }
+
+    @Test
+    void collectProjectedHeadingsShouldIncludeNestedItemBlockHeadings() {
         var heading = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        heading.put("type", "heading");
         heading.put("level", 2);
         heading.put("text", "Overview");
         var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
-        root.putObject("document").putArray("headings").add(heading);
+        root.putObject("document").putArray("blocks")
+                .addObject()
+                .put("type", "list")
+                .putArray("items")
+                .addObject()
+                .putArray("blocks")
+                .add(heading);
 
         var headings = validator.collectProjectedHeadings(new Document(root, "markdown", null));
 
         assertEquals(1, headings.size());
         assertEquals(2, headings.getFirst().level());
         assertEquals("Overview", headings.getFirst().text());
-        assertEquals("$.document.headings[0]", headings.getFirst().path());
+        assertEquals("$.document.blocks[0].items[0].blocks[0]", headings.getFirst().path());
+    }
+
+    @Test
+    void collectProjectedHeadingsShouldReturnEmptyWhenBlocksMissing() {
+        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        root.putObject("document");
+
+        var headings = validator.collectProjectedHeadings(new Document(root, "markdown", null));
+
+        assertTrue(headings.isEmpty());
+    }
+
+    @Test
+    void collectProjectedHeadingsShouldIgnoreListItemWithoutNestedBlocks() {
+        var heading = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        heading.put("type", "heading");
+        heading.put("level", 2);
+        heading.put("text", "Overview");
+        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        root.putObject("document").putArray("blocks")
+                .add(heading)
+                .addObject()
+                .put("type", "list")
+                .putArray("items")
+                .addObject();
+
+        var headings = validator.collectProjectedHeadings(new Document(root, "markdown", null));
+
+        assertEquals(1, headings.size());
+        assertEquals("Overview", headings.getFirst().text());
+    }
+
+    @Test
+    void checkListMarkersShouldIgnoreListItemWithoutNestedBlocks() {
+        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        root.putObject("document").putArray("blocks")
+                .addObject()
+                .put("type", "list")
+                .put("marker", "-")
+                .putArray("items")
+                .addObject();
+
+        List<Diagnostic> diagnostics = new java.util.ArrayList<>();
+        validator.checkListMarkers(new Document(root, "markdown", null), diagnostics);
+
+        assertTrue(diagnostics.isEmpty());
+    }
+
+    @Test
+    void validateShouldReportNestedListMarkerMismatch() {
+        String content = "# Title\n\n- Parent\n  * Child\n";
+
+        List<Diagnostic> result = validator.validate(doc(content));
+
+        assertTrue(result.stream().anyMatch(d -> d.code().equals("inconsistent-list-marker")));
     }
 }
