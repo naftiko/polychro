@@ -193,4 +193,104 @@ class MarkdownValidatorEdgeCasesTest {
         assertEquals(1, diagnostics.size());
         assertEquals(new io.polychro.spi.SourceRange(1, 1, 1, 1), diagnostics.getFirst().range());
     }
+
+    @Test
+    void checkCodeBlockLanguageShouldIgnoreProjectedBlockWithLanguage() {
+        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        root.putObject("document").putArray("blocks")
+                .addObject()
+                .put("type", "code-block")
+                .put("language", "java");
+
+        List<Diagnostic> diagnostics = new java.util.ArrayList<>();
+        validator.checkCodeBlockLanguage(new Document(root, "markdown", null), diagnostics);
+
+        assertTrue(diagnostics.isEmpty());
+    }
+
+    @Test
+    void checkCodeBlockLanguageShouldReportProjectedBlockWithNullLanguageNode() {
+        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        root.putObject("document").putArray("blocks")
+                .addObject()
+                .put("type", "code-block")
+                .putNull("language");
+
+        List<Diagnostic> diagnostics = new java.util.ArrayList<>();
+        validator.checkCodeBlockLanguage(new Document(root, "markdown", null), diagnostics);
+
+        assertEquals(1, diagnostics.size());
+        assertEquals("code-block-no-language", diagnostics.getFirst().code());
+    }
+
+    @Test
+    void checkCodeBlockLanguageShouldReportProjectedBlockWithMissingLanguage() {
+        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        root.putObject("document").putArray("blocks")
+                .addObject()
+                .put("type", "code-block");
+
+        List<Diagnostic> diagnostics = new java.util.ArrayList<>();
+        validator.checkCodeBlockLanguage(new Document(root, "markdown", null), diagnostics);
+
+        assertEquals(1, diagnostics.size());
+        assertEquals("code-block-no-language", diagnostics.getFirst().code());
+    }
+
+    @Test
+    void checkCodeBlockLanguageShouldHandleLegacyBlankLanguage() {
+        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        root.putObject("document").putArray("codeBlocks")
+                .addObject()
+                .put("language", "   ");
+
+        List<Diagnostic> diagnostics = new java.util.ArrayList<>();
+        validator.checkCodeBlockLanguage(new Document(root, "markdown", null), diagnostics);
+
+        assertEquals(1, diagnostics.size());
+        assertEquals("code-block-no-language", diagnostics.getFirst().code());
+    }
+
+    @Test
+    void checkCodeBlockLanguageShouldHandleLegacyNullLanguageNode() {
+        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        root.putObject("document").putArray("codeBlocks")
+                .addObject()
+                .putNull("language");
+
+        List<Diagnostic> diagnostics = new java.util.ArrayList<>();
+        validator.checkCodeBlockLanguage(new Document(root, "markdown", null), diagnostics);
+
+        assertEquals(1, diagnostics.size());
+        assertEquals("code-block-no-language", diagnostics.getFirst().code());
+    }
+
+    @Test
+    void checkCodeBlockLanguageShouldIgnoreLegacyCodeBlockWithLanguage() {
+        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        root.putObject("document").putArray("codeBlocks")
+                .addObject()
+                .put("language", "yaml");
+
+        List<Diagnostic> diagnostics = new java.util.ArrayList<>();
+        validator.checkCodeBlockLanguage(new Document(root, "markdown", null), diagnostics);
+
+        assertTrue(diagnostics.isEmpty());
+    }
+
+    @Test
+    void collectProjectedHeadingsShouldFallbackToLegacyHeadingsWhenBlocksMissing() {
+        var heading = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        heading.put("level", 2);
+        heading.put("text", "Overview");
+        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        root.putObject("document").putArray("headings").add(heading);
+
+        var headings = validator.collectProjectedHeadings(new Document(root, "markdown", null));
+
+        assertEquals(1, headings.size());
+        assertEquals(2, headings.getFirst().level());
+        assertEquals("Overview", headings.getFirst().text());
+        assertEquals("$.document.headings[0]", headings.getFirst().path());
+    }
 }
