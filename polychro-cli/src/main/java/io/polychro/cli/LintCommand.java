@@ -44,7 +44,7 @@ import java.util.List;
 @CommandLine.Command(
         name = "lint",
         mixinStandardHelpOptions = true,
-        description = "Lint one or more YAML/JSON files"
+    description = "Lint one or more YAML/JSON/XML files"
 )
 public class LintCommand implements Runnable {
 
@@ -184,6 +184,9 @@ public class LintCommand implements Runnable {
         try {
             if (fileName.endsWith(".json")) {
                 return Document.fromJson(file);
+            }
+            if (fileName.endsWith(".xml")) {
+                return Document.fromXml(file);
             }
             return Document.fromYaml(file);
         } catch (Exception e) {

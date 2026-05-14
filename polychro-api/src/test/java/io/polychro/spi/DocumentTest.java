@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -39,7 +40,10 @@ class DocumentTest {
         assertNotNull(doc.root());
         assertEquals("hello", doc.root().get("name").asText());
         assertEquals(42, doc.root().get("value").asInt());
+        assertEquals("yaml", doc.format());
         assertEquals(file.toString(), doc.sourcePath());
+        assertSame(SourceMap.NONE, doc.sourceMap());
+        assertTrue(doc.metadata().isEmpty());
     }
 
     @Test
@@ -72,7 +76,30 @@ class DocumentTest {
         assertNotNull(doc.root());
         assertEquals("hello", doc.root().get("name").asText());
         assertEquals(42, doc.root().get("value").asInt());
+        assertEquals("json", doc.format());
         assertEquals(file.toString(), doc.sourcePath());
+    }
+
+    @Test
+    void fromXmlShouldParseValidFile() throws IOException {
+        Path file = tempDir.resolve("test.xml");
+        Files.writeString(file, "<root><name>hello</name><value>42</value></root>");
+
+        Document doc = Document.fromXml(file);
+
+        assertNotNull(doc.root());
+        assertEquals("hello", doc.root().get("name").asText());
+        assertEquals("42", doc.root().get("value").asText());
+        assertEquals("xml", doc.format());
+        assertEquals(file.toString(), doc.sourcePath());
+    }
+
+    @Test
+    void fromXmlShouldThrowForNonExistentFile() {
+        Path nonExistent = tempDir.resolve("missing.xml");
+        UncheckedIOException ex = assertThrows(UncheckedIOException.class,
+                () -> Document.fromXml(nonExistent));
+        assertTrue(ex.getMessage().contains("Failed to parse XML"));
     }
 
     @Test
@@ -98,6 +125,7 @@ class DocumentTest {
         Document doc = Document.fromString("name: hello\nvalue: 42", "yaml");
         assertNotNull(doc.root());
         assertEquals("hello", doc.root().get("name").asText());
+        assertEquals("yaml", doc.format());
         assertNull(doc.sourcePath());
     }
 
@@ -106,6 +134,7 @@ class DocumentTest {
         Document doc = Document.fromString("key: value", "yml");
         assertNotNull(doc.root());
         assertEquals("value", doc.root().get("key").asText());
+        assertEquals("yaml", doc.format());
     }
 
     @Test
@@ -113,7 +142,16 @@ class DocumentTest {
         Document doc = Document.fromString("{\"name\": \"hello\"}", "json");
         assertNotNull(doc.root());
         assertEquals("hello", doc.root().get("name").asText());
+        assertEquals("json", doc.format());
         assertNull(doc.sourcePath());
+    }
+
+    @Test
+    void fromStringShouldParseXmlWithExplicitFormat() {
+        Document doc = Document.fromString("<root><name>hello</name></root>", "xml");
+        assertNotNull(doc.root());
+        assertEquals("hello", doc.root().get("name").asText());
+        assertEquals("xml", doc.format());
     }
 
     @Test
@@ -121,6 +159,7 @@ class DocumentTest {
         Document doc = Document.fromString("{\"key\": \"value\"}", null);
         assertNotNull(doc.root());
         assertEquals("value", doc.root().get("key").asText());
+        assertEquals("json", doc.format());
     }
 
     @Test
@@ -128,6 +167,7 @@ class DocumentTest {
         Document doc = Document.fromString("[1, 2, 3]", null);
         assertNotNull(doc.root());
         assertTrue(doc.root().isArray());
+        assertEquals("json", doc.format());
     }
 
     @Test
@@ -135,6 +175,15 @@ class DocumentTest {
         Document doc = Document.fromString("name: hello\nvalue: 42", null);
         assertNotNull(doc.root());
         assertEquals("hello", doc.root().get("name").asText());
+        assertEquals("yaml", doc.format());
+    }
+
+    @Test
+    void fromStringShouldAutoDetectXml() {
+        Document doc = Document.fromString("<root><name>hello</name></root>", null);
+        assertNotNull(doc.root());
+        assertEquals("hello", doc.root().get("name").asText());
+        assertEquals("xml", doc.format());
     }
 
     @Test
@@ -149,7 +198,7 @@ class DocumentTest {
 
     @Test
     void fromStringShouldThrowForUnknownFormat() {
-        assertThrows(IllegalArgumentException.class, () -> Document.fromString("content", "xml"));
+        assertThrows(IllegalArgumentException.class, () -> Document.fromString("content", "toml"));
     }
 
     @Test
@@ -157,11 +206,28 @@ class DocumentTest {
         Document doc = Document.fromString("{\"a\": 1}", "JSON");
         assertNotNull(doc.root());
         assertEquals(1, doc.root().get("a").asInt());
+        assertEquals("json", doc.format());
     }
 
     @Test
     void fromStringShouldThrowForInvalidJsonContent() {
         assertThrows(UncheckedIOException.class,
                 () -> Document.fromString("{invalid json", "json"));
+    }
+
+    @Test
+    void constructorShouldInferFormatFromSourcePath() {
+        Document doc = new Document(null, "docs/example.md");
+        assertEquals("markdown", doc.format());
+    }
+
+    @Test
+    void constructorShouldPreserveCustomMetadataAndSourceMap() {
+        SourceMap sourceMap = path -> new SourceRange(1, 1, 1, 5);
+        Document doc = new Document(null, "markdown", "test.md", sourceMap, Map.of("profile", "generic"));
+
+        assertEquals("markdown", doc.format());
+        assertEquals("generic", doc.metadata().get("profile"));
+        assertEquals(new SourceRange(1, 1, 1, 5), doc.sourceMap().resolve("$.document"));
     }
 }
