@@ -20,6 +20,7 @@ import io.polychro.spi.Document;
 import io.polychro.spi.FormatProjector;
 import io.polychro.spi.SourceRange;
 import org.commonmark.node.AbstractVisitor;
+import org.commonmark.node.BulletList;
 import org.commonmark.node.FencedCodeBlock;
 import org.commonmark.node.Heading;
 import org.commonmark.node.Link;
@@ -43,6 +44,7 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
         ArrayNode headings = document.putArray("headings");
         ArrayNode links = document.putArray("links");
         ArrayNode codeBlocks = document.putArray("codeBlocks");
+        ArrayNode lists = document.putArray("lists");
         MarkdownSourceMapBuilder sourceMapBuilder = new MarkdownSourceMapBuilder();
 
         if (parsed.frontmatter().data() != null) {
@@ -101,6 +103,17 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
                 }
                 projectedCodeBlock.put("content", fencedCodeBlock.getLiteral());
                 sourceMapBuilder.put(path, rangeFor(fencedCodeBlock, parsed.bodyStartLine()));
+            }
+
+            @Override
+            public void visit(BulletList bulletList) {
+                int index = lists.size();
+                String path = "$.document.lists[" + index + "]";
+                ObjectNode projectedList = lists.addObject();
+                projectedList.put("kind", "bullet");
+                projectedList.put("marker", String.valueOf(bulletList.getBulletMarker()));
+                sourceMapBuilder.put(path, rangeFor(bulletList, parsed.bodyStartLine()));
+                visitChildren(bulletList);
             }
         });
 
