@@ -55,6 +55,13 @@ class LintCommandTest {
     }
 
     @Test
+    void lintShouldReturnZeroForValidXmlFile() throws Exception {
+        Path file = createFile("test.xml", "<root><name>test</name></root>");
+        int exitCode = executeLint(file.toString());
+        assertEquals(0, exitCode);
+    }
+
+    @Test
     void lintShouldSupportTextFormat() throws Exception {
         Path file = createFile("test.yml", "name: test\n");
         int exitCode = executeLint("--format", "text", file.toString());
