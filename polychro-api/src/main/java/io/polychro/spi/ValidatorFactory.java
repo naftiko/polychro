@@ -13,6 +13,8 @@
  */
 package io.polychro.spi;
 
+import java.util.Set;
+
 /**
  * Factory for creating {@link Validator} instances.
  * <p>
@@ -26,6 +28,29 @@ public interface ValidatorFactory {
      * @return the unique name of the validator this factory creates
      */
     String name();
+
+    /**
+     * Advertise the canonical formats this validator can handle directly.
+     * <p>
+     * An empty set means the validator does not declare format constraints through the SPI.
+     * Callers should treat that as "unspecified" rather than "supports nothing".
+     *
+     * @return the supported canonical document formats, or an empty set when unspecified
+     */
+    default Set<String> supportedFormats() {
+        return Set.of();
+    }
+
+    /**
+     * Advertise the document profiles this validator understands.
+     * <p>
+     * An empty set means the validator does not declare profile constraints through the SPI.
+     *
+     * @return the supported document profiles, or an empty set when unspecified
+     */
+    default Set<String> supportedProfiles() {
+        return Set.of();
+    }
 
     /**
      * Create a new validator instance with the given configuration.
