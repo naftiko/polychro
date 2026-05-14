@@ -271,6 +271,25 @@ class MarkdownValidator implements Validator {
     }
 
     void checkListMarkers(Document projected, List<Diagnostic> diagnostics) {
+        JsonNode blocks = projected.root().path("document").path("blocks");
+        if (blocks.isArray()) {
+            for (int i = 0; i < blocks.size(); i++) {
+                JsonNode block = blocks.get(i);
+                if (!"list".equals(block.path("type").asText())) {
+                    continue;
+                }
+
+                String marker = block.path("marker").asText();
+                if (!marker.equals(listMarker)) {
+                    diagnostics.add(new Diagnostic(Severity.INFO, "inconsistent-list-marker",
+                            "Expected list marker '" + listMarker + "' but found '" + marker + "'",
+                            null,
+                            rangeFor(projected, "$.document.blocks[" + i + "]")));
+                }
+            }
+            return;
+        }
+
         JsonNode lists = projected.root().path("document").path("lists");
         for (int i = 0; i < lists.size(); i++) {
             JsonNode list = lists.get(i);
