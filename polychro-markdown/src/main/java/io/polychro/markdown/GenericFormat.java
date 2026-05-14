@@ -24,7 +24,7 @@ import java.util.List;
 class GenericFormat implements MarkdownFormat {
 
     @Override
-    public void validate(Document doc, FrontmatterResult frontmatter, List<Diagnostic> diagnostics) {
+    public void validate(Document doc, List<Diagnostic> diagnostics) {
         // No format-specific rules for generic Markdown
     }
 }

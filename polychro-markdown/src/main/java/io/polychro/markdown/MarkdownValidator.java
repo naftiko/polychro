@@ -125,7 +125,7 @@ class MarkdownValidator implements Validator {
         checkFileLinks(parsed.bodyDocument(), parsed.bodyStartLine(), doc.sourcePath(), diagnostics);
 
         // Format-specific checks
-        format.validate(projected, frontmatter, diagnostics);
+        format.validate(projected, diagnostics);
 
         return diagnostics;
     }

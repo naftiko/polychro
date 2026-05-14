@@ -13,6 +13,8 @@
  */
 package io.polychro.markdown;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.TextNode;
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Document;
@@ -30,6 +32,21 @@ class SkillFormatTest {
 
     private Document doc(String content) {
         return new Document(new TextNode(content), "SKILL.md");
+    }
+
+    private Document projectedDoc(JsonNode frontmatter, JsonNode... headings) {
+        var root = JsonNodeFactory.instance.objectNode();
+        var document = root.putObject("document");
+        if (frontmatter == null) {
+            document.putNull("frontmatter");
+        } else {
+            document.set("frontmatter", frontmatter);
+        }
+        var headingArray = document.putArray("headings");
+        for (JsonNode heading : headings) {
+            headingArray.add(heading);
+        }
+        return new Document(root, "markdown", "SKILL.md");
     }
 
     @Test
@@ -102,16 +119,30 @@ class SkillFormatTest {
 
     @Test
     void validateShouldNotCrashWhenBodyIsNull() {
-        // Test SkillFormat directly with null body
+        // Test SkillFormat directly with no projected headings
         SkillFormat format = new SkillFormat();
         com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
         com.fasterxml.jackson.databind.node.ObjectNode data = mapper.createObjectNode();
         data.put("name", "test");
         data.put("description", "desc");
-        FrontmatterResult frontmatter = new FrontmatterResult(data, null, 1, null);
         java.util.List<io.polychro.spi.Diagnostic> diagnostics = new java.util.ArrayList<>();
-        format.validate(new Document(null, "SKILL.md"), frontmatter, diagnostics);
-        // Should not throw, and should not add skill-no-sections since body is null
+        format.validate(projectedDoc(data), diagnostics);
+        assertTrue(diagnostics.stream().anyMatch(d -> d.code().equals("skill-no-sections")));
+    }
+
+    @Test
+    void validateShouldAcceptProjectedSectionHeading() {
+        SkillFormat format = new SkillFormat();
+        var frontmatter = JsonNodeFactory.instance.objectNode();
+        frontmatter.put("name", "test");
+        frontmatter.put("description", "desc");
+        var heading = JsonNodeFactory.instance.objectNode();
+        heading.put("level", 2);
+        heading.put("text", "Overview");
+        java.util.List<io.polychro.spi.Diagnostic> diagnostics = new java.util.ArrayList<>();
+
+        format.validate(projectedDoc(frontmatter, heading), diagnostics);
+
         assertTrue(diagnostics.stream().noneMatch(d -> d.code().equals("skill-no-sections")));
     }
 }
