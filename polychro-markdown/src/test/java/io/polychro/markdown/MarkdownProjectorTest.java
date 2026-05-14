@@ -59,9 +59,9 @@ class MarkdownProjectorTest {
         assertEquals("#title", projected.root().path("document").path("blocks").get(2).path("links").get(0).path("target").asText());
         assertEquals("internal-anchor", projected.root().path("document").path("blocks").get(2).path("links").get(0).path("kind").asText());
         assertEquals("code-block", projected.root().path("document").path("blocks").get(3).path("type").asText());
-        assertEquals("Title", projected.root().path("document").path("headings").get(0).path("text").asText());
-        assertEquals("title", projected.root().path("document").path("headings").get(0).path("anchor").asText());
-        assertEquals("", projected.root().path("document").path("codeBlocks").get(0).path("language").asText());
+        assertEquals("Title", projected.root().path("document").path("blocks").get(0).path("text").asText());
+        assertEquals("title", projected.root().path("document").path("blocks").get(0).path("anchor").asText());
+        assertEquals("", projected.root().path("document").path("blocks").get(3).path("language").asText());
     }
 
     @Test
@@ -89,9 +89,9 @@ class MarkdownProjectorTest {
         assertEquals(new SourceRange(7, 1, 7, 1), projected.sourceMap().resolve("$.document.blocks[1]"));
         assertEquals(new SourceRange(9, 1, 9, 1), projected.sourceMap().resolve("$.document.blocks[2]"));
         assertEquals(new SourceRange(11, 1, 11, 1), projected.sourceMap().resolve("$.document.blocks[3]"));
-        assertEquals(new SourceRange(5, 1, 5, 1), projected.sourceMap().resolve("$.document.headings[0]"));
         assertEquals(new SourceRange(9, 1, 9, 1), projected.sourceMap().resolve("$.document.blocks[2].links[0]"));
-        assertEquals(new SourceRange(11, 1, 11, 1), projected.sourceMap().resolve("$.document.codeBlocks[0]"));
+        assertNull(projected.sourceMap().resolve("$.document.headings[0]"));
+        assertNull(projected.sourceMap().resolve("$.document.codeBlocks[0]"));
         assertNull(projected.sourceMap().resolve("$.document.lists[0]"));
         assertNull(projected.sourceMap().resolve("$.document.links[0]"));
     }
@@ -120,10 +120,32 @@ class MarkdownProjectorTest {
 
         Document projected = projector.project(parsed, null);
 
-        assertEquals("guide", projected.root().path("document").path("blocks").get(0)
-            .path("items").get(0).path("links").get(0).path("text").asText());
+            assertEquals("guide", projected.root().path("document").path("blocks").get(0)
+                .path("items").get(0).path("blocks").get(0).path("links").get(0).path("text").asText());
         assertEquals("docs/guide.md", projected.root().path("document").path("blocks").get(0)
-            .path("items").get(0).path("links").get(0).path("target").asText());
+                .path("items").get(0).path("blocks").get(0).path("links").get(0).path("target").asText());
+        }
+
+        @Test
+        void projectShouldExposeNestedListItemBlocks() {
+        MarkdownParseResult parsed = parserFacade.parse("""
+            - Parent
+              - [Child](docs/child.md)
+            """);
+
+        Document projected = projector.project(parsed, null);
+
+        assertEquals("Parent", projected.root().path("document").path("blocks").get(0)
+            .path("items").get(0).path("text").asText());
+        assertEquals("paragraph", projected.root().path("document").path("blocks").get(0)
+            .path("items").get(0).path("blocks").get(0).path("type").asText());
+        assertEquals("list", projected.root().path("document").path("blocks").get(0)
+            .path("items").get(0).path("blocks").get(1).path("type").asText());
+        assertEquals("Child", projected.root().path("document").path("blocks").get(0)
+            .path("items").get(0).path("blocks").get(1).path("items").get(0).path("text").asText());
+        assertEquals("docs/child.md", projected.root().path("document").path("blocks").get(0)
+            .path("items").get(0).path("blocks").get(1).path("items").get(0)
+            .path("blocks").get(0).path("links").get(0).path("target").asText());
         }
 
     @Test
@@ -164,6 +186,44 @@ class MarkdownProjectorTest {
                 new MarkdownSourceMapBuilder(), 1);
 
         assertEquals(0, links.size());
+    }
+
+    @Test
+    void appendListItemLinksShouldIgnoreNonParagraphChildren() {
+        org.commonmark.node.ListItem listItem = new org.commonmark.node.ListItem();
+        listItem.appendChild(new org.commonmark.node.BulletList());
+
+        var links = JsonNodeFactory.instance.arrayNode();
+        projector.appendListItemLinks(listItem, links, "$.document.blocks[0].items[0]",
+                new MarkdownSourceMapBuilder(), 1);
+
+        assertEquals(0, links.size());
+    }
+
+    @Test
+    void extractListItemTextShouldIgnoreNestedListText() {
+        MarkdownParseResult parsed = parserFacade.parse("""
+                - Parent
+                  - Child
+                """);
+
+        org.commonmark.node.BulletList list = (org.commonmark.node.BulletList) parsed.bodyDocument().getFirstChild();
+        org.commonmark.node.ListItem item = (org.commonmark.node.ListItem) list.getFirstChild();
+
+        assertEquals("Parent", projector.extractListItemText(item));
+    }
+
+    @Test
+    void extractListItemTextShouldJoinMultipleParagraphs() {
+        org.commonmark.node.ListItem listItem = new org.commonmark.node.ListItem();
+        org.commonmark.node.Paragraph first = new org.commonmark.node.Paragraph();
+        first.appendChild(new org.commonmark.node.Text("First"));
+        org.commonmark.node.Paragraph second = new org.commonmark.node.Paragraph();
+        second.appendChild(new org.commonmark.node.Text("Second"));
+        listItem.appendChild(first);
+        listItem.appendChild(second);
+
+        assertEquals("First\nSecond", projector.extractListItemText(listItem));
     }
 
     @Test

@@ -82,10 +82,15 @@ class RelativeAnchorChecker {
             String normalizedAnchor = anchor.toLowerCase();
             var parsed = parserFacade.parse(content);
             var projected = projector.project(parsed, mdFile.toString());
-            var headings = projected.root().path("document").path("headings");
+            var blocks = projected.root().path("document").path("blocks");
 
-            for (int i = 0; i < headings.size(); i++) {
-                String projectedAnchor = headings.get(i).path("anchor").asText();
+            for (int i = 0; i < blocks.size(); i++) {
+                var block = blocks.get(i);
+                if (!"heading".equals(block.path("type").asText())) {
+                    continue;
+                }
+
+                String projectedAnchor = block.path("anchor").asText();
                 if (projectedAnchor.equals(normalizedAnchor)) {
                     return true;
                 }
