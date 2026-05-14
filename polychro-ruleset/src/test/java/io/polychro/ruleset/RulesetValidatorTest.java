@@ -25,10 +25,14 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class RulesetValidatorTest {
 
+        private static RulesetValidator newValidator() {
+                Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of(), null);
+                return new RulesetValidator(ruleset, false);
+        }
+
     @Test
     void nameShouldReturnRuleset() {
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of(), null);
-        RulesetValidator validator = new RulesetValidator(ruleset, false);
+        RulesetValidator validator = newValidator();
         assertEquals("ruleset", validator.name());
     }
 
@@ -149,30 +153,77 @@ class RulesetValidatorTest {
         assertTrue(results.isEmpty());
     }
 
-        @Test
-        void validateShouldSkipRulesWhenFormatsDoNotMatchDocumentFormat() {
-                Rule rule = new Rule("markdown-only", "Markdown only", null, "warn", true,
-                                List.of("markdown"), null, List.of("$.info.name"),
-                                List.of(new RuleAction(null, "truthy", Map.of())));
-                Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("markdown-only", rule), null);
-                RulesetValidator validator = new RulesetValidator(ruleset, false);
-                Document doc = Document.fromString("{\"info\": {\"name\": \"\"}}", "json");
+    @Test
+    void validateShouldSkipRulesWhenFormatsDoNotMatchDocumentFormat() {
+        Rule rule = new Rule("markdown-only", "Markdown only", null, "warn", true,
+                List.of("markdown"), null, List.of("$.info.name"),
+                List.of(new RuleAction(null, "truthy", Map.of())));
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("markdown-only", rule), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
+        Document doc = Document.fromString("{\"info\": {\"name\": \"\"}}", "json");
 
-                List<Diagnostic> results = validator.validate(doc);
-                assertTrue(results.isEmpty());
-        }
+        List<Diagnostic> results = validator.validate(doc);
+        assertTrue(results.isEmpty());
+    }
 
-        @Test
-        void validateShouldRunRulesWhenFormatsMatchDocumentFormatAlias() {
-                Rule rule = new Rule("yaml-only", "YAML only", null, "warn", true,
-                                List.of("yml"), null, List.of("$.info.name"),
-                                List.of(new RuleAction(null, "truthy", Map.of())));
-                Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("yaml-only", rule), null);
-                RulesetValidator validator = new RulesetValidator(ruleset, false);
-                Document doc = Document.fromString("info:\n  name: \"\"\n", "yaml");
+    @Test
+    void validateShouldRunRulesWhenFormatsMatchDocumentFormatAlias() {
+        Rule rule = new Rule("yaml-only", "YAML only", null, "warn", true,
+                List.of("yml"), null, List.of("$.info.name"),
+                List.of(new RuleAction(null, "truthy", Map.of())));
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("yaml-only", rule), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
+        Document doc = Document.fromString("info:\n  name: \"\"\n", "yaml");
 
-                List<Diagnostic> results = validator.validate(doc);
-                assertEquals(1, results.size());
-                assertEquals("YAML only", results.get(0).message());
-        }
+        List<Diagnostic> results = validator.validate(doc);
+        assertEquals(1, results.size());
+        assertEquals("YAML only", results.get(0).message());
+    }
+
+    @Test
+    void matchesFormatShouldReturnTrueWhenRuleFormatsAreEmpty() {
+        RulesetValidator validator = newValidator();
+        Rule rule = new Rule("any-format", "Any format", null, "warn", true,
+                List.of(), null, List.of("$.info.name"),
+                List.of(new RuleAction(null, "truthy", Map.of())));
+        Document doc = Document.fromString("{\"info\": {\"name\": \"\"}}", "json");
+
+        assertTrue(validator.matchesFormat(rule, doc));
+    }
+
+    @Test
+    void matchesFormatShouldReturnFalseWhenDocumentFormatIsBlank() {
+        RulesetValidator validator = newValidator();
+        Rule rule = new Rule("json-only", "JSON only", null, "warn", true,
+                List.of("json"), null, List.of("$.info.name"),
+                List.of(new RuleAction(null, "truthy", Map.of())));
+        Document doc = new Document(null, "   ", null);
+
+        assertFalse(validator.matchesFormat(rule, doc));
+    }
+
+    @Test
+    void matchesFormatShouldReturnFalseWhenDocumentFormatIsNull() {
+        RulesetValidator validator = newValidator();
+        Rule rule = new Rule("json-only", "JSON only", null, "warn", true,
+                List.of("json"), null, List.of("$.info.name"),
+                List.of(new RuleAction(null, "truthy", Map.of())));
+        Document doc = new Document(null, (String) null, null);
+
+        assertFalse(validator.matchesFormat(rule, doc));
+    }
+
+    @Test
+    void normalizeFormatShouldNormalizeMarkdownAlias() {
+        RulesetValidator validator = newValidator();
+
+        assertEquals("markdown", validator.normalizeFormat("md"));
+    }
+
+    @Test
+    void normalizeFormatShouldNormalizeHtmlAlias() {
+        RulesetValidator validator = newValidator();
+
+        assertEquals("html", validator.normalizeFormat("htm"));
+    }
 }

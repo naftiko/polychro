@@ -101,7 +101,7 @@ class RulesetValidator implements Validator {
         if (rule.formats() == null || rule.formats().isEmpty()) {
             return true;
         }
-        if (doc.format() == null || doc.format().isBlank()) {
+        if (doc.format() == null) {
             return false;
         }
 
