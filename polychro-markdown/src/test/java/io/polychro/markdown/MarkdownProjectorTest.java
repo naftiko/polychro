@@ -56,6 +56,8 @@ class MarkdownProjectorTest {
         assertEquals("Item", projected.root().path("document").path("blocks").get(1).path("items").get(0).path("text").asText());
         assertEquals("paragraph", projected.root().path("document").path("blocks").get(2).path("type").asText());
         assertEquals("link", projected.root().path("document").path("blocks").get(2).path("text").asText());
+        assertEquals("#title", projected.root().path("document").path("blocks").get(2).path("links").get(0).path("target").asText());
+        assertEquals("internal-anchor", projected.root().path("document").path("blocks").get(2).path("links").get(0).path("kind").asText());
         assertEquals("code-block", projected.root().path("document").path("blocks").get(3).path("type").asText());
         assertEquals("Title", projected.root().path("document").path("headings").get(0).path("text").asText());
         assertEquals("title", projected.root().path("document").path("headings").get(0).path("anchor").asText());
@@ -91,6 +93,7 @@ class MarkdownProjectorTest {
         assertEquals(new SourceRange(11, 1, 11, 1), projected.sourceMap().resolve("$.document.blocks[3]"));
         assertEquals(new SourceRange(5, 1, 5, 1), projected.sourceMap().resolve("$.document.headings[0]"));
         assertEquals(new SourceRange(7, 1, 7, 1), projected.sourceMap().resolve("$.document.lists[0]"));
+        assertEquals(new SourceRange(9, 1, 9, 1), projected.sourceMap().resolve("$.document.blocks[2].links[0]"));
         assertEquals(new SourceRange(9, 1, 9, 1), projected.sourceMap().resolve("$.document.links[0]"));
         assertEquals(new SourceRange(11, 1, 11, 1), projected.sourceMap().resolve("$.document.codeBlocks[0]"));
     }
