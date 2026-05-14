@@ -143,7 +143,7 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
                 block.put("ordered", false);
                 block.put("marker", String.valueOf(bulletList.getBulletMarker()));
                 ArrayNode items = block.putArray("items");
-                appendListItems(bulletList, items);
+                appendListItems(bulletList, items, path, sourceMapBuilder, parsed.bodyStartLine());
                 sourceMapBuilder.put(path, rangeFor(bulletList, parsed.bodyStartLine()));
             } else if (child instanceof OrderedList orderedList) {
                 ObjectNode block = blocks.addObject();
@@ -152,7 +152,7 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
                 block.put("marker", String.valueOf(orderedList.getDelimiter()));
                 block.put("startNumber", orderedList.getStartNumber());
                 ArrayNode items = block.putArray("items");
-                appendListItems(orderedList, items);
+                appendListItems(orderedList, items, path, sourceMapBuilder, parsed.bodyStartLine());
                 sourceMapBuilder.put(path, rangeFor(orderedList, parsed.bodyStartLine()));
             } else if (child instanceof FencedCodeBlock fencedCodeBlock) {
                 ObjectNode block = blocks.addObject();
@@ -168,12 +168,37 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
         }
     }
 
-    void appendListItems(org.commonmark.node.Node listNode, ArrayNode items) {
+    void appendListItems(org.commonmark.node.Node listNode, ArrayNode items, String blockPath,
+                         MarkdownSourceMapBuilder sourceMapBuilder, int bodyStartLine) {
         for (org.commonmark.node.Node child = listNode.getFirstChild(); child != null; child = child.getNext()) {
             if (child instanceof ListItem listItem) {
-                items.addObject().put("text", MarkdownValidator.extractText(listItem));
+                int index = items.size();
+                ObjectNode item = items.addObject();
+                item.put("text", MarkdownValidator.extractText(listItem));
+                ArrayNode itemLinks = item.putArray("links");
+                appendListItemLinks(listItem, itemLinks, blockPath + ".items[" + index + "]",
+                        sourceMapBuilder, bodyStartLine);
             }
         }
+    }
+
+    void appendListItemLinks(ListItem listItem, ArrayNode links, String itemPath,
+                             MarkdownSourceMapBuilder sourceMapBuilder, int bodyStartLine) {
+        listItem.accept(new AbstractVisitor() {
+            @Override
+            public void visit(Link link) {
+                String destination = link.getDestination();
+                if (destination == null || destination.isBlank()) {
+                    visitChildren(link);
+                    return;
+                }
+
+                int index = links.size();
+                links.add(buildProjectedLink(link));
+                sourceMapBuilder.put(itemPath + ".links[" + index + "]", rangeFor(link, bodyStartLine));
+                visitChildren(link);
+            }
+        });
     }
 
     void appendParagraphLinks(Paragraph paragraph, ArrayNode links, String blockPath,
