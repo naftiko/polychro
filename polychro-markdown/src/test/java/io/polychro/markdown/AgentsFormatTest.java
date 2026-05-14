@@ -42,9 +42,12 @@ class AgentsFormatTest {
         } else {
             document.set("frontmatter", frontmatter);
         }
-        var headingArray = document.putArray("headings");
+        var blocks = document.putArray("blocks");
         for (var heading : headings) {
-            headingArray.add(heading);
+            var block = JsonNodeFactory.instance.objectNode();
+            block.setAll((com.fasterxml.jackson.databind.node.ObjectNode) heading.deepCopy());
+            block.put("type", "heading");
+            blocks.add(block);
         }
         return new Document(root, "markdown", "AGENTS.md");
     }
