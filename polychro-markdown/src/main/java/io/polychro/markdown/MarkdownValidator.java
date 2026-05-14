@@ -21,13 +21,11 @@ import io.polychro.spi.Validator;
 
 import org.commonmark.node.AbstractVisitor;
 import org.commonmark.node.Code;
-import org.commonmark.node.FencedCodeBlock;
 import org.commonmark.node.Heading;
 import org.commonmark.node.Link;
 import org.commonmark.node.Node;
 import org.commonmark.node.Text;
-import org.commonmark.parser.IncludeSourceSpans;
-import org.commonmark.parser.Parser;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -49,15 +47,14 @@ class MarkdownValidator implements Validator {
     static final int DEFAULT_EXTERNAL_LINK_TIMEOUT_MS = 5000;
     static final int DEFAULT_EXTERNAL_LINK_RATE_LIMIT = 10;
 
-    private static final Parser PARSER = Parser.builder()
-            .includeSourceSpans(IncludeSourceSpans.BLOCKS)
-            .build();
     private static final Pattern SLUG_SPECIAL = Pattern.compile("[^a-z0-9 -]");
 
     private final int lineLength;
     private final String listMarker;
     private final MarkdownFormat format;
     private final FrontmatterParser frontmatterParser;
+        private final MarkdownParserFacade parserFacade;
+        private final MarkdownProjector projector;
     private final boolean checkExternalLinks;
     private final RelativeLinkChecker relativeLinkChecker;
     private final RelativeAnchorChecker relativeAnchorChecker;
@@ -70,6 +67,8 @@ class MarkdownValidator implements Validator {
         this.listMarker = listMarker;
         this.format = format;
         this.frontmatterParser = frontmatterParser;
+        this.parserFacade = new MarkdownParserFacade(frontmatterParser);
+        this.projector = new MarkdownProjector();
         this.checkExternalLinks = checkExternalLinks;
         this.relativeLinkChecker = new RelativeLinkChecker();
         this.relativeAnchorChecker = new RelativeAnchorChecker();
@@ -100,36 +99,33 @@ class MarkdownValidator implements Validator {
 
         String[] lines = content.split("\n", -1);
 
-        // Parse frontmatter
-        FrontmatterResult frontmatter = frontmatterParser.parse(content);
+        MarkdownParseResult parsed = parserFacade.parse(content);
+        FrontmatterResult frontmatter = parsed.frontmatter();
         if (frontmatter.hasError()) {
             diagnostics.add(new Diagnostic(Severity.ERROR, "frontmatter-parse-error",
                     frontmatter.errorMessage(), null,
                     new SourceRange(1, 1, 1, 1)));
         }
 
-        // Parse CommonMark AST (body only, excluding frontmatter)
-        String body = frontmatter.body();
-        int bodyStartLine = frontmatter.bodyStartLine();
-        Node document = PARSER.parse(body);
+        Document projected = projector.project(parsed, doc.sourcePath());
 
         // Structural checks
-        checkHeadingHierarchy(document, bodyStartLine, diagnostics);
-        checkDuplicateAnchors(document, bodyStartLine, diagnostics);
-        checkInternalLinks(document, bodyStartLine, diagnostics);
+        checkHeadingHierarchy(projected, diagnostics);
+        checkDuplicateAnchors(projected, diagnostics);
+        checkInternalLinks(projected, diagnostics);
 
         // Formatting checks
-        checkCodeBlockLanguage(document, bodyStartLine, diagnostics);
+        checkCodeBlockLanguage(projected, diagnostics);
         checkLineLength(lines, diagnostics);
         checkTrailingWhitespace(lines, diagnostics);
         checkListMarkers(lines, frontmatter.bodyStartLine(), diagnostics);
         checkBlankLineBeforeHeading(lines, diagnostics);
 
         // Relative and external link checks
-        checkFileLinks(document, bodyStartLine, doc.sourcePath(), diagnostics);
+        checkFileLinks(parsed.bodyDocument(), parsed.bodyStartLine(), doc.sourcePath(), diagnostics);
 
         // Format-specific checks
-        format.validate(doc, frontmatter, diagnostics);
+        format.validate(projected, frontmatter, diagnostics);
 
         return diagnostics;
     }
@@ -144,47 +140,47 @@ class MarkdownValidator implements Validator {
         return null;
     }
 
-    void checkHeadingHierarchy(Node document, int bodyStartLine, List<Diagnostic> diagnostics) {
-        List<HeadingInfo> headings = collectHeadings(document, bodyStartLine);
+    void checkHeadingHierarchy(Document projected, List<Diagnostic> diagnostics) {
+        List<ProjectedHeadingInfo> headings = collectProjectedHeadings(projected);
         for (int i = 1; i < headings.size(); i++) {
-            HeadingInfo prev = headings.get(i - 1);
-            HeadingInfo curr = headings.get(i);
+            ProjectedHeadingInfo prev = headings.get(i - 1);
+            ProjectedHeadingInfo curr = headings.get(i);
             if (curr.level() > prev.level() + 1) {
                 diagnostics.add(new Diagnostic(Severity.WARN, "heading-hierarchy",
                         "Heading level skipped: expected h" + (prev.level() + 1)
                                 + " or lower, found h" + curr.level(),
                         null,
-                        new SourceRange(curr.line(), 1, curr.line(), 1)));
+                        rangeFor(projected, curr.path())));
             }
         }
     }
 
-    void checkDuplicateAnchors(Node document, int bodyStartLine, List<Diagnostic> diagnostics) {
-        List<HeadingInfo> headings = collectHeadings(document, bodyStartLine);
+    void checkDuplicateAnchors(Document projected, List<Diagnostic> diagnostics) {
+        List<ProjectedHeadingInfo> headings = collectProjectedHeadings(projected);
         Set<String> seen = new HashSet<>();
-        for (HeadingInfo heading : headings) {
+        for (ProjectedHeadingInfo heading : headings) {
             String slug = slugify(heading.text());
             if (!seen.add(slug)) {
                 diagnostics.add(new Diagnostic(Severity.WARN, "duplicate-anchor",
                         "Duplicate heading anchor: #" + slug,
                         null,
-                        new SourceRange(heading.line(), 1, heading.line(), 1)));
+                        rangeFor(projected, heading.path())));
             }
         }
     }
 
-    void checkInternalLinks(Node document, int bodyStartLine, List<Diagnostic> diagnostics) {
-        List<HeadingInfo> headings = collectHeadings(document, bodyStartLine);
+    void checkInternalLinks(Document projected, List<Diagnostic> diagnostics) {
+        List<ProjectedHeadingInfo> headings = collectProjectedHeadings(projected);
         Set<String> anchors = new HashSet<>();
         Map<String, Integer> anchorCounts = new HashMap<>();
-        for (HeadingInfo heading : headings) {
+        for (ProjectedHeadingInfo heading : headings) {
             String slug = slugify(heading.text());
             anchors.add(slug);
             anchorCounts.merge(slug, 1, Integer::sum);
         }
 
-        List<LinkInfo> links = collectInternalLinks(document, bodyStartLine);
-        for (LinkInfo link : links) {
+        List<ProjectedLinkInfo> links = collectProjectedInternalLinks(projected);
+        for (ProjectedLinkInfo link : links) {
             // link.target() always starts with '#' (guaranteed by collectInternalLinks)
             String target = link.target().substring(1);
             String normalizedTarget = target.toLowerCase();
@@ -192,25 +188,23 @@ class MarkdownValidator implements Validator {
                 diagnostics.add(new Diagnostic(Severity.WARN, "broken-internal-link",
                         "Internal link target not found: #" + target,
                         null,
-                        new SourceRange(link.line(), 1, link.line(), 1)));
+                        rangeFor(projected, link.path())));
             }
         }
     }
 
-    void checkCodeBlockLanguage(Node document, int bodyStartLine, List<Diagnostic> diagnostics) {
-        document.accept(new AbstractVisitor() {
-            @Override
-            public void visit(FencedCodeBlock fencedCodeBlock) {
-                String info = fencedCodeBlock.getInfo();
-                if (info == null || info.isBlank()) {
-                    int line = getNodeLine(fencedCodeBlock, bodyStartLine);
-                    diagnostics.add(new Diagnostic(Severity.INFO, "code-block-no-language",
-                            "Fenced code block has no language annotation",
-                            null,
-                            new SourceRange(line, 1, line, 1)));
-                }
+    void checkCodeBlockLanguage(Document projected, List<Diagnostic> diagnostics) {
+        JsonNode codeBlocks = projected.root().path("document").path("codeBlocks");
+        for (int i = 0; i < codeBlocks.size(); i++) {
+            JsonNode codeBlock = codeBlocks.get(i);
+            JsonNode language = codeBlock.get("language");
+            if (language == null || language.isNull() || language.asText().isBlank()) {
+                diagnostics.add(new Diagnostic(Severity.INFO, "code-block-no-language",
+                        "Fenced code block has no language annotation",
+                        null,
+                        rangeFor(projected, "$.document.codeBlocks[" + i + "]")));
             }
-        });
+        }
     }
 
     void checkLineLength(String[] lines, List<Diagnostic> diagnostics) {
@@ -348,35 +342,6 @@ class MarkdownValidator implements Validator {
         return links;
     }
 
-    List<HeadingInfo> collectHeadings(Node document, int bodyStartLine) {
-        List<HeadingInfo> headings = new ArrayList<>();
-        document.accept(new AbstractVisitor() {
-            @Override
-            public void visit(Heading heading) {
-                String text = extractText(heading);
-                int line = getNodeLine(heading, bodyStartLine);
-                headings.add(new HeadingInfo(heading.getLevel(), text, line));
-            }
-        });
-        return headings;
-    }
-
-    List<LinkInfo> collectInternalLinks(Node document, int bodyStartLine) {
-        List<LinkInfo> links = new ArrayList<>();
-        document.accept(new AbstractVisitor() {
-            @Override
-            public void visit(Link link) {
-                String destination = link.getDestination();
-                if (destination != null && destination.startsWith("#")) {
-                    int line = getNodeLine(link, bodyStartLine);
-                    links.add(new LinkInfo(destination, line));
-                }
-                visitChildren(link);
-            }
-        });
-        return links;
-    }
-
     static String extractText(Node node) {
         StringBuilder sb = new StringBuilder();
         node.accept(new AbstractVisitor() {
@@ -407,7 +372,41 @@ class MarkdownValidator implements Validator {
         return bodyStartLine;
     }
 
-    record HeadingInfo(int level, String text, int line) {}
+    List<ProjectedHeadingInfo> collectProjectedHeadings(Document projected) {
+        List<ProjectedHeadingInfo> headings = new ArrayList<>();
+        JsonNode headingNodes = projected.root().path("document").path("headings");
+        for (int i = 0; i < headingNodes.size(); i++) {
+            JsonNode heading = headingNodes.get(i);
+            headings.add(new ProjectedHeadingInfo(
+                    heading.path("level").asInt(),
+                    heading.path("text").asText(),
+                    "$.document.headings[" + i + "]"));
+        }
+        return headings;
+    }
+
+    List<ProjectedLinkInfo> collectProjectedInternalLinks(Document projected) {
+        List<ProjectedLinkInfo> links = new ArrayList<>();
+        JsonNode linkNodes = projected.root().path("document").path("links");
+        for (int i = 0; i < linkNodes.size(); i++) {
+            JsonNode link = linkNodes.get(i);
+            if ("internal-anchor".equals(link.path("kind").asText())) {
+                links.add(new ProjectedLinkInfo(
+                        link.path("target").asText(),
+                        "$.document.links[" + i + "]"));
+            }
+        }
+        return links;
+    }
+
+    SourceRange rangeFor(Document projected, String path) {
+        SourceRange range = projected.sourceMap().resolve(path);
+        return range != null ? range : new SourceRange(1, 1, 1, 1);
+    }
 
     record LinkInfo(String target, int line) {}
+
+    record ProjectedHeadingInfo(int level, String text, String path) {}
+
+    record ProjectedLinkInfo(String target, String path) {}
 }
