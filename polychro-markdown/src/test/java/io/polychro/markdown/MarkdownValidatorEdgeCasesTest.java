@@ -173,21 +173,24 @@ class MarkdownValidatorEdgeCasesTest {
         // info defaults to null when not set via setter
         org.commonmark.node.Document mdDoc = new org.commonmark.node.Document();
         mdDoc.appendChild(codeBlock);
+        Document projected = new MarkdownProjector().project(
+                new MarkdownParseResult("", new FrontmatterResult(null, "", 1, null), mdDoc),
+                null);
         List<Diagnostic> diagnostics = new java.util.ArrayList<>();
-        validator.checkCodeBlockLanguage(mdDoc, 1, diagnostics);
+        validator.checkCodeBlockLanguage(projected, diagnostics);
         assertEquals(1, diagnostics.size());
         assertEquals("code-block-no-language", diagnostics.getFirst().code());
     }
 
     @Test
-    void collectInternalLinksShouldSkipLinksWithNullDestination() {
-        // Programmatically create a Link node with null destination
-        org.commonmark.node.Link link = new org.commonmark.node.Link(null, null);
-        org.commonmark.node.Document mdDoc = new org.commonmark.node.Document();
-        org.commonmark.node.Paragraph para = new org.commonmark.node.Paragraph();
-        para.appendChild(link);
-        mdDoc.appendChild(para);
-        List<MarkdownValidator.LinkInfo> links = validator.collectInternalLinks(mdDoc, 1);
-        assertTrue(links.isEmpty());
+    void checkCodeBlockLanguageShouldFallbackWhenSourceMapRangeIsMissing() {
+        com.fasterxml.jackson.databind.node.ObjectNode root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        root.putObject("document").putArray("codeBlocks").addObject();
+
+        List<Diagnostic> diagnostics = new java.util.ArrayList<>();
+        validator.checkCodeBlockLanguage(new Document(root, "markdown", null), diagnostics);
+
+        assertEquals(1, diagnostics.size());
+        assertEquals(new io.polychro.spi.SourceRange(1, 1, 1, 1), diagnostics.getFirst().range());
     }
 }
