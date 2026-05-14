@@ -222,6 +222,97 @@ class DocumentTest {
     }
 
     @Test
+    void constructorShouldInferYamlFormatFromYamlExtension() {
+        Document doc = new Document(null, "config/example.yaml");
+
+        assertEquals("yaml", doc.format());
+    }
+
+    @Test
+    void constructorShouldInferYamlFormatFromYmlExtension() {
+        Document doc = new Document(null, "config/example.yml");
+
+        assertEquals("yaml", doc.format());
+    }
+
+    @Test
+    void constructorShouldInferJsonFormatFromSourcePath() {
+        Document doc = new Document(null, "config/example.json");
+
+        assertEquals("json", doc.format());
+    }
+
+    @Test
+    void constructorShouldInferXmlFormatFromSourcePath() {
+        Document doc = new Document(null, "config/example.xml");
+
+        assertEquals("xml", doc.format());
+    }
+
+    @Test
+    void constructorShouldInferMarkdownFormatFromMarkdownExtension() {
+        Document doc = new Document(null, "docs/example.markdown");
+
+        assertEquals("markdown", doc.format());
+    }
+
+    @Test
+    void constructorShouldInferHtmlFormatFromHtmlExtension() {
+        Document doc = new Document(null, "site/index.html");
+
+        assertEquals("html", doc.format());
+    }
+
+    @Test
+    void constructorShouldInferHtmlFormatFromHtmExtension() {
+        Document doc = new Document(null, "site/index.htm");
+
+        assertEquals("html", doc.format());
+    }
+
+    @Test
+    void constructorShouldLeaveFormatNullForBlankSourcePath() {
+        Document doc = new Document(null, "   ");
+
+        assertNull(doc.format());
+    }
+
+    @Test
+    void constructorShouldLeaveFormatNullForNullSourcePath() {
+        Document doc = new Document(null, (String) null);
+
+        assertNull(doc.format());
+    }
+
+    @Test
+    void constructorShouldLeaveFormatNullForUnknownSourcePath() {
+        Document doc = new Document(null, "config/example.toml");
+
+        assertNull(doc.format());
+    }
+
+    @Test
+    void constructorShouldNormalizeMarkdownAlias() {
+        Document doc = new Document(null, "md", null);
+
+        assertEquals("markdown", doc.format());
+    }
+
+    @Test
+    void constructorShouldNormalizeHtmlAlias() {
+        Document doc = new Document(null, "htm", null);
+
+        assertEquals("html", doc.format());
+    }
+
+    @Test
+    void constructorShouldTreatBlankFormatAsUnknown() {
+        Document doc = new Document(null, "   ", null);
+
+        assertNull(doc.format());
+    }
+
+    @Test
     void constructorShouldPreserveCustomMetadataAndSourceMap() {
         SourceMap sourceMap = path -> new SourceRange(1, 1, 1, 5);
         Document doc = new Document(null, "markdown", "test.md", sourceMap, Map.of("profile", "generic"));
@@ -229,5 +320,10 @@ class DocumentTest {
         assertEquals("markdown", doc.format());
         assertEquals("generic", doc.metadata().get("profile"));
         assertEquals(new SourceRange(1, 1, 1, 5), doc.sourceMap().resolve("$.document"));
+    }
+
+    @Test
+    void sourceMapNoneShouldResolveToNull() {
+        assertNull(SourceMap.NONE.resolve("$.document"));
     }
 }
