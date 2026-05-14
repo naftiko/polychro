@@ -24,6 +24,9 @@ import org.commonmark.node.BulletList;
 import org.commonmark.node.FencedCodeBlock;
 import org.commonmark.node.Heading;
 import org.commonmark.node.Link;
+import org.commonmark.node.ListItem;
+import org.commonmark.node.OrderedList;
+import org.commonmark.node.Paragraph;
 
 import java.util.Map;
 
@@ -41,6 +44,7 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
     public Document project(MarkdownParseResult parsed, String sourcePath) {
         ObjectNode root = JsonNodeFactory.instance.objectNode();
         ObjectNode document = root.putObject("document");
+        ArrayNode blocks = document.putArray("blocks");
         ArrayNode headings = document.putArray("headings");
         ArrayNode links = document.putArray("links");
         ArrayNode codeBlocks = document.putArray("codeBlocks");
@@ -53,6 +57,8 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
         } else {
             document.putNull("frontmatter");
         }
+
+        projectBlocks(parsed, blocks, sourceMapBuilder);
 
         parsed.bodyDocument().accept(new AbstractVisitor() {
             @Override
@@ -118,6 +124,63 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
         });
 
         return new Document(root, format(), sourcePath, sourceMapBuilder.build(), Map.of());
+    }
+
+    void projectBlocks(MarkdownParseResult parsed, ArrayNode blocks, MarkdownSourceMapBuilder sourceMapBuilder) {
+        for (org.commonmark.node.Node child = parsed.bodyDocument().getFirstChild(); child != null; child = child.getNext()) {
+            int index = blocks.size();
+            String path = "$.document.blocks[" + index + "]";
+
+            if (child instanceof Heading heading) {
+                ObjectNode block = blocks.addObject();
+                String text = MarkdownValidator.extractText(heading);
+                block.put("type", "heading");
+                block.put("level", heading.getLevel());
+                block.put("text", text);
+                block.put("anchor", MarkdownValidator.slugify(text));
+                sourceMapBuilder.put(path, rangeFor(heading, parsed.bodyStartLine()));
+            } else if (child instanceof Paragraph paragraph) {
+                ObjectNode block = blocks.addObject();
+                block.put("type", "paragraph");
+                block.put("text", MarkdownValidator.extractText(paragraph));
+                sourceMapBuilder.put(path, rangeFor(paragraph, parsed.bodyStartLine()));
+            } else if (child instanceof BulletList bulletList) {
+                ObjectNode block = blocks.addObject();
+                block.put("type", "list");
+                block.put("ordered", false);
+                block.put("marker", String.valueOf(bulletList.getBulletMarker()));
+                ArrayNode items = block.putArray("items");
+                appendListItems(bulletList, items);
+                sourceMapBuilder.put(path, rangeFor(bulletList, parsed.bodyStartLine()));
+            } else if (child instanceof OrderedList orderedList) {
+                ObjectNode block = blocks.addObject();
+                block.put("type", "list");
+                block.put("ordered", true);
+                block.put("marker", String.valueOf(orderedList.getDelimiter()));
+                block.put("startNumber", orderedList.getStartNumber());
+                ArrayNode items = block.putArray("items");
+                appendListItems(orderedList, items);
+                sourceMapBuilder.put(path, rangeFor(orderedList, parsed.bodyStartLine()));
+            } else if (child instanceof FencedCodeBlock fencedCodeBlock) {
+                ObjectNode block = blocks.addObject();
+                block.put("type", "code-block");
+                if (fencedCodeBlock.getInfo() == null) {
+                    block.putNull("language");
+                } else {
+                    block.put("language", fencedCodeBlock.getInfo());
+                }
+                block.put("content", fencedCodeBlock.getLiteral());
+                sourceMapBuilder.put(path, rangeFor(fencedCodeBlock, parsed.bodyStartLine()));
+            }
+        }
+    }
+
+    void appendListItems(org.commonmark.node.Node listNode, ArrayNode items) {
+        for (org.commonmark.node.Node child = listNode.getFirstChild(); child != null; child = child.getNext()) {
+            if (child instanceof ListItem listItem) {
+                items.addObject().put("text", MarkdownValidator.extractText(listItem));
+            }
+        }
     }
 
     private SourceRange frontmatterRange(MarkdownParseResult parsed) {
