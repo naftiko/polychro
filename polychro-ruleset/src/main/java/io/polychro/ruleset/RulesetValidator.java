@@ -21,6 +21,7 @@ import io.polychro.spi.Validator;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -76,6 +77,9 @@ class RulesetValidator implements Validator {
             if (!rule.recommended() && !includeNonRecommended) {
                 continue;
             }
+            if (!matchesFormat(rule, doc)) {
+                continue;
+            }
 
             // Resolve aliases in given expressions
             Rule resolvedRule = rule;
@@ -91,5 +95,28 @@ class RulesetValidator implements Validator {
 
         diagnostics.sort(null);
         return diagnostics;
+    }
+
+    boolean matchesFormat(Rule rule, Document doc) {
+        if (rule.formats() == null || rule.formats().isEmpty()) {
+            return true;
+        }
+        if (doc.format() == null || doc.format().isBlank()) {
+            return false;
+        }
+
+        String documentFormat = normalizeFormat(doc.format());
+        return rule.formats().stream()
+                .map(this::normalizeFormat)
+                .anyMatch(documentFormat::equals);
+    }
+
+    String normalizeFormat(String format) {
+        return switch (format.toLowerCase(Locale.ROOT)) {
+            case "yml" -> "yaml";
+            case "md" -> "markdown";
+            case "htm" -> "html";
+            default -> format.toLowerCase(Locale.ROOT);
+        };
     }
 }

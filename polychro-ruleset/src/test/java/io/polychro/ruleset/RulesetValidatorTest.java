@@ -148,4 +148,31 @@ class RulesetValidatorTest {
         List<Diagnostic> results = validator.validate(doc);
         assertTrue(results.isEmpty());
     }
+
+        @Test
+        void validateShouldSkipRulesWhenFormatsDoNotMatchDocumentFormat() {
+                Rule rule = new Rule("markdown-only", "Markdown only", null, "warn", true,
+                                List.of("markdown"), null, List.of("$.info.name"),
+                                List.of(new RuleAction(null, "truthy", Map.of())));
+                Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("markdown-only", rule), null);
+                RulesetValidator validator = new RulesetValidator(ruleset, false);
+                Document doc = Document.fromString("{\"info\": {\"name\": \"\"}}", "json");
+
+                List<Diagnostic> results = validator.validate(doc);
+                assertTrue(results.isEmpty());
+        }
+
+        @Test
+        void validateShouldRunRulesWhenFormatsMatchDocumentFormatAlias() {
+                Rule rule = new Rule("yaml-only", "YAML only", null, "warn", true,
+                                List.of("yml"), null, List.of("$.info.name"),
+                                List.of(new RuleAction(null, "truthy", Map.of())));
+                Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("yaml-only", rule), null);
+                RulesetValidator validator = new RulesetValidator(ruleset, false);
+                Document doc = Document.fromString("info:\n  name: \"\"\n", "yaml");
+
+                List<Diagnostic> results = validator.validate(doc);
+                assertEquals(1, results.size());
+                assertEquals("YAML only", results.get(0).message());
+        }
 }

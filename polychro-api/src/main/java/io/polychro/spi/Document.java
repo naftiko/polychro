@@ -16,22 +16,44 @@ package io.polychro.spi;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
+import java.util.Map;
 
 /**
  * An in-memory representation of a document to be validated.
  *
  * @param root       the parsed document as a Jackson JsonNode tree
+ * @param format     the canonical document format identifier, may be null when unknown
  * @param sourcePath the file path or identifier of the source, may be null for in-memory documents
+ * @param sourceMap  source-location resolver for projected formats
+ * @param metadata   parser or projection metadata attached to the document
  */
-public record Document(JsonNode root, String sourcePath) {
+public record Document(JsonNode root, String format, String sourcePath, SourceMap sourceMap,
+                       Map<String, Object> metadata) {
 
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
     private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
+    private static final ObjectMapper XML_MAPPER = new XmlMapper();
+
+    public Document {
+        format = normalizeFormat(format != null ? format : detectFormatFromSourcePath(sourcePath));
+        sourceMap = sourceMap != null ? sourceMap : SourceMap.NONE;
+        metadata = metadata != null ? Map.copyOf(metadata) : Map.of();
+    }
+
+    public Document(JsonNode root, String sourcePath) {
+        this(root, null, sourcePath, null, null);
+    }
+
+    public Document(JsonNode root, String format, String sourcePath) {
+        this(root, format, sourcePath, null, null);
+    }
 
     /**
      * Parse a YAML file into a Document.
@@ -43,7 +65,7 @@ public record Document(JsonNode root, String sourcePath) {
     public static Document fromYaml(Path path) {
         try {
             JsonNode root = YAML_MAPPER.readTree(Files.newInputStream(path));
-            return new Document(root, path.toString());
+            return new Document(root, "yaml", path.toString());
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to parse YAML: " + path, e);
         }
@@ -59,9 +81,25 @@ public record Document(JsonNode root, String sourcePath) {
     public static Document fromJson(Path path) {
         try {
             JsonNode root = JSON_MAPPER.readTree(Files.newInputStream(path));
-            return new Document(root, path.toString());
+            return new Document(root, "json", path.toString());
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to parse JSON: " + path, e);
+        }
+    }
+
+    /**
+     * Parse an XML file into a Document.
+     *
+     * @param path the file system path to the XML document
+     * @return the parsed Document
+     * @throws UncheckedIOException if the file cannot be read or is not valid XML
+     */
+    public static Document fromXml(Path path) {
+        try {
+            JsonNode root = XML_MAPPER.readTree(Files.newInputStream(path));
+            return new Document(root, "xml", path.toString());
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to parse XML: " + path, e);
         }
     }
 
@@ -82,17 +120,18 @@ public record Document(JsonNode root, String sourcePath) {
         if (content == null || content.isBlank()) {
             throw new IllegalArgumentException("Document content must not be null or blank");
         }
-        String effectiveFormat = format;
+        String effectiveFormat = normalizeFormat(format);
         if (effectiveFormat == null) {
             effectiveFormat = detectFormat(content);
         }
         try {
-            JsonNode root = switch (effectiveFormat.toLowerCase()) {
+            JsonNode root = switch (effectiveFormat) {
                 case "yaml", "yml" -> YAML_MAPPER.readTree(content);
                 case "json" -> JSON_MAPPER.readTree(content);
+                case "xml" -> XML_MAPPER.readTree(content);
                 default -> throw new IllegalArgumentException("Unknown format: " + effectiveFormat);
             };
-            return new Document(root, sourcePath);
+            return new Document(root, effectiveFormat, sourcePath);
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to parse content as " + effectiveFormat, e);
         }
@@ -103,6 +142,46 @@ public record Document(JsonNode root, String sourcePath) {
         if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
             return "json";
         }
+        if (trimmed.startsWith("<")) {
+            return "xml";
+        }
         return "yaml";
+    }
+
+    private static String detectFormatFromSourcePath(String sourcePath) {
+        if (sourcePath == null || sourcePath.isBlank()) {
+            return null;
+        }
+
+        String lowerSourcePath = sourcePath.toLowerCase(Locale.ROOT);
+        if (lowerSourcePath.endsWith(".yml") || lowerSourcePath.endsWith(".yaml")) {
+            return "yaml";
+        }
+        if (lowerSourcePath.endsWith(".json")) {
+            return "json";
+        }
+        if (lowerSourcePath.endsWith(".xml")) {
+            return "xml";
+        }
+        if (lowerSourcePath.endsWith(".md") || lowerSourcePath.endsWith(".markdown")) {
+            return "markdown";
+        }
+        if (lowerSourcePath.endsWith(".html") || lowerSourcePath.endsWith(".htm")) {
+            return "html";
+        }
+        return null;
+    }
+
+    private static String normalizeFormat(String format) {
+        if (format == null || format.isBlank()) {
+            return null;
+        }
+
+        return switch (format.toLowerCase(Locale.ROOT)) {
+            case "yml" -> "yaml";
+            case "md" -> "markdown";
+            case "htm" -> "html";
+            default -> format.toLowerCase(Locale.ROOT);
+        };
     }
 }
