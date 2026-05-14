@@ -193,6 +193,25 @@ class MarkdownValidator implements Validator {
     }
 
     void checkCodeBlockLanguage(Document projected, List<Diagnostic> diagnostics) {
+        JsonNode blocks = projected.root().path("document").path("blocks");
+        if (blocks.isArray()) {
+            for (int i = 0; i < blocks.size(); i++) {
+                JsonNode block = blocks.get(i);
+                if (!"code-block".equals(block.path("type").asText())) {
+                    continue;
+                }
+
+                JsonNode language = block.get("language");
+                if (language == null || language.isNull() || language.asText().isBlank()) {
+                    diagnostics.add(new Diagnostic(Severity.INFO, "code-block-no-language",
+                            "Fenced code block has no language annotation",
+                            null,
+                            rangeFor(projected, "$.document.blocks[" + i + "]")));
+                }
+            }
+            return;
+        }
+
         JsonNode codeBlocks = projected.root().path("document").path("codeBlocks");
         for (int i = 0; i < codeBlocks.size(); i++) {
             JsonNode codeBlock = codeBlocks.get(i);
@@ -369,6 +388,22 @@ class MarkdownValidator implements Validator {
 
     List<ProjectedHeadingInfo> collectProjectedHeadings(Document projected) {
         List<ProjectedHeadingInfo> headings = new ArrayList<>();
+        JsonNode blocks = projected.root().path("document").path("blocks");
+        if (blocks.isArray()) {
+            for (int i = 0; i < blocks.size(); i++) {
+                JsonNode block = blocks.get(i);
+                if (!"heading".equals(block.path("type").asText())) {
+                    continue;
+                }
+
+                headings.add(new ProjectedHeadingInfo(
+                        block.path("level").asInt(),
+                        block.path("text").asText(),
+                        "$.document.blocks[" + i + "]"));
+            }
+            return headings;
+        }
+
         JsonNode headingNodes = projected.root().path("document").path("headings");
         for (int i = 0; i < headingNodes.size(); i++) {
             JsonNode heading = headingNodes.get(i);

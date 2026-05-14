@@ -131,6 +131,29 @@ class MarkdownFormatTest {
     }
 
     @Test
+    void headingsShouldPreferBlocksWhenPresent() {
+        var blockHeading = JsonNodeFactory.instance.objectNode();
+        blockHeading.put("type", "heading");
+        blockHeading.put("level", 2);
+        blockHeading.put("text", "Overview");
+        var legacyHeading = JsonNodeFactory.instance.objectNode();
+        legacyHeading.put("level", 2);
+        legacyHeading.put("text", "Legacy");
+        var root = JsonNodeFactory.instance.objectNode();
+        var document = root.putObject("document");
+        document.putArray("blocks").add(blockHeading);
+        document.putArray("headings").add(legacyHeading);
+
+        int count = 0;
+        for (var projectedHeading : format.headings(new Document(root, "markdown", null))) {
+            assertEquals("Overview", projectedHeading.path("text").asText());
+            count++;
+        }
+
+        assertEquals(1, count);
+    }
+
+    @Test
     void hasHeadingShouldReturnTrueForMatchingHeadingAndLevel() {
         var heading = JsonNodeFactory.instance.objectNode();
         heading.put("level", 2);
