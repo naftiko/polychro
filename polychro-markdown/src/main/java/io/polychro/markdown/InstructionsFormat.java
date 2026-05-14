@@ -27,13 +27,12 @@ import java.util.List;
 class InstructionsFormat implements MarkdownFormat {
 
     @Override
-    public void validate(Document doc, FrontmatterResult frontmatter, List<Diagnostic> diagnostics) {
-        if (!frontmatter.hasFrontmatter()) {
+    public void validate(Document doc, List<Diagnostic> diagnostics) {
+        JsonNode data = frontmatter(doc);
+        if (data == null) {
             // No frontmatter is acceptable — falls back to generic
             return;
         }
-
-        JsonNode data = frontmatter.data();
 
         // applyTo is the key field for instructions files
         if (!data.has("applyTo")) {

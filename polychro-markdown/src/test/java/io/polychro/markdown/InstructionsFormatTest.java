@@ -13,6 +13,7 @@
  */
 package io.polychro.markdown;
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.TextNode;
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Document;
@@ -30,6 +31,18 @@ class InstructionsFormatTest {
 
     private Document doc(String content) {
         return new Document(new TextNode(content), "coding.instructions.md");
+    }
+
+    private Document projectedDoc(com.fasterxml.jackson.databind.JsonNode frontmatter) {
+        var root = JsonNodeFactory.instance.objectNode();
+        var document = root.putObject("document");
+        if (frontmatter == null) {
+            document.putNull("frontmatter");
+        } else {
+            document.set("frontmatter", frontmatter);
+        }
+        document.putArray("headings");
+        return new Document(root, "markdown", "coding.instructions.md");
     }
 
     @Test
@@ -67,5 +80,15 @@ class InstructionsFormatTest {
         List<Diagnostic> result = validator().validate(doc(content));
         assertTrue(result.stream().noneMatch(d -> d.code().equals("instructions-empty-applyto")));
         assertTrue(result.stream().noneMatch(d -> d.code().equals("instructions-missing-applyto")));
+    }
+
+    @Test
+    void validateShouldHandleNullProjectedFrontmatter() {
+        InstructionsFormat format = new InstructionsFormat();
+        List<Diagnostic> diagnostics = new java.util.ArrayList<>();
+
+        format.validate(projectedDoc(null), diagnostics);
+
+        assertTrue(diagnostics.isEmpty());
     }
 }

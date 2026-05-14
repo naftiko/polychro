@@ -13,10 +13,13 @@
  */
 package io.polychro.markdown;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Document;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.StreamSupport;
 
 /**
  * Format-specific validation profile for Markdown documents.
@@ -26,5 +29,43 @@ interface MarkdownFormat {
     /**
      * Apply format-specific validation rules.
      */
-    void validate(Document doc, FrontmatterResult frontmatter, List<Diagnostic> diagnostics);
+    void validate(Document doc, List<Diagnostic> diagnostics);
+
+    default JsonNode frontmatter(Document doc) {
+        if (doc == null || doc.root() == null) {
+            return null;
+        }
+
+        JsonNode frontmatter = doc.root().path("document").path("frontmatter");
+        if (frontmatter.isMissingNode() || frontmatter.isNull()) {
+            return null;
+        }
+        return frontmatter;
+    }
+
+    default Iterable<JsonNode> headings(Document doc) {
+        if (doc == null) {
+            return Collections.emptyList();
+        }
+        if (doc.root() == null) {
+            return Collections.emptyList();
+        }
+
+        JsonNode headings = doc.root().path("document").path("headings");
+        if (!headings.isArray()) {
+            return Collections.emptyList();
+        }
+        return headings;
+    }
+
+    default boolean hasHeading(Document doc, String text, int minLevel) {
+        return StreamSupport.stream(headings(doc).spliterator(), false)
+                .anyMatch(heading -> heading.path("level").asInt() >= minLevel
+                        && text.equals(heading.path("text").asText()));
+    }
+
+    default boolean hasHeadingAtOrAboveLevel(Document doc, int minLevel) {
+        return StreamSupport.stream(headings(doc).spliterator(), false)
+                .anyMatch(heading -> heading.path("level").asInt() >= minLevel);
+    }
 }
