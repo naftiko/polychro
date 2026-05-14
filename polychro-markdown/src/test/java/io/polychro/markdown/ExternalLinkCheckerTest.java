@@ -170,4 +170,36 @@ class ExternalLinkCheckerTest {
         assertEquals(Severity.WARN, diagnostics.get(0).severity());
         assertEquals("broken-external-link", diagnostics.get(0).code());
     }
+
+    @Test
+    void checkUrlShouldThrottleRepeatedRequests() {
+        ExternalLinkChecker checker = new ExternalLinkChecker(5000, 5);
+
+        assertNull(checker.checkUrl(baseUrl + "/ok?first", 1));
+
+        long start = System.nanoTime();
+        assertNull(checker.checkUrl(baseUrl + "/ok?second", 2));
+        long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+
+        assertTrue(elapsedMs >= 150, "Expected throttled request to wait, elapsed=" + elapsedMs + "ms");
+    }
+
+    @Test
+    void checkUrlShouldPreserveInterruptWhenThrottleSleepIsInterrupted() {
+        ExternalLinkChecker checker = new ExternalLinkChecker(5000, 1);
+
+        assertNull(checker.checkUrl(baseUrl + "/ok?first", 1));
+
+        Thread.currentThread().interrupt();
+        try {
+            Diagnostic diagnostic = checker.checkUrl(baseUrl + "/ok?second", 2);
+
+            assertNotNull(diagnostic);
+            assertEquals(Severity.INFO, diagnostic.severity());
+            assertEquals("unreachable-external-link", diagnostic.code());
+            assertTrue(Thread.currentThread().isInterrupted());
+        } finally {
+            Thread.interrupted();
+        }
+    }
 }
