@@ -83,16 +83,7 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
 
                 int index = links.size();
                 String path = "$.document.links[" + index + "]";
-                ObjectNode projectedLink = links.addObject();
-                projectedLink.put("target", destination);
-                projectedLink.put("text", MarkdownValidator.extractText(link));
-                if (destination.startsWith("#")) {
-                    projectedLink.put("kind", "internal-anchor");
-                } else if (destination.startsWith("http://") || destination.startsWith("https://")) {
-                    projectedLink.put("kind", "external");
-                } else {
-                    projectedLink.put("kind", "relative");
-                }
+                links.add(buildProjectedLink(link));
                 sourceMapBuilder.put(path, rangeFor(link, parsed.bodyStartLine()));
                 visitChildren(link);
             }
@@ -143,6 +134,8 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
                 ObjectNode block = blocks.addObject();
                 block.put("type", "paragraph");
                 block.put("text", MarkdownValidator.extractText(paragraph));
+                ArrayNode paragraphLinks = block.putArray("links");
+                appendParagraphLinks(paragraph, paragraphLinks, path, sourceMapBuilder, parsed.bodyStartLine());
                 sourceMapBuilder.put(path, rangeFor(paragraph, parsed.bodyStartLine()));
             } else if (child instanceof BulletList bulletList) {
                 ObjectNode block = blocks.addObject();
@@ -181,6 +174,40 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
                 items.addObject().put("text", MarkdownValidator.extractText(listItem));
             }
         }
+    }
+
+    void appendParagraphLinks(Paragraph paragraph, ArrayNode links, String blockPath,
+                              MarkdownSourceMapBuilder sourceMapBuilder, int bodyStartLine) {
+        paragraph.accept(new AbstractVisitor() {
+            @Override
+            public void visit(Link link) {
+                String destination = link.getDestination();
+                if (destination == null || destination.isBlank()) {
+                    visitChildren(link);
+                    return;
+                }
+
+                int index = links.size();
+                links.add(buildProjectedLink(link));
+                sourceMapBuilder.put(blockPath + ".links[" + index + "]", rangeFor(link, bodyStartLine));
+                visitChildren(link);
+            }
+        });
+    }
+
+    ObjectNode buildProjectedLink(Link link) {
+        String destination = link.getDestination();
+        ObjectNode projectedLink = JsonNodeFactory.instance.objectNode();
+        projectedLink.put("target", destination);
+        projectedLink.put("text", MarkdownValidator.extractText(link));
+        if (destination.startsWith("#")) {
+            projectedLink.put("kind", "internal-anchor");
+        } else if (destination.startsWith("http://") || destination.startsWith("https://")) {
+            projectedLink.put("kind", "external");
+        } else {
+            projectedLink.put("kind", "relative");
+        }
+        return projectedLink;
     }
 
     private SourceRange frontmatterRange(MarkdownParseResult parsed) {
