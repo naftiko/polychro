@@ -346,20 +346,15 @@ class MarkdownValidator implements Validator {
         if (blocks.isArray()) {
             for (int i = 0; i < blocks.size(); i++) {
                 JsonNode block = blocks.get(i);
-                JsonNode blockLinks = block.path("links");
-                if (!blockLinks.isArray()) {
+                collectProjectedLinks(links, projected, block.path("links"), "$.document.blocks[" + i + "].links");
+                JsonNode items = block.path("items");
+                if (!items.isArray()) {
                     continue;
                 }
 
-                for (int j = 0; j < blockLinks.size(); j++) {
-                    JsonNode link = blockLinks.get(j);
-                    String target = link.path("target").asText();
-                    if (target.isBlank()) {
-                        continue;
-                    }
-
-                    SourceRange range = rangeFor(projected, "$.document.blocks[" + i + "].links[" + j + "]");
-                    links.add(new LinkInfo(target, range.startLine()));
+                for (int j = 0; j < items.size(); j++) {
+                    collectProjectedLinks(links, projected, items.get(j).path("links"),
+                            "$.document.blocks[" + i + "].items[" + j + "].links");
                 }
             }
             return links;
@@ -444,18 +439,15 @@ class MarkdownValidator implements Validator {
         if (blocks.isArray()) {
             for (int i = 0; i < blocks.size(); i++) {
                 JsonNode block = blocks.get(i);
-                JsonNode blockLinks = block.path("links");
-                if (!blockLinks.isArray()) {
+                collectProjectedInternalLinks(links, block.path("links"), "$.document.blocks[" + i + "].links");
+                JsonNode items = block.path("items");
+                if (!items.isArray()) {
                     continue;
                 }
 
-                for (int j = 0; j < blockLinks.size(); j++) {
-                    JsonNode link = blockLinks.get(j);
-                    if ("internal-anchor".equals(link.path("kind").asText())) {
-                        links.add(new ProjectedLinkInfo(
-                                link.path("target").asText(),
-                                "$.document.blocks[" + i + "].links[" + j + "]"));
-                    }
+                for (int j = 0; j < items.size(); j++) {
+                    collectProjectedInternalLinks(links, items.get(j).path("links"),
+                            "$.document.blocks[" + i + "].items[" + j + "].links");
                 }
             }
             return links;
@@ -471,6 +463,36 @@ class MarkdownValidator implements Validator {
             }
         }
         return links;
+    }
+
+    void collectProjectedLinks(List<LinkInfo> links, Document projected, JsonNode linkNodes, String pathPrefix) {
+        if (!linkNodes.isArray()) {
+            return;
+        }
+
+        for (int i = 0; i < linkNodes.size(); i++) {
+            JsonNode link = linkNodes.get(i);
+            String target = link.path("target").asText();
+            if (target.isBlank()) {
+                continue;
+            }
+
+            SourceRange range = rangeFor(projected, pathPrefix + "[" + i + "]");
+            links.add(new LinkInfo(target, range.startLine()));
+        }
+    }
+
+    void collectProjectedInternalLinks(List<ProjectedLinkInfo> links, JsonNode linkNodes, String pathPrefix) {
+        if (!linkNodes.isArray()) {
+            return;
+        }
+
+        for (int i = 0; i < linkNodes.size(); i++) {
+            JsonNode link = linkNodes.get(i);
+            if ("internal-anchor".equals(link.path("kind").asText())) {
+                links.add(new ProjectedLinkInfo(link.path("target").asText(), pathPrefix + "[" + i + "]"));
+            }
+        }
     }
 
     SourceRange rangeFor(Document projected, String path) {
