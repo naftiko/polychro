@@ -29,6 +29,9 @@ import java.util.List;
  */
 class RelativeAnchorChecker {
 
+    private final MarkdownParserFacade parserFacade = new MarkdownParserFacade(new FrontmatterParser());
+    private final MarkdownProjector projector = new MarkdownProjector();
+
     List<Diagnostic> check(List<MarkdownValidator.LinkInfo> links, Path documentDir) {
         List<Diagnostic> diagnostics = new ArrayList<>();
 
@@ -76,17 +79,15 @@ class RelativeAnchorChecker {
     boolean anchorExistsInFile(Path mdFile, String anchor) {
         try {
             String content = Files.readString(mdFile);
-            String[] lines = content.split("\n");
             String normalizedAnchor = anchor.toLowerCase();
+            var parsed = parserFacade.parse(content);
+            var projected = projector.project(parsed, mdFile.toString());
+            var headings = projected.root().path("document").path("headings");
 
-            for (String line : lines) {
-                String trimmed = line.trim();
-                if (trimmed.startsWith("#")) {
-                    String headingText = trimmed.replaceFirst("^#+\\s*", "");
-                    String slug = MarkdownValidator.slugify(headingText);
-                    if (slug.equals(normalizedAnchor)) {
-                        return true;
-                    }
+            for (int i = 0; i < headings.size(); i++) {
+                String projectedAnchor = headings.get(i).path("anchor").asText();
+                if (projectedAnchor.equals(normalizedAnchor)) {
+                    return true;
                 }
             }
         } catch (IOException e) {
