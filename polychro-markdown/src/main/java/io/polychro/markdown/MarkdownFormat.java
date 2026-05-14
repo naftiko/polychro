@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Document;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.StreamSupport;
@@ -49,6 +50,17 @@ interface MarkdownFormat {
         }
         if (doc.root() == null) {
             return Collections.emptyList();
+        }
+
+        JsonNode blocks = doc.root().path("document").path("blocks");
+        if (blocks.isArray()) {
+            List<JsonNode> headings = new ArrayList<>();
+            for (JsonNode block : blocks) {
+                if ("heading".equals(block.path("type").asText())) {
+                    headings.add(block);
+                }
+            }
+            return headings;
         }
 
         JsonNode headings = doc.root().path("document").path("headings");
