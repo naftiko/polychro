@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.ServiceLoader;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -105,6 +106,14 @@ class RulesetValidatorFactoryTest {
         var diagnostics = validator.validate(doc);
         assertEquals(1, diagnostics.size());
     }
+
+      @Test
+      void supportedFormatsShouldAdvertiseProjectedFormats() {
+        RulesetValidatorFactory factory = new RulesetValidatorFactory();
+
+        assertEquals(Set.of("json", "yaml", "xml", "markdown", "html"),
+            factory.supportedFormats());
+      }
 
     @Test
     void factoryShouldBeDiscoverableViaServiceLoader() {

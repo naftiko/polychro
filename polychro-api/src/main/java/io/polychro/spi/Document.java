@@ -15,6 +15,7 @@ package io.polychro.spi;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 
@@ -122,13 +123,17 @@ public record Document(JsonNode root, String format, String sourcePath, SourceMa
         }
         String effectiveFormat = normalizeFormat(format);
         if (effectiveFormat == null) {
+            effectiveFormat = detectFormatFromSourcePath(sourcePath);
+        }
+        if (effectiveFormat == null) {
             effectiveFormat = detectFormat(content);
         }
         try {
             JsonNode root = switch (effectiveFormat) {
-                case "yaml", "yml" -> YAML_MAPPER.readTree(content);
+                case "yaml" -> YAML_MAPPER.readTree(content);
                 case "json" -> JSON_MAPPER.readTree(content);
                 case "xml" -> XML_MAPPER.readTree(content);
+                case "markdown", "html" -> TextNode.valueOf(content);
                 default -> throw new IllegalArgumentException("Unknown format: " + effectiveFormat);
             };
             return new Document(root, effectiveFormat, sourcePath);

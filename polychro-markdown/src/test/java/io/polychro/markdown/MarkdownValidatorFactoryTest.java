@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.ServiceLoader;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -70,6 +71,17 @@ class MarkdownValidatorFactoryTest {
         Validator validator = factory.createWithAutoDetect(
                 new ValidatorConfig(Map.of("format", "agents")), "path/to/SKILL.md");
         assertNotNull(validator);
+    }
+
+    @Test
+    void supportedFormatsShouldAdvertiseMarkdown() {
+        assertEquals(Set.of("markdown"), factory.supportedFormats());
+    }
+
+    @Test
+    void supportedProfilesShouldAdvertiseMarkdownProfiles() {
+        assertEquals(Set.of("generic", "skill", "agents", "instructions"),
+                factory.supportedProfiles());
     }
 
     @Test

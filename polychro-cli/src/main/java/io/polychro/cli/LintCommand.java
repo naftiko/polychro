@@ -44,7 +44,7 @@ import java.util.List;
 @CommandLine.Command(
         name = "lint",
         mixinStandardHelpOptions = true,
-    description = "Lint one or more YAML/JSON/XML files"
+    description = "Lint one or more YAML/JSON/XML/Markdown/HTML files"
 )
 public class LintCommand implements Runnable {
 
@@ -180,15 +180,8 @@ public class LintCommand implements Runnable {
     }
 
     static Document loadDocument(Path file, PrintWriter err) {
-        String fileName = file.getFileName().toString().toLowerCase();
         try {
-            if (fileName.endsWith(".json")) {
-                return Document.fromJson(file);
-            }
-            if (fileName.endsWith(".xml")) {
-                return Document.fromXml(file);
-            }
-            return Document.fromYaml(file);
+            return Document.fromString(Files.readString(file), null, file.toString());
         } catch (Exception e) {
             err.println("Error: failed to parse " + file + ": " + e.getMessage());
             return null;
