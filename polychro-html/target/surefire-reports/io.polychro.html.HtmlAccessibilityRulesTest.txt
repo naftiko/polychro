@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: io.polychro.html.HtmlAccessibilityRulesTest
--------------------------------------------------------------------------------
-Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.551 s -- in io.polychro.html.HtmlAccessibilityRulesTest
