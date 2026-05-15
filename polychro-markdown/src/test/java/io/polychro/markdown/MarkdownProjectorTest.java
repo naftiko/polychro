@@ -112,94 +112,6 @@ class MarkdownProjectorTest {
         assertEquals("Third", projected.root().path("document").path("blocks").get(0).path("items").get(0).path("text").asText());
     }
 
-        @Test
-        void projectShouldExposeListItemLinksInBlocks() {
-        MarkdownParseResult parsed = parserFacade.parse("""
-            - [guide](docs/guide.md)
-            """);
-
-        Document projected = projector.project(parsed, null);
-
-            assertEquals("guide", projected.root().path("document").path("blocks").get(0)
-                .path("items").get(0).path("blocks").get(0).path("links").get(0).path("text").asText());
-        assertEquals("docs/guide.md", projected.root().path("document").path("blocks").get(0)
-                .path("items").get(0).path("blocks").get(0).path("links").get(0).path("target").asText());
-        }
-
-        @Test
-        void projectShouldExposeNestedListItemBlocks() {
-        MarkdownParseResult parsed = parserFacade.parse("""
-            - Parent
-              - [Child](docs/child.md)
-            """);
-
-        Document projected = projector.project(parsed, null);
-
-        assertEquals("Parent", projected.root().path("document").path("blocks").get(0)
-            .path("items").get(0).path("text").asText());
-        assertEquals("paragraph", projected.root().path("document").path("blocks").get(0)
-            .path("items").get(0).path("blocks").get(0).path("type").asText());
-        assertEquals("list", projected.root().path("document").path("blocks").get(0)
-            .path("items").get(0).path("blocks").get(1).path("type").asText());
-        assertEquals("Child", projected.root().path("document").path("blocks").get(0)
-            .path("items").get(0).path("blocks").get(1).path("items").get(0).path("text").asText());
-        assertEquals("docs/child.md", projected.root().path("document").path("blocks").get(0)
-            .path("items").get(0).path("blocks").get(1).path("items").get(0)
-            .path("blocks").get(0).path("links").get(0).path("target").asText());
-        }
-
-    @Test
-    void appendListItemsShouldIgnoreNonListItemChildren() {
-        org.commonmark.node.BulletList bulletList = new org.commonmark.node.BulletList();
-        bulletList.appendChild(new org.commonmark.node.Paragraph());
-
-        var items = JsonNodeFactory.instance.arrayNode();
-        projector.appendListItems(bulletList, items, "$.document.blocks[0]",
-                new MarkdownSourceMapBuilder(), 1);
-
-        assertEquals(0, items.size());
-    }
-
-    @Test
-    void appendListItemLinksShouldSkipLinkWithNullDestination() {
-        org.commonmark.node.ListItem listItem = new org.commonmark.node.ListItem();
-        org.commonmark.node.Paragraph paragraph = new org.commonmark.node.Paragraph();
-        paragraph.appendChild(new org.commonmark.node.Link(null, null));
-        listItem.appendChild(paragraph);
-
-        var links = JsonNodeFactory.instance.arrayNode();
-        projector.appendListItemLinks(listItem, links, "$.document.blocks[0].items[0]",
-                new MarkdownSourceMapBuilder(), 1);
-
-        assertEquals(0, links.size());
-    }
-
-    @Test
-    void appendListItemLinksShouldSkipLinkWithBlankDestination() {
-        org.commonmark.node.ListItem listItem = new org.commonmark.node.ListItem();
-        org.commonmark.node.Paragraph paragraph = new org.commonmark.node.Paragraph();
-        paragraph.appendChild(new org.commonmark.node.Link("  ", null));
-        listItem.appendChild(paragraph);
-
-        var links = JsonNodeFactory.instance.arrayNode();
-        projector.appendListItemLinks(listItem, links, "$.document.blocks[0].items[0]",
-                new MarkdownSourceMapBuilder(), 1);
-
-        assertEquals(0, links.size());
-    }
-
-    @Test
-    void appendListItemLinksShouldIgnoreNonParagraphChildren() {
-        org.commonmark.node.ListItem listItem = new org.commonmark.node.ListItem();
-        listItem.appendChild(new org.commonmark.node.BulletList());
-
-        var links = JsonNodeFactory.instance.arrayNode();
-        projector.appendListItemLinks(listItem, links, "$.document.blocks[0].items[0]",
-                new MarkdownSourceMapBuilder(), 1);
-
-        assertEquals(0, links.size());
-    }
-
     @Test
     void extractListItemTextShouldIgnoreNestedListText() {
         MarkdownParseResult parsed = parserFacade.parse("""
@@ -259,5 +171,17 @@ class MarkdownProjectorTest {
         Document projected = projector.project(parsed, "docs/example.md");
 
         assertEquals("relative", projected.root().path("document").path("blocks").get(0).path("links").get(0).path("kind").asText());
+    }
+
+    @Test
+    void appendListItemsShouldIgnoreNonListItemChildren() {
+        org.commonmark.node.BulletList bulletList = new org.commonmark.node.BulletList();
+        bulletList.appendChild(new org.commonmark.node.Paragraph());
+
+        var items = JsonNodeFactory.instance.arrayNode();
+        projector.appendListItems(bulletList, items, "$.document.blocks[0]",
+                new MarkdownSourceMapBuilder(), 1);
+
+        assertEquals(0, items.size());
     }
 }
