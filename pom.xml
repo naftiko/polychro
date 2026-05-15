@@ -33,6 +33,7 @@
         <module>polychro-cli</module>
         <module>polychro-github-action</module>
         <module>polychro-markdown</module>
+        <module>polychro-html</module>
         <module>polychro-checkov</module>
         <module>polychro-docs</module>
     </modules>

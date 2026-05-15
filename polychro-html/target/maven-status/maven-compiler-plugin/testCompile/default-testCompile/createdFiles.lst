@@ -1,0 +1,9 @@
+io\polychro\html\HtmlValidatorIntegrationTest.class
+io\polychro\html\HtmlProjectorTest.class
+io\polychro\html\HtmlSourceMapBuilderTest.class
+io\polychro\html\HtmlTableProjectionTest.class
+io\polychro\html\HtmlAssetAndLinkRulesTest.class
+io\polychro\html\HtmlSecurityRulesTest.class
+io\polychro\html\HtmlStructureRulesTest.class
+io\polychro\html\HtmlAccessibilityRulesTest.class
+io\polychro\html\HtmlProfileTest.class
