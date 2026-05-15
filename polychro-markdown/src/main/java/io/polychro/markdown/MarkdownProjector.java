@@ -134,15 +134,6 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
         }
     }
 
-    void appendListItemLinks(ListItem listItem, ArrayNode links, String itemPath,
-                             MarkdownSourceMapBuilder sourceMapBuilder, int bodyStartLine) {
-        for (org.commonmark.node.Node child = listItem.getFirstChild(); child != null; child = child.getNext()) {
-            if (child instanceof Paragraph paragraph) {
-                appendParagraphLinks(paragraph, links, itemPath, sourceMapBuilder, bodyStartLine);
-            }
-        }
-    }
-
     String extractListItemText(ListItem listItem) {
         StringBuilder text = new StringBuilder();
         for (org.commonmark.node.Node child = listItem.getFirstChild(); child != null; child = child.getNext()) {
