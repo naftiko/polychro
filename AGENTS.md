@@ -222,6 +222,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow. Key rules:
 - When creating issues or PRs with multiline bodies via `gh`, **never construct the body as a
   string in the terminal** — always write the body to a temp `.md` file using the file creation
   tool, then pass it via `--body-file "/path/to/file.md"`.
+- When resuming after a context compaction (conversation summary), always re-read any active
+  skill's `SKILL.md` before continuing — compaction erases step formalism, workflow constraints,
+  and all details defined in the skill.
 - Do **not** use `git push --force` — use `--force-with-lease`. This applies everywhere:
   feature branches, fix branches, rebases.
 - When the user corrects a mistake, note it immediately and propose an `AGENTS.md` update
