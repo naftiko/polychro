@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: io.polychro.html.HtmlProjectorTest
--------------------------------------------------------------------------------
-Tests run: 13, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.171 s -- in io.polychro.html.HtmlProjectorTest
