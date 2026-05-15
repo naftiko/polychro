@@ -251,19 +251,6 @@ class MarkdownLinkValidationIntegrationTest {
         assertTrue(diagnostics.stream().noneMatch(d -> d.code().equals("broken-relative-link")));
     }
 
-    @Test
-        void collectProjectedLinksShouldSkipBlankTarget() {
-        MarkdownValidator validator = new MarkdownValidator(
-                120, "-", new GenericFormat(), new FrontmatterParser());
-
-                var root = JsonNodeFactory.instance.objectNode();
-                root.putObject("document").putArray("links").addObject().put("target", "   ");
-                Document projected = new Document(root, "markdown", null);
-
-                List<MarkdownValidator.LinkInfo> links = validator.collectProjectedLinks(projected);
-        assertTrue(links.isEmpty());
-    }
-
         @Test
         void collectProjectedLinksShouldPreferBlockLinksWhenPresent() {
                 MarkdownValidator validator = new MarkdownValidator(
@@ -272,9 +259,7 @@ class MarkdownLinkValidationIntegrationTest {
                 var blockLink = JsonNodeFactory.instance.objectNode();
                 blockLink.put("target", "target.md");
                 var root = JsonNodeFactory.instance.objectNode();
-                var document = root.putObject("document");
-                document.putArray("blocks").addObject().putArray("links").add(blockLink);
-                document.putArray("links").addObject().put("target", "legacy.md");
+                root.putObject("document").putArray("blocks").addObject().putArray("links").add(blockLink);
                 Document projected = new Document(root, "markdown", null);
 
                 List<MarkdownValidator.LinkInfo> links = validator.collectProjectedLinks(projected);
@@ -293,20 +278,6 @@ class MarkdownLinkValidationIntegrationTest {
 
                 List<MarkdownValidator.LinkInfo> links = validator.collectProjectedLinks(projected);
                 assertTrue(links.isEmpty());
-            }
-
-            @Test
-            void collectProjectedLinksShouldFallbackToLegacyLinksWhenBlocksMissing() {
-                MarkdownValidator validator = new MarkdownValidator(
-                        120, "-", new GenericFormat(), new FrontmatterParser());
-
-                var root = JsonNodeFactory.instance.objectNode();
-                root.putObject("document").putArray("links").addObject().put("target", "legacy.md");
-                Document projected = new Document(root, "markdown", null);
-
-                List<MarkdownValidator.LinkInfo> links = validator.collectProjectedLinks(projected);
-                assertEquals(1, links.size());
-                assertEquals("legacy.md", links.getFirst().target());
             }
 
             @Test
@@ -329,25 +300,6 @@ class MarkdownLinkValidationIntegrationTest {
                 assertEquals(1, links.size());
                 assertEquals("#title", links.getFirst().target());
                 assertEquals("$.document.blocks[0].links[0]", links.getFirst().path());
-            }
-
-            @Test
-            void collectProjectedInternalLinksShouldFallbackToLegacyLinksWhenBlocksMissing() {
-                MarkdownValidator validator = new MarkdownValidator(
-                        120, "-", new GenericFormat(), new FrontmatterParser());
-
-                var root = JsonNodeFactory.instance.objectNode();
-                var document = root.putObject("document");
-                document.putArray("links")
-                        .addObject().put("target", "#title").put("kind", "internal-anchor");
-                document.withArray("links")
-                        .addObject().put("target", "guide.md").put("kind", "relative");
-                Document projected = new Document(root, "markdown", null);
-
-                List<MarkdownValidator.ProjectedLinkInfo> links = validator.collectProjectedInternalLinks(projected);
-                assertEquals(1, links.size());
-                assertEquals("#title", links.getFirst().target());
-                assertEquals("$.document.links[0]", links.getFirst().path());
             }
 
             @Test

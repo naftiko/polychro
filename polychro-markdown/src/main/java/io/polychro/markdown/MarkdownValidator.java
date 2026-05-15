@@ -231,20 +231,37 @@ class MarkdownValidator implements Validator {
 
     void checkListMarkers(Document projected, List<Diagnostic> diagnostics) {
         JsonNode blocks = projected.root().path("document").path("blocks");
-        if (blocks.isArray()) {
-            checkListMarkers(projected, diagnostics, blocks, "$.document.blocks");
+        if (!blocks.isArray()) {
             return;
         }
+        checkListMarkers(projected, diagnostics, blocks, "$.document.blocks");
+    }
 
-        JsonNode lists = projected.root().path("document").path("lists");
-        for (int i = 0; i < lists.size(); i++) {
-            JsonNode list = lists.get(i);
-            String marker = list.path("marker").asText();
-            if (!marker.equals(listMarker)) {
-                diagnostics.add(new Diagnostic(Severity.INFO, "inconsistent-list-marker",
-                        "Expected list marker '" + listMarker + "' but found '" + marker + "'",
-                        null,
-                        rangeFor(projected, "$.document.lists[" + i + "]")));
+    void checkListMarkers(Document projected, List<Diagnostic> diagnostics, JsonNode blocks, String blocksPath) {
+        for (int i = 0; i < blocks.size(); i++) {
+            JsonNode block = blocks.get(i);
+            String blockPath = blocksPath + "[" + i + "]";
+            if ("list".equals(block.path("type").asText())) {
+                String marker = block.path("marker").asText();
+                if (!marker.equals(listMarker)) {
+                    diagnostics.add(new Diagnostic(Severity.INFO, "inconsistent-list-marker",
+                            "Expected list marker '" + listMarker + "' but found '" + marker + "'",
+                            null,
+                            rangeFor(projected, blockPath)));
+                }
+            }
+
+            JsonNode items = block.path("items");
+            if (!items.isArray()) {
+                continue;
+            }
+
+            for (int j = 0; j < items.size(); j++) {
+                JsonNode nestedBlocks = items.get(j).path("blocks");
+                if (nestedBlocks.isArray()) {
+                    checkListMarkers(projected, diagnostics, nestedBlocks,
+                            blockPath + ".items[" + j + "].blocks");
+                }
             }
         }
     }
@@ -290,35 +307,6 @@ class MarkdownValidator implements Validator {
                         "Trailing whitespace",
                         null,
                         new SourceRange(i + 1, line.length(), i + 1, line.length())));
-            }
-        }
-    }
-
-    void checkListMarkers(Document projected, List<Diagnostic> diagnostics, JsonNode blocks, String blocksPath) {
-        for (int i = 0; i < blocks.size(); i++) {
-            JsonNode block = blocks.get(i);
-            String blockPath = blocksPath + "[" + i + "]";
-            if ("list".equals(block.path("type").asText())) {
-                String marker = block.path("marker").asText();
-                if (!marker.equals(listMarker)) {
-                    diagnostics.add(new Diagnostic(Severity.INFO, "inconsistent-list-marker",
-                            "Expected list marker '" + listMarker + "' but found '" + marker + "'",
-                            null,
-                            rangeFor(projected, blockPath)));
-                }
-            }
-
-            JsonNode items = block.path("items");
-            if (!items.isArray()) {
-                continue;
-            }
-
-            for (int j = 0; j < items.size(); j++) {
-                JsonNode nestedBlocks = items.get(j).path("blocks");
-                if (nestedBlocks.isArray()) {
-                    checkListMarkers(projected, diagnostics, nestedBlocks,
-                            blockPath + ".items[" + j + "].blocks");
-                }
             }
         }
     }
@@ -382,23 +370,11 @@ class MarkdownValidator implements Validator {
     List<LinkInfo> collectProjectedLinks(Document projected) {
         List<LinkInfo> links = new ArrayList<>();
         JsonNode blocks = projected.root().path("document").path("blocks");
-        if (blocks.isArray()) {
-            for (int i = 0; i < blocks.size(); i++) {
-                collectProjectedBlockLinks(links, projected, blocks.get(i), "$.document.blocks[" + i + "]");
-            }
+        if (!blocks.isArray()) {
             return links;
         }
-
-        JsonNode linkNodes = projected.root().path("document").path("links");
-        for (int i = 0; i < linkNodes.size(); i++) {
-            JsonNode link = linkNodes.get(i);
-            String target = link.path("target").asText();
-            if (target.isBlank()) {
-                continue;
-            }
-
-            SourceRange range = rangeFor(projected, "$.document.links[" + i + "]");
-            links.add(new LinkInfo(target, range.startLine()));
+        for (int i = 0; i < blocks.size(); i++) {
+            collectProjectedBlockLinks(links, projected, blocks.get(i), "$.document.blocks[" + i + "]");
         }
         return links;
     }
@@ -472,21 +448,11 @@ class MarkdownValidator implements Validator {
     List<ProjectedLinkInfo> collectProjectedInternalLinks(Document projected) {
         List<ProjectedLinkInfo> links = new ArrayList<>();
         JsonNode blocks = projected.root().path("document").path("blocks");
-        if (blocks.isArray()) {
-            for (int i = 0; i < blocks.size(); i++) {
-                collectProjectedInternalBlockLinks(links, blocks.get(i), "$.document.blocks[" + i + "]");
-            }
+        if (!blocks.isArray()) {
             return links;
         }
-
-        JsonNode linkNodes = projected.root().path("document").path("links");
-        for (int i = 0; i < linkNodes.size(); i++) {
-            JsonNode link = linkNodes.get(i);
-            if ("internal-anchor".equals(link.path("kind").asText())) {
-                links.add(new ProjectedLinkInfo(
-                        link.path("target").asText(),
-                        "$.document.links[" + i + "]"));
-            }
+        for (int i = 0; i < blocks.size(); i++) {
+            collectProjectedInternalBlockLinks(links, blocks.get(i), "$.document.blocks[" + i + "]");
         }
         return links;
     }
