@@ -41,7 +41,7 @@ class InstructionsFormatTest {
         } else {
             document.set("frontmatter", frontmatter);
         }
-        document.putArray("headings");
+        document.putArray("blocks");
         return new Document(root, "markdown", "coding.instructions.md");
     }
 
