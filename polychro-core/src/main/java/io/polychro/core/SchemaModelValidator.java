@@ -34,8 +34,8 @@ class SchemaModelValidator implements Validator {
     private final ValidatorConfig jsonStructureConfig;
     private final String defaultSchemaValidator;
 
-    private Validator jsonSchemaValidator;
-    private Validator jsonStructureValidator;
+    private volatile Validator jsonSchemaValidator;
+    private volatile Validator jsonStructureValidator;
 
     SchemaModelValidator(
             ValidatorFactory jsonSchemaFactory,
@@ -99,20 +99,34 @@ class SchemaModelValidator implements Validator {
         if (jsonSchemaFactory == null) {
             return null;
         }
-        if (jsonSchemaValidator == null) {
-            jsonSchemaValidator = jsonSchemaFactory.create(jsonSchemaConfig);
+        Validator local = jsonSchemaValidator;
+        if (local == null) {
+            synchronized (this) {
+                local = jsonSchemaValidator;
+                if (local == null) {
+                    local = jsonSchemaFactory.create(jsonSchemaConfig);
+                    jsonSchemaValidator = local;
+                }
+            }
         }
-        return jsonSchemaValidator;
+        return local;
     }
 
     private Validator jsonStructureValidator() {
         if (jsonStructureFactory == null) {
             return null;
         }
-        if (jsonStructureValidator == null) {
-            jsonStructureValidator = jsonStructureFactory.create(jsonStructureConfig);
+        Validator local = jsonStructureValidator;
+        if (local == null) {
+            synchronized (this) {
+                local = jsonStructureValidator;
+                if (local == null) {
+                    local = jsonStructureFactory.create(jsonStructureConfig);
+                    jsonStructureValidator = local;
+                }
+            }
         }
-        return jsonStructureValidator;
+        return local;
     }
 
     static boolean isSchemaValidatorName(String name) {
