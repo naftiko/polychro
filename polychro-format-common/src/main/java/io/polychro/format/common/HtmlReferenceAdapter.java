@@ -29,6 +29,16 @@ import java.util.List;
  * present.
  *
  * <p>References are collected from {@code $.document.links[*]} using the {@code href} field.
+ *
+ * <p><strong>Scope of the {@code references()} scan.</strong> Only the {@code links} array of the
+ * canonical HTML projection is scanned today. Anchor-bearing references (i.e. {@code <a href>} and
+ * equivalents the projector maps into {@code links}) are therefore covered by
+ * {@link BrokenLocalReferenceRule}, but <em>asset</em> references such as {@code <img src>},
+ * {@code <script src>}, and {@code <link href>} are not — those are validated by the format-specific
+ * {@code HtmlAssetLinkChecker} on the raw parse tree, not by this cross-format adapter. If the HTML
+ * projector grows a dedicated assets array in the projection (for example {@code $.document.assets[*].src}),
+ * this adapter should be extended to walk it so {@code BrokenLocalReferenceRule} can apply
+ * uniformly across asset-style references too.
  */
 public final class HtmlReferenceAdapter implements DocumentReferenceAdapter {
 
