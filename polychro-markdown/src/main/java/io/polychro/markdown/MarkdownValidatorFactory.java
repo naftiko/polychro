@@ -24,24 +24,24 @@ import java.util.Set;
  */
 public class MarkdownValidatorFactory implements ValidatorFactory {
 
-        private static final Set<String> SUPPORTED_FORMATS = Set.of("markdown");
-        private static final Set<String> SUPPORTED_PROFILES = Set.of(
-                        "generic", "skill", "agents", "instructions");
+    private static final Set<String> SUPPORTED_FORMATS = Set.of("markdown");
+    private static final Set<String> SUPPORTED_PROFILES = Set.of(
+            "generic", "skill", "agents", "instructions");
 
     @Override
     public String name() {
         return MarkdownValidator.NAME;
     }
 
-        @Override
-        public Set<String> supportedFormats() {
-                return SUPPORTED_FORMATS;
-        }
+    @Override
+    public Set<String> supportedFormats() {
+        return SUPPORTED_FORMATS;
+    }
 
-        @Override
-        public Set<String> supportedProfiles() {
-                return SUPPORTED_PROFILES;
-        }
+    @Override
+    public Set<String> supportedProfiles() {
+        return SUPPORTED_PROFILES;
+    }
 
     @Override
     public Validator create(ValidatorConfig config) {

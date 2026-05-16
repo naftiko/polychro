@@ -25,10 +25,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class RulesetValidatorTest {
 
-        private static RulesetValidator newValidator() {
-                Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of(), null);
-                return new RulesetValidator(ruleset, false);
-        }
+    private static RulesetValidator newValidator() {
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of(), null);
+        return new RulesetValidator(ruleset, false);
+    }
 
     @Test
     void nameShouldReturnRuleset() {

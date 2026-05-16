@@ -368,4 +368,36 @@ class DocumentTest {
     void sourceMapNoneShouldResolveToNull() {
         assertNull(SourceMap.NONE.resolve("$.document"));
     }
+
+    @Test
+    void constructorShouldFallBackToSourcePathWhenFormatIsBlank() {
+        Document doc = new Document(null, "   ", "config/example.yaml", null, null);
+
+        assertEquals("yaml", doc.format());
+    }
+
+    @Test
+    void fromStringShouldAutoDetectHtmlFromDoctype() {
+        Document doc = Document.fromString("<!DOCTYPE html><html><body>Hi</body></html>", null);
+
+        assertNotNull(doc.root());
+        assertTrue(doc.root().isTextual());
+        assertEquals("html", doc.format());
+    }
+
+    @Test
+    void fromStringShouldAutoDetectHtmlFromHtmlTag() {
+        Document doc = Document.fromString("<html><body>Hi</body></html>", null);
+
+        assertNotNull(doc.root());
+        assertTrue(doc.root().isTextual());
+        assertEquals("html", doc.format());
+    }
+
+    @Test
+    void fromStringShouldStillAutoDetectXmlForNonHtmlAngleBracketContent() {
+        Document doc = Document.fromString("<root><name>hello</name></root>", null);
+
+        assertEquals("xml", doc.format());
+    }
 }
