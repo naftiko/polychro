@@ -79,6 +79,9 @@ class HtmlProjector implements FormatProjector<HtmlParseResult> {
 
     private String extractLang(Element root) {
         Element htmlEl = root.selectFirst("html");
+        if (htmlEl == null) {
+            return null;
+        }
         String lang = htmlEl.attr("lang");
         return lang.isEmpty() ? null : lang;
     }

@@ -30,8 +30,11 @@ class HtmlParserFacade {
         Parser parser = Parser.htmlParser().setTrackPosition(true);
         Document document;
         if (HtmlParseResult.MODE_FRAGMENT.equals(effectiveMode)) {
-            document = Parser.parseBodyFragment(normalized, "");
-            document.parser(parser);
+            // Wrap the fragment in a full document so JSoup's tracking parser records
+            // accurate positions; calling Parser.parseBodyFragment + document.parser()
+            // assigns the parser AFTER parsing, leaving SourceRange un-tracked.
+            document = Jsoup.parse("<html><head></head><body>" + normalized + "</body></html>",
+                    "", parser);
         } else {
             document = Jsoup.parse(normalized, "", parser);
         }
