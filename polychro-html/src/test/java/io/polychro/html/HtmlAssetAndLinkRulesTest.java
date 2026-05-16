@@ -85,17 +85,16 @@ class HtmlAssetAndLinkRulesTest {
     }
 
     @Test
-    void shouldUseCurrentDirectoryWhenSourceHasNoParent() throws IOException {
-        Path localFile = Path.of("page.html");
-        Files.writeString(localFile, "x");
-        try {
-            List<Diagnostic> diags = diagnose(
-                    "<img src=\"asset-that-does-not-exist.png\" alt=\"x\">",
-                    localFile.toString());
-            assertTrue(diags.stream().anyMatch(d -> "html-missing-local-asset".equals(d.code())));
-        } finally {
-            Files.deleteIfExists(localFile);
-        }
+    void shouldUseCurrentDirectoryWhenSourceHasNoParent() {
+        // Pass only a filename as sourcePath so resolveBasePath() takes the
+        // `parent == null` branch and falls back to `Path.of(".")`. The asset
+        // reference points to a guaranteed-missing path, so no file I/O on
+        // the process working directory is required.
+        List<Diagnostic> diags = diagnose(
+                "<img src=\"this-asset-definitely-does-not-exist-"
+                        + System.nanoTime() + ".png\" alt=\"x\">",
+                "page.html");
+        assertTrue(diags.stream().anyMatch(d -> "html-missing-local-asset".equals(d.code())));
     }
 
     @Test
