@@ -82,6 +82,14 @@ public class LintCommand implements Runnable {
     Path schema;
 
     @CommandLine.Option(
+            names = {"--default-schema-validator"},
+            description = "Default schema-model validator when the document does not declare a $schema "
+                    + "(json-schema or json-structure, default: json-schema)",
+            defaultValue = "json-schema"
+    )
+    String defaultSchemaValidator;
+
+    @CommandLine.Option(
             names = {"--config", "-c"},
             description = "Path to .polychro.yml config file"
     )
@@ -156,7 +164,10 @@ public class LintCommand implements Runnable {
             configMap.put("json-structure", schemaConfig);
         }
 
-        return new LinterConfig(validatorList, configMap, false, "json-schema");
+        String resolvedDefault = (defaultSchemaValidator != null && !defaultSchemaValidator.isBlank())
+                ? defaultSchemaValidator
+                : "json-schema";
+        return new LinterConfig(validatorList, configMap, false, resolvedDefault);
     }
 
     static DiagnosticFormatter resolveFormatter(String format) {
