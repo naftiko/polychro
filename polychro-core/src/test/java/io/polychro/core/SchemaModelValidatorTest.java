@@ -50,8 +50,25 @@ class SchemaModelValidatorTest {
         List<Diagnostic> diagnostics = validator.validate(new Document(root, null));
 
         assertEquals("json-structure", diagnostics.get(0).code());
-        assertEquals(0, jsonSchema.createCount);
-        assertEquals(1, jsonStructure.createCount);
+    }
+
+    @Test
+    void validateShouldUseJsonSchemaWhenSchemaIndicatesJsonSchema() {
+        RecordingFactory jsonSchema = new RecordingFactory("json-schema");
+        RecordingFactory jsonStructure = new RecordingFactory("json-structure");
+        SchemaModelValidator validator = new SchemaModelValidator(
+                jsonSchema,
+                new ValidatorConfig(Map.of()),
+                jsonStructure,
+                new ValidatorConfig(Map.of()),
+                "json-structure"
+        );
+
+        ObjectNode root = MAPPER.createObjectNode();
+        root.put("$schema", "https://json-schema.org/draft/2020-12/schema");
+        List<Diagnostic> diagnostics = validator.validate(new Document(root, null));
+
+        assertEquals("json-schema", diagnostics.get(0).code());
     }
 
     @Test
@@ -92,6 +109,24 @@ class SchemaModelValidatorTest {
     }
 
     @Test
+    void validateShouldFallBackToJsonStructureWhenJsonSchemaIsSelectedButMissing() {
+        RecordingFactory jsonStructure = new RecordingFactory("json-structure");
+        SchemaModelValidator validator = new SchemaModelValidator(
+                null,
+                new ValidatorConfig(Map.of()),
+                jsonStructure,
+                new ValidatorConfig(Map.of()),
+                "json-schema"
+        );
+
+        ObjectNode root = MAPPER.createObjectNode();
+        root.put("name", "test");
+        List<Diagnostic> diagnostics = validator.validate(new Document(root, null));
+
+        assertEquals("json-structure", diagnostics.get(0).code());
+    }
+
+    @Test
     void validateShouldReturnEmptyWhenNoValidatorFactoryIsAvailable() {
         SchemaModelValidator validator = new SchemaModelValidator(
                 null,
@@ -124,32 +159,6 @@ class SchemaModelValidatorTest {
         List<Diagnostic> diagnostics = validator.validate(new Document(root, null));
 
         assertEquals("json-structure", diagnostics.get(0).code());
-        assertEquals(1, jsonStructure.createCount);
-    }
-
-    @Test
-    void validateShouldReuseCreatedValidatorsAcrossCalls() {
-        RecordingFactory jsonSchema = new RecordingFactory("json-schema");
-        RecordingFactory jsonStructure = new RecordingFactory("json-structure");
-        SchemaModelValidator validator = new SchemaModelValidator(
-                jsonSchema,
-                new ValidatorConfig(Map.of()),
-                jsonStructure,
-                new ValidatorConfig(Map.of()),
-                "json-schema"
-        );
-
-        ObjectNode structureDoc = MAPPER.createObjectNode();
-        structureDoc.put("$schema", "https://example.com/json-structure/v1");
-        validator.validate(new Document(structureDoc, null));
-        validator.validate(new Document(structureDoc, null));
-
-        ObjectNode schemaDoc = MAPPER.createObjectNode();
-        schemaDoc.put("name", "test");
-        validator.validate(new Document(schemaDoc, null));
-        validator.validate(new Document(schemaDoc, null));
-
-        assertEquals(1, jsonSchema.createCount);
         assertEquals(1, jsonStructure.createCount);
     }
 

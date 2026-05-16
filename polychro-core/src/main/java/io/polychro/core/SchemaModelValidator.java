@@ -28,14 +28,9 @@ class SchemaModelValidator implements Validator {
     static final String JSON_SCHEMA_NAME = "json-schema";
     static final String JSON_STRUCTURE_NAME = "json-structure";
 
-    private final ValidatorFactory jsonSchemaFactory;
-    private final ValidatorConfig jsonSchemaConfig;
-    private final ValidatorFactory jsonStructureFactory;
-    private final ValidatorConfig jsonStructureConfig;
     private final String defaultSchemaValidator;
-
-    private volatile Validator jsonSchemaValidator;
-    private volatile Validator jsonStructureValidator;
+    private final Validator jsonSchemaValidator;
+    private final Validator jsonStructureValidator;
 
     SchemaModelValidator(
             ValidatorFactory jsonSchemaFactory,
@@ -43,11 +38,13 @@ class SchemaModelValidator implements Validator {
             ValidatorFactory jsonStructureFactory,
             ValidatorConfig jsonStructureConfig,
             String defaultSchemaValidator) {
-        this.jsonSchemaFactory = jsonSchemaFactory;
-        this.jsonSchemaConfig = jsonSchemaConfig;
-        this.jsonStructureFactory = jsonStructureFactory;
-        this.jsonStructureConfig = jsonStructureConfig;
         this.defaultSchemaValidator = defaultSchemaValidator;
+        this.jsonSchemaValidator = jsonSchemaFactory != null
+                ? jsonSchemaFactory.create(jsonSchemaConfig)
+                : null;
+        this.jsonStructureValidator = jsonStructureFactory != null
+                ? jsonStructureFactory.create(jsonStructureConfig)
+                : null;
     }
 
     @Override
@@ -71,62 +68,26 @@ class SchemaModelValidator implements Validator {
     private Validator resolveValidator(Document doc) {
         String selectedName = selectValidatorName(doc);
         if (JSON_STRUCTURE_NAME.equals(selectedName)) {
-            Validator validator = jsonStructureValidator();
-            if (validator != null) {
-                return validator;
+            if (jsonStructureValidator != null) {
+                return jsonStructureValidator;
             }
-            return jsonSchemaValidator();
+            return jsonSchemaValidator;
         }
 
-        Validator validator = jsonSchemaValidator();
-        if (validator != null) {
-            return validator;
+        if (jsonSchemaValidator != null) {
+            return jsonSchemaValidator;
         }
-        return jsonStructureValidator();
+        return jsonStructureValidator;
     }
 
     private String defaultValidatorName() {
         if (JSON_STRUCTURE_NAME.equals(defaultSchemaValidator) || JSON_SCHEMA_NAME.equals(defaultSchemaValidator)) {
             return defaultSchemaValidator;
         }
-        if (jsonSchemaFactory != null) {
+        if (jsonSchemaValidator != null) {
             return JSON_SCHEMA_NAME;
         }
         return JSON_STRUCTURE_NAME;
-    }
-
-    private Validator jsonSchemaValidator() {
-        if (jsonSchemaFactory == null) {
-            return null;
-        }
-        Validator local = jsonSchemaValidator;
-        if (local == null) {
-            synchronized (this) {
-                local = jsonSchemaValidator;
-                if (local == null) {
-                    local = jsonSchemaFactory.create(jsonSchemaConfig);
-                    jsonSchemaValidator = local;
-                }
-            }
-        }
-        return local;
-    }
-
-    private Validator jsonStructureValidator() {
-        if (jsonStructureFactory == null) {
-            return null;
-        }
-        Validator local = jsonStructureValidator;
-        if (local == null) {
-            synchronized (this) {
-                local = jsonStructureValidator;
-                if (local == null) {
-                    local = jsonStructureFactory.create(jsonStructureConfig);
-                    jsonStructureValidator = local;
-                }
-            }
-        }
-        return local;
     }
 
     static boolean isSchemaValidatorName(String name) {
