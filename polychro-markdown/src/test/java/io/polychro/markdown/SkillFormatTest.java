@@ -148,4 +148,17 @@ class SkillFormatTest {
 
         assertTrue(diagnostics.stream().noneMatch(d -> d.code().equals("skill-no-sections")));
     }
+
+    @Test
+    void validateShouldReportNoSectionsWhenNoProjectedHeadings() {
+        // Test SkillFormat directly with no projected headings
+        SkillFormat format = new SkillFormat();
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        com.fasterxml.jackson.databind.node.ObjectNode data = mapper.createObjectNode();
+        data.put("name", "test");
+        data.put("description", "desc");
+        java.util.List<io.polychro.spi.Diagnostic> diagnostics = new java.util.ArrayList<>();
+        format.validate(projectedDoc(data), diagnostics);
+        assertTrue(diagnostics.stream().anyMatch(d -> d.code().equals("skill-no-sections")));
+    }
 }

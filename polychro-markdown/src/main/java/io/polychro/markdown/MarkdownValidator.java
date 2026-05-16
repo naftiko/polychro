@@ -51,8 +51,8 @@ class MarkdownValidator implements Validator {
     private final String listMarker;
     private final MarkdownFormat format;
     private final FrontmatterParser frontmatterParser;
-        private final MarkdownParserFacade parserFacade;
-        private final MarkdownProjector projector;
+    private final MarkdownParserFacade parserFacade;
+    private final MarkdownProjector projector;
     private final boolean checkExternalLinks;
     private final RelativeLinkChecker relativeLinkChecker;
     private final RelativeAnchorChecker relativeAnchorChecker;
