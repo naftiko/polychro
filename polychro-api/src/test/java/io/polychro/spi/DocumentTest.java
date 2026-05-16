@@ -400,4 +400,33 @@ class DocumentTest {
 
         assertEquals("xml", doc.format());
     }
+
+    @Test
+    void fromStringShouldAutoDetectHtmlWhenContentExceedsHeuristicWindow() {
+        String longHtml = "<html><head><title>Example with a fairly long heading line</title></head>"
+                + "<body><p>Hello world long content sentence beyond the 64-byte sniff window.</p></body></html>";
+        Document doc = Document.fromString(longHtml, null);
+
+        assertNotNull(doc.root());
+        assertTrue(doc.root().isTextual());
+        assertEquals("html", doc.format());
+    }
+
+    @Test
+    void fromStringShouldAutoDetectXmlForLongDocumentBeyondHeuristicWindow() {
+        String longXml = "<root><child1>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</child1>"
+                + "<child2>bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb</child2></root>";
+        Document doc = Document.fromString(longXml, null);
+
+        assertEquals("xml", doc.format());
+    }
+
+    @Test
+    void fromStringShouldTreatBlankFormatArgumentAsAutoDetect() {
+        Document doc = Document.fromString("{\"key\":\"value\"}", "   ");
+
+        assertNotNull(doc.root());
+        assertEquals("value", doc.root().get("key").asText());
+        assertEquals("json", doc.format());
+    }
 }
