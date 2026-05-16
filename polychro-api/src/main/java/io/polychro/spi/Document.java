@@ -43,7 +43,10 @@ public record Document(JsonNode root, String format, String sourcePath, SourceMa
     private static final ObjectMapper XML_MAPPER = new XmlMapper();
 
     public Document {
-        format = normalizeFormat(format != null ? format : detectFormatFromSourcePath(sourcePath));
+        String resolvedFormat = (format == null || format.isBlank())
+                ? detectFormatFromSourcePath(sourcePath)
+                : format;
+        format = normalizeFormat(resolvedFormat);
         sourceMap = sourceMap != null ? sourceMap : SourceMap.NONE;
         metadata = metadata != null ? Map.copyOf(metadata) : Map.of();
     }
@@ -108,7 +111,8 @@ public record Document(JsonNode root, String format, String sourcePath, SourceMa
      * Parse a string into a Document, auto-detecting format.
      *
      * @param content the document content as a string
-     * @param format  the format: "yaml", "json", or null for auto-detection
+     * @param format  the format: {@code "yaml"}, {@code "json"}, {@code "xml"}, {@code "markdown"},
+     *                {@code "html"}, or {@code null} for auto-detection from source path and content
      * @return the parsed Document
      * @throws UncheckedIOException     if the content is not valid for the specified format
      * @throws IllegalArgumentException if the format is not recognized
@@ -148,6 +152,12 @@ public record Document(JsonNode root, String format, String sourcePath, SourceMa
             return "json";
         }
         if (trimmed.startsWith("<")) {
+            String lowerStart = trimmed.length() > 64
+                    ? trimmed.substring(0, 64).toLowerCase(Locale.ROOT)
+                    : trimmed.toLowerCase(Locale.ROOT);
+            if (lowerStart.startsWith("<!doctype html") || lowerStart.startsWith("<html")) {
+                return "html";
+            }
             return "xml";
         }
         return "yaml";
