@@ -151,6 +151,16 @@ class LintCommandTest {
     }
 
     @Test
+    void buildConfigFromFlagsShouldFallBackToJsonSchemaWhenFlagIsBlank() {
+        LintCommand command = new LintCommand();
+        command.defaultSchemaValidator = "  ";
+
+        LinterConfig config = command.buildConfigFromFlags();
+
+        assertEquals("json-schema", config.defaultSchemaValidator());
+    }
+
+    @Test
     void lintShouldReturnTwoForUnparsableFile() throws Exception {
         Path file = createFile("bad.json", "{invalid json content!!!");
         int exitCode = executeLint(file.toString());
