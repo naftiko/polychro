@@ -68,6 +68,7 @@ class MarkdownFormatTest {
     }
 
     @Test
+    @SuppressWarnings("unused")
     void headingsShouldReturnEmptyWhenRootIsMissing() {
         int count = 0;
         for (var ignored : format.headings(new Document(null, "markdown", null))) {
@@ -78,6 +79,7 @@ class MarkdownFormatTest {
     }
 
     @Test
+    @SuppressWarnings("unused")
     void headingsShouldReturnEmptyWhenDocumentIsNull() {
         int count = 0;
         for (var ignored : format.headings(null)) {
@@ -88,6 +90,7 @@ class MarkdownFormatTest {
     }
 
     @Test
+    @SuppressWarnings("unused")
     void headingsShouldReturnEmptyWhenProjectedBlocksAreNotAnArray() {
         var root = JsonNodeFactory.instance.objectNode();
         root.putObject("document").putObject("blocks");
@@ -101,6 +104,7 @@ class MarkdownFormatTest {
     }
 
     @Test
+    @SuppressWarnings("unused")
     void headingsShouldReturnEmptyWhenProjectedBlocksAreMissing() {
         var root = JsonNodeFactory.instance.objectNode();
         root.putObject("document");

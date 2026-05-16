@@ -94,7 +94,7 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
             ObjectNode block = blocks.addObject();
             block.put("type", "list");
             block.put("ordered", false);
-            block.put("marker", String.valueOf(bulletList.getBulletMarker()));
+            block.put("marker", bulletList.getMarker());
             ArrayNode items = block.putArray("items");
             appendListItems(bulletList, items, path, sourceMapBuilder, bodyStartLine);
             sourceMapBuilder.put(path, rangeFor(bulletList, bodyStartLine));
@@ -102,8 +102,8 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
             ObjectNode block = blocks.addObject();
             block.put("type", "list");
             block.put("ordered", true);
-            block.put("marker", String.valueOf(orderedList.getDelimiter()));
-            block.put("startNumber", orderedList.getStartNumber());
+            block.put("marker", orderedList.getMarkerDelimiter());
+            block.put("startNumber", orderedList.getMarkerStartNumber());
             ArrayNode items = block.putArray("items");
             appendListItems(orderedList, items, path, sourceMapBuilder, bodyStartLine);
             sourceMapBuilder.put(path, rangeFor(orderedList, bodyStartLine));
