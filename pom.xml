@@ -33,8 +33,8 @@
         <module>polychro-cli</module>
         <module>polychro-github-action</module>
         <module>polychro-markdown</module>
-        <module>polychro-html</module>
         <module>polychro-format-common</module>
+        <module>polychro-html</module>
         <module>polychro-checkov</module>
         <module>polychro-docs</module>
     </modules>
@@ -60,6 +60,13 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- Internal modules -->
+            <dependency>
+                <groupId>io.polychro</groupId>
+                <artifactId>polychro-format-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
             <!-- Jackson -->
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
