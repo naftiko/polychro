@@ -30,6 +30,16 @@ public final class LinkResolver {
     /**
      * Classify {@code rawTarget} and return the resulting {@link LinkReference}.
      *
+     * <p><strong>Query and fragment handling.</strong> When a relative target carries a fragment,
+     * the fragment is captured and the query (if any) is stripped from the file part, so
+     * {@code "docs/a.md?v=1#tail"} resolves to {@link LinkKind#RELATIVE_FILE} with file part
+     * {@code "docs/a.md"} and fragment {@code "tail"}. When the same shape appears <em>without</em> a
+     * path — {@code "?q=1#tail"} — the fragment keeps the reference live and the result is still
+     * {@link LinkKind#RELATIVE_FILE} (empty file part, fragment {@code "tail"}). However, a
+     * fragment-less query-only target such as {@code "?just-a-query"} carries no resolvable file
+     * <em>and</em> no anchor, so it is intentionally classified {@link LinkKind#MALFORMED}. This
+     * asymmetry is by design: a fragment is a resolvable reference target, a bare query is not.
+     *
      * @param rawTarget the raw link target as written in the source, may be {@code null}
      * @param path      the JsonPath of the projected node carrying the reference, never
      *                  {@code null}
