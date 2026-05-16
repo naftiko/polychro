@@ -50,7 +50,6 @@ class MarkdownValidator implements Validator {
     private final int lineLength;
     private final String listMarker;
     private final MarkdownFormat format;
-    private final FrontmatterParser frontmatterParser;
     private final MarkdownParserFacade parserFacade;
     private final MarkdownProjector projector;
     private final boolean checkExternalLinks;
@@ -64,7 +63,6 @@ class MarkdownValidator implements Validator {
         this.lineLength = lineLength;
         this.listMarker = listMarker;
         this.format = format;
-        this.frontmatterParser = frontmatterParser;
         this.parserFacade = new MarkdownParserFacade(frontmatterParser);
         this.projector = new MarkdownProjector();
         this.checkExternalLinks = checkExternalLinks;
