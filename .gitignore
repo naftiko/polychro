@@ -19,7 +19,6 @@ dependency-reduced-pom.xml
 /polychro-html/target
 build-output.txt
 /polychro-capability/target
-/polychro-html/target
 /polychro-format-common/target
 
 # SDK directories (non-Maven)
@@ -30,5 +29,3 @@ __pycache__/
 /polychro-python/*.egg-info/
 /polychro-node/node_modules/
 /polychro-node/dist/
-/polychro-format-common/target
-/polychro-html/target
