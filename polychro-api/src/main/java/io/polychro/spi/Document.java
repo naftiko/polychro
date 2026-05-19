@@ -38,6 +38,12 @@ import java.util.Map;
 public record Document(JsonNode root, String format, String sourcePath, SourceMap sourceMap,
                        Map<String, Object> metadata) {
 
+    /**
+     * Shared Jackson mappers. {@link ObjectMapper} (and {@link XmlMapper}) are safe for
+     * concurrent read/parse operations once fully configured, so a single instance per format
+     * is reused across all calls — do not introduce per-call instantiation as a "fix" for
+     * apparent threading concerns.
+     */
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
     private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
     private static final ObjectMapper XML_MAPPER = new XmlMapper();
@@ -46,7 +52,7 @@ public record Document(JsonNode root, String format, String sourcePath, SourceMa
         String resolvedFormat = (format == null || format.isBlank())
                 ? detectFormatFromSourcePath(sourcePath)
                 : format;
-        format = normalizeFormat(resolvedFormat);
+        format = Formats.normalize(resolvedFormat);
         sourceMap = sourceMap != null ? sourceMap : SourceMap.NONE;
         metadata = metadata != null ? Map.copyOf(metadata) : Map.of();
     }
@@ -125,7 +131,7 @@ public record Document(JsonNode root, String format, String sourcePath, SourceMa
         if (content == null || content.isBlank()) {
             throw new IllegalArgumentException("Document content must not be null or blank");
         }
-        String effectiveFormat = normalizeFormat(format);
+        String effectiveFormat = Formats.normalize(format);
         if (effectiveFormat == null) {
             effectiveFormat = detectFormatFromSourcePath(sourcePath);
         }
@@ -185,18 +191,5 @@ public record Document(JsonNode root, String format, String sourcePath, SourceMa
             return "html";
         }
         return null;
-    }
-
-    private static String normalizeFormat(String format) {
-        if (format == null || format.isBlank()) {
-            return null;
-        }
-
-        return switch (format.toLowerCase(Locale.ROOT)) {
-            case "yml" -> "yaml";
-            case "md" -> "markdown";
-            case "htm" -> "html";
-            default -> format.toLowerCase(Locale.ROOT);
-        };
     }
 }
