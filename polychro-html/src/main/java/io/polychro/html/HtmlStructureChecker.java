@@ -20,6 +20,7 @@ import io.polychro.spi.SourceRange;
 import org.jsoup.nodes.Element;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -28,7 +29,7 @@ import java.util.Set;
 class HtmlStructureChecker {
 
     void check(HtmlParseResult parsed, Document projected, HtmlProfile profile,
-               java.util.List<Diagnostic> diagnostics) {
+               List<Diagnostic> diagnostics) {
         checkDuplicateIds(parsed, diagnostics);
         checkHeadingOrder(parsed, diagnostics);
         checkBrokenFragments(parsed, diagnostics);
@@ -37,7 +38,7 @@ class HtmlStructureChecker {
         }
     }
 
-    private void checkDuplicateIds(HtmlParseResult parsed, java.util.List<Diagnostic> diagnostics) {
+    private void checkDuplicateIds(HtmlParseResult parsed, List<Diagnostic> diagnostics) {
         Set<String> seen = new HashSet<>();
         int index = 0;
         for (Element el : parsed.document().getAllElements()) {
@@ -57,7 +58,7 @@ class HtmlStructureChecker {
         }
     }
 
-    private void checkHeadingOrder(HtmlParseResult parsed, java.util.List<Diagnostic> diagnostics) {
+    private void checkHeadingOrder(HtmlParseResult parsed, List<Diagnostic> diagnostics) {
         int previous = 0;
         int idx = 0;
         for (Element el : parsed.document().select("h1, h2, h3, h4, h5, h6")) {
@@ -75,7 +76,7 @@ class HtmlStructureChecker {
         }
     }
 
-    private void checkBrokenFragments(HtmlParseResult parsed, java.util.List<Diagnostic> diagnostics) {
+    private void checkBrokenFragments(HtmlParseResult parsed, List<Diagnostic> diagnostics) {
         Set<String> ids = new HashSet<>();
         for (Element el : parsed.document().getAllElements()) {
             String id = el.id();
@@ -105,8 +106,23 @@ class HtmlStructureChecker {
         }
     }
 
-    private void checkRequiredDocumentParts(HtmlParseResult parsed, java.util.List<Diagnostic> diagnostics) {
+    private void checkRequiredDocumentParts(HtmlParseResult parsed, List<Diagnostic> diagnostics) {
         Element html = parsed.document().selectFirst("html");
+        if (html == null) {
+            diagnostics.add(new Diagnostic(
+                    Severity.WARN,
+                    "html-missing-lang",
+                    "Document profile requires lang attribute on <html>",
+                    "$.document.lang",
+                    new SourceRange(1, 1, 1, 1)));
+            diagnostics.add(new Diagnostic(
+                    Severity.WARN,
+                    "html-missing-title",
+                    "Document profile requires a non-empty <title>",
+                    "$.document.title",
+                    new SourceRange(1, 1, 1, 1)));
+            return;
+        }
         if (html.attr("lang").isEmpty()) {
             diagnostics.add(new Diagnostic(
                     Severity.WARN,
