@@ -422,7 +422,7 @@ class MarkdownValidatorEdgeCasesTest {
 
     @Test
     void checkListMarkersShouldReturnEmptyWhenBlocksMissing() {
-        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        var root = JsonNodeFactory.instance.objectNode();
         root.putObject("document");
 
         List<Diagnostic> diagnostics = new java.util.ArrayList<>();
@@ -433,7 +433,7 @@ class MarkdownValidatorEdgeCasesTest {
 
     @Test
     void collectProjectedLinksShouldReturnEmptyWhenBlocksMissing() {
-        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        var root = JsonNodeFactory.instance.objectNode();
         root.putObject("document");
 
         var links = validator.collectProjectedLinks(new Document(root, "markdown", null));
@@ -443,7 +443,7 @@ class MarkdownValidatorEdgeCasesTest {
 
     @Test
     void collectProjectedInternalLinksShouldReturnEmptyWhenBlocksMissing() {
-        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        var root = JsonNodeFactory.instance.objectNode();
         root.putObject("document");
 
         var links = validator.collectProjectedInternalLinks(new Document(root, "markdown", null));
