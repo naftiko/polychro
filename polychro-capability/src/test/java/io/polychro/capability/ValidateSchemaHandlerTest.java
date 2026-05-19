@@ -99,30 +99,30 @@ class ValidateSchemaHandlerTest {
 
         assertEquals(List.of("schema-model"), result.validators());
         assertEquals("my-schema.json",
-            result.validatorConfigs().get("json-schema").get("schemaPath"));
+                result.validatorConfigs().get("json-schema").get("schemaPath"));
         assertEquals("my-schema.json",
-            result.validatorConfigs().get("json-structure").get("schemaPath"));
+                result.validatorConfigs().get("json-structure").get("schemaPath"));
     }
 
     @Test
     void buildSchemaConfigShouldFallBackWhenSchemaNull() {
         LinterConfig baseConfig = new LinterConfig(
                 List.of(),
-            Map.of(
-                "json-schema", Map.of("schemaPath", "base-schema.json"),
-                "json-structure", Map.of("schemaPath", "base-structure.json")
-            ),
+                Map.of(
+                        "json-schema", Map.of("schemaPath", "base-schema.json"),
+                        "json-structure", Map.of("schemaPath", "base-structure.json")
+                ),
                 false,
-            "json-structure"
+                "json-structure"
         );
         ValidateSchemaHandler handler = new ValidateSchemaHandler(baseConfig);
 
         LinterConfig result = handler.buildSchemaConfig(null);
 
         assertEquals("base-schema.json",
-            result.validatorConfigs().get("json-schema").get("schemaPath"));
+                result.validatorConfigs().get("json-schema").get("schemaPath"));
         assertEquals("base-structure.json",
-            result.validatorConfigs().get("json-structure").get("schemaPath"));
+                result.validatorConfigs().get("json-structure").get("schemaPath"));
         assertEquals("json-structure", result.defaultSchemaValidator());
     }
 

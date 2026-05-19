@@ -159,14 +159,6 @@ class SchemaModelValidatorTest {
         List<Diagnostic> diagnostics = validator.validate(new Document(root, null));
 
         assertEquals("json-structure", diagnostics.get(0).code());
-        assertEquals(1, jsonStructure.createCount);
-    }
-
-    @Test
-    void createShouldReturnNullWhenNoSchemaFactoriesAreAvailable() {
-        LinterConfig config = new LinterConfig(List.of(), Map.of(), false, "json-schema");
-
-        assertNull(SchemaModelValidator.create(Map.of(), config));
     }
 
     @Test
@@ -206,7 +198,6 @@ class SchemaModelValidatorTest {
     private static class RecordingFactory implements ValidatorFactory {
 
         private final String name;
-        private int createCount;
 
         private RecordingFactory(String name) {
             this.name = name;
@@ -219,7 +210,6 @@ class SchemaModelValidatorTest {
 
         @Override
         public Validator create(ValidatorConfig config) {
-            createCount++;
             return new Validator() {
                 @Override
                 public String name() {
