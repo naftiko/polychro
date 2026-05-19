@@ -24,6 +24,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -52,7 +53,7 @@ class HtmlCoverageEdgeCasesTest {
         jsoupDoc.children().remove();
         assertNotNull(jsoupDoc);
         // Sanity check: there really is no <html> element anymore.
-        assertTrue(jsoupDoc.selectFirst("html") == null);
+        assertNull(jsoupDoc.selectFirst("html"));
 
         HtmlParseResult parsed = new HtmlParseResult(
                 jsoupDoc, HtmlParseResult.MODE_DOCUMENT, "<p>x</p>");

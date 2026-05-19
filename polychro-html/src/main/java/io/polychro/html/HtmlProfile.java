@@ -13,6 +13,8 @@
  */
 package io.polychro.html;
 
+import java.util.Locale;
+
 /**
  * Strategy contract describing which structural, accessibility and security rules
  * apply for a given HTML profile.
@@ -37,7 +39,7 @@ interface HtmlProfile {
         if (profileName == null) {
             return new GenericHtmlProfile();
         }
-        return switch (profileName.toLowerCase(java.util.Locale.ROOT)) {
+        return switch (profileName.toLowerCase(Locale.ROOT)) {
             case "document" -> new DocumentHtmlProfile();
             case "fragment" -> new FragmentHtmlProfile();
             case "email" -> new EmailHtmlProfile();

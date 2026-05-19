@@ -21,6 +21,7 @@ import io.polychro.spi.FormatProjector;
 import io.polychro.spi.SourceRange;
 import org.jsoup.nodes.Attribute;
 import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -204,7 +205,7 @@ class HtmlProjector implements FormatProjector<HtmlParseResult> {
 
     private List<String> extractHeaders(Element table) {
         List<String> headers = new ArrayList<>();
-        org.jsoup.select.Elements headerCells = table.select("thead tr:first-child th");
+        Elements headerCells = table.select("thead tr:first-child th");
         if (headerCells.isEmpty()) {
             headerCells = table.select("tr:first-child th");
         }
@@ -223,7 +224,7 @@ class HtmlProjector implements FormatProjector<HtmlParseResult> {
             if (!rowEl.select("th").isEmpty()) {
                 continue;
             }
-            org.jsoup.select.Elements cells = rowEl.select("td");
+            Elements cells = rowEl.select("td");
             if (cells.isEmpty()) {
                 continue;
             }
