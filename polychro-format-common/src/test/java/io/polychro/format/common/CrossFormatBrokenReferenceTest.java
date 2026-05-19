@@ -154,9 +154,7 @@ class CrossFormatBrokenReferenceTest {
 
     @Test
     void unsupportedDocumentYieldsNoDiagnostics() {
-        Document yaml = new Document(
-                new com.fasterxml.jackson.databind.ObjectMapper().createObjectNode(),
-                "yaml", "x.yml", null, Map.of());
+        Document yaml = TestDocuments.unsupported();
         List<Diagnostic> diagnostics = new BrokenLocalReferenceRule(
                 new MarkdownReferenceAdapter(), p -> true).apply(yaml);
         assertTrue(diagnostics.isEmpty());
