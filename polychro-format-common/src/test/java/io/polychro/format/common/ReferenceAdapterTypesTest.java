@@ -49,7 +49,7 @@ class ReferenceAdapterTypesTest {
     void linkKindValuesAreExhaustive() {
         // touch every enum constant so they're loaded
         LinkKind[] values = LinkKind.values();
-        assertTrue(values.length >= 9);
+        assertEquals(9, values.length);
         assertEquals(LinkKind.EMPTY, LinkKind.valueOf("EMPTY"));
         assertEquals(LinkKind.MALFORMED, LinkKind.valueOf("MALFORMED"));
         assertEquals(LinkKind.INTERNAL_ANCHOR, LinkKind.valueOf("INTERNAL_ANCHOR"));

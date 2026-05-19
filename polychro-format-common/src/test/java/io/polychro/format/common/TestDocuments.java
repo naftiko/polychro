@@ -46,6 +46,10 @@ final class TestDocuments {
         return new Document(parse(json), "html", sourcePath, null, Map.of());
     }
 
+    static Document unsupported() {
+        return new Document(MAPPER.createObjectNode(), "yaml", "fixture.yml", null, Map.of());
+    }
+
     static Document withSourceMap(Document base, Map<String, io.polychro.spi.SourceRange> map) {
         Map<String, io.polychro.spi.SourceRange> snapshot = new LinkedHashMap<>(map);
         return new Document(base.root(), base.format(), base.sourcePath(),
