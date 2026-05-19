@@ -214,16 +214,24 @@ class RulesetValidatorTest {
     }
 
     @Test
-    void normalizeFormatShouldNormalizeMarkdownAlias() {
+    void matchesFormatShouldNormalizeMarkdownAlias() {
         RulesetValidator validator = newValidator();
+        Rule rule = new Rule("md-only", "Markdown only", null, "warn", true,
+                List.of("md"), null, List.of("$"),
+                List.of(new RuleAction(null, "truthy", Map.of())));
+        Document doc = new Document(null, "markdown", null);
 
-        assertEquals("markdown", validator.normalizeFormat("md"));
+        assertTrue(validator.matchesFormat(rule, doc));
     }
 
     @Test
-    void normalizeFormatShouldNormalizeHtmlAlias() {
+    void matchesFormatShouldNormalizeHtmlAlias() {
         RulesetValidator validator = newValidator();
+        Rule rule = new Rule("htm-only", "HTML only", null, "warn", true,
+                List.of("htm"), null, List.of("$"),
+                List.of(new RuleAction(null, "truthy", Map.of())));
+        Document doc = new Document(null, "html", null);
 
-        assertEquals("html", validator.normalizeFormat("htm"));
+        assertTrue(validator.matchesFormat(rule, doc));
     }
 }

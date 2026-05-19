@@ -16,12 +16,12 @@ package io.polychro.ruleset;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Document;
+import io.polychro.spi.Formats;
 import io.polychro.spi.Validator;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -105,18 +105,9 @@ class RulesetValidator implements Validator {
             return false;
         }
 
-        String documentFormat = normalizeFormat(doc.format());
+        String documentFormat = Formats.normalize(doc.format());
         return rule.formats().stream()
-                .map(this::normalizeFormat)
+                .map(Formats::normalize)
                 .anyMatch(documentFormat::equals);
-    }
-
-    String normalizeFormat(String format) {
-        return switch (format.toLowerCase(Locale.ROOT)) {
-            case "yml" -> "yaml";
-            case "md" -> "markdown";
-            case "htm" -> "html";
-            default -> format.toLowerCase(Locale.ROOT);
-        };
     }
 }

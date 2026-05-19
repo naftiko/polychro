@@ -44,7 +44,7 @@ import java.util.List;
 @CommandLine.Command(
         name = "lint",
         mixinStandardHelpOptions = true,
-    description = "Lint one or more YAML/JSON/XML/Markdown/HTML files"
+        description = "Lint one or more YAML/JSON/XML/Markdown/HTML files"
 )
 public class LintCommand implements Runnable {
 
