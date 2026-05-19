@@ -189,6 +189,7 @@ class CheckovRunnerProcessTest {
         interrupter.start();
 
         CheckovRunner.CheckovExecutionResult result = runner.run(yamlFile, CheckovFramework.YAML);
+        Thread.interrupted(); // clear interrupt flag before join to prevent InterruptedException
         interrupter.join();
 
         assertFalse(result.isSuccess());
