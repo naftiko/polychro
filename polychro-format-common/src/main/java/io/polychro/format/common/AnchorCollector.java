@@ -17,6 +17,7 @@ import io.polychro.spi.Document;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -91,7 +92,7 @@ public final class AnchorCollector {
      */
     public Set<String> idsOf(Document document) {
         List<Anchor> collected = collect(document);
-        Set<String> ids = new java.util.LinkedHashSet<>();
+        Set<String> ids = new LinkedHashSet<>();
         for (Anchor anchor : collected) {
             ids.add(anchor.id());
         }

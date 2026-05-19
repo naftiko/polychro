@@ -70,9 +70,7 @@ class AnchorCollectorTest {
 
     @Test
     void shouldReturnEmptyWhenNoAdapterSupportsTheDocument() {
-        Document yaml = new Document(
-                new com.fasterxml.jackson.databind.ObjectMapper().createObjectNode(),
-                "yaml", "foo.yml", null, Map.of());
+        Document yaml = TestDocuments.unsupported();
         assertTrue(collector.collect(yaml).isEmpty());
     }
 
