@@ -13,6 +13,8 @@
  */
 package io.polychro.markdown;
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Document;
@@ -184,7 +186,7 @@ class MarkdownValidatorEdgeCasesTest {
 
     @Test
     void checkCodeBlockLanguageShouldIgnoreDocumentWithoutProjectedBlocks() {
-        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        var root = JsonNodeFactory.instance.objectNode();
         root.putObject("document");
 
         List<Diagnostic> diagnostics = new java.util.ArrayList<>();
@@ -195,7 +197,7 @@ class MarkdownValidatorEdgeCasesTest {
 
     @Test
     void checkCodeBlockLanguageShouldFallbackWhenProjectedBlockRangeIsMissing() {
-        com.fasterxml.jackson.databind.node.ObjectNode root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        ObjectNode root = JsonNodeFactory.instance.objectNode();
         root.putObject("document").putArray("blocks")
                 .addObject()
                 .put("type", "code-block");
@@ -209,7 +211,7 @@ class MarkdownValidatorEdgeCasesTest {
 
     @Test
     void checkCodeBlockLanguageShouldIgnoreProjectedBlockWithLanguage() {
-        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        var root = JsonNodeFactory.instance.objectNode();
         root.putObject("document").putArray("blocks")
                 .addObject()
                 .put("type", "code-block")
@@ -223,7 +225,7 @@ class MarkdownValidatorEdgeCasesTest {
 
     @Test
     void checkCodeBlockLanguageShouldReportProjectedBlockWithNullLanguageNode() {
-        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        var root = JsonNodeFactory.instance.objectNode();
         root.putObject("document").putArray("blocks")
                 .addObject()
                 .put("type", "code-block")
@@ -238,7 +240,7 @@ class MarkdownValidatorEdgeCasesTest {
 
     @Test
     void checkCodeBlockLanguageShouldReportProjectedBlockWithMissingLanguage() {
-        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        var root = JsonNodeFactory.instance.objectNode();
         root.putObject("document").putArray("blocks")
                 .addObject()
                 .put("type", "code-block");
@@ -252,7 +254,7 @@ class MarkdownValidatorEdgeCasesTest {
 
     @Test
     void checkListMarkersShouldPreferProjectedBlocksWhenPresent() {
-        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        var root = JsonNodeFactory.instance.objectNode();
         root.putObject("document").putArray("blocks")
                 .addObject()
                 .put("type", "list")
@@ -268,7 +270,7 @@ class MarkdownValidatorEdgeCasesTest {
 
     @Test
     void checkCodeBlockLanguageShouldHandleNestedBlankLanguage() {
-        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        var root = JsonNodeFactory.instance.objectNode();
         root.putObject("document").putArray("blocks")
                 .addObject()
                 .put("type", "list")
@@ -288,7 +290,7 @@ class MarkdownValidatorEdgeCasesTest {
 
     @Test
     void checkCodeBlockLanguageShouldHandleNestedNullLanguageNode() {
-        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        var root = JsonNodeFactory.instance.objectNode();
         root.putObject("document").putArray("blocks")
                 .addObject()
                 .put("type", "list")
@@ -308,7 +310,7 @@ class MarkdownValidatorEdgeCasesTest {
 
     @Test
     void checkCodeBlockLanguageShouldIgnoreNestedCodeBlockWithLanguage() {
-        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        var root = JsonNodeFactory.instance.objectNode();
         root.putObject("document").putArray("blocks")
                 .addObject()
                 .put("type", "list")
@@ -327,7 +329,7 @@ class MarkdownValidatorEdgeCasesTest {
 
     @Test
     void checkCodeBlockLanguageShouldIgnoreListItemWithoutNestedBlocks() {
-        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        var root = JsonNodeFactory.instance.objectNode();
         root.putObject("document").putArray("blocks")
                 .addObject()
                 .put("type", "list")
@@ -342,11 +344,11 @@ class MarkdownValidatorEdgeCasesTest {
 
     @Test
     void collectProjectedHeadingsShouldIncludeNestedItemBlockHeadings() {
-        var heading = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        var heading = JsonNodeFactory.instance.objectNode();
         heading.put("type", "heading");
         heading.put("level", 2);
         heading.put("text", "Overview");
-        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        var root = JsonNodeFactory.instance.objectNode();
         root.putObject("document").putArray("blocks")
                 .addObject()
                 .put("type", "list")
@@ -365,7 +367,7 @@ class MarkdownValidatorEdgeCasesTest {
 
     @Test
     void collectProjectedHeadingsShouldReturnEmptyWhenBlocksMissing() {
-        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        var root = JsonNodeFactory.instance.objectNode();
         root.putObject("document");
 
         var headings = validator.collectProjectedHeadings(new Document(root, "markdown", null));
@@ -375,11 +377,11 @@ class MarkdownValidatorEdgeCasesTest {
 
     @Test
     void collectProjectedHeadingsShouldIgnoreListItemWithoutNestedBlocks() {
-        var heading = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        var heading = JsonNodeFactory.instance.objectNode();
         heading.put("type", "heading");
         heading.put("level", 2);
         heading.put("text", "Overview");
-        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        var root = JsonNodeFactory.instance.objectNode();
         root.putObject("document").putArray("blocks")
                 .add(heading)
                 .addObject()
@@ -395,7 +397,7 @@ class MarkdownValidatorEdgeCasesTest {
 
     @Test
     void checkListMarkersShouldIgnoreListItemWithoutNestedBlocks() {
-        var root = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        var root = JsonNodeFactory.instance.objectNode();
         root.putObject("document").putArray("blocks")
                 .addObject()
                 .put("type", "list")

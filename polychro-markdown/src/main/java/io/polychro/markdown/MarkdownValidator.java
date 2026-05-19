@@ -67,7 +67,7 @@ class MarkdownValidator implements Validator {
         this.projector = new MarkdownProjector();
         this.checkExternalLinks = checkExternalLinks;
         this.relativeLinkChecker = new RelativeLinkChecker();
-        this.relativeAnchorChecker = new RelativeAnchorChecker();
+        this.relativeAnchorChecker = new RelativeAnchorChecker(parserFacade, projector);
         this.externalLinkChecker = new ExternalLinkChecker(externalLinkTimeoutMs, externalLinkRateLimit);
     }
 
