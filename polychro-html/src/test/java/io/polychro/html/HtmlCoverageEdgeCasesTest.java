@@ -124,4 +124,24 @@ class HtmlCoverageEdgeCasesTest {
                 || d.code().equals("html-inline-style-disallowed")));
         assertTrue(diagnostics.stream().anyMatch(d -> d.code().equals("html-missing-local-asset")));
     }
+
+    @Test
+    void structureCheckerShouldEmitMissingLangAndTitleWhenHtmlElementIsAbsent() {
+        // Build a JSoup document without a tracking parser, then strip the <html>
+        // element so selectFirst("html") returns null inside checkRequiredDocumentParts().
+        // This exercises the null-guard branch introduced to prevent NPE.
+        org.jsoup.nodes.Document jsoupDoc = Jsoup.parse("<p>x</p>", "");
+        jsoupDoc.children().remove();
+        assertNull(jsoupDoc.selectFirst("html"));
+
+        HtmlParseResult parsed = new HtmlParseResult(
+                jsoupDoc, HtmlParseResult.MODE_DOCUMENT, "<p>x</p>");
+        Document projected = projector.project(parsed, null);
+
+        List<Diagnostic> diagnostics = new ArrayList<>();
+        new HtmlStructureChecker().check(parsed, projected, new DocumentHtmlProfile(), diagnostics);
+
+        assertTrue(diagnostics.stream().anyMatch(d -> "html-missing-lang".equals(d.code())));
+        assertTrue(diagnostics.stream().anyMatch(d -> "html-missing-title".equals(d.code())));
+    }
 }
