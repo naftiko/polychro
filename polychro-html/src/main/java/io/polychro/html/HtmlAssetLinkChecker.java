@@ -22,6 +22,7 @@ import org.jsoup.nodes.Element;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Asset and link rules: missing local href/src targets.
@@ -78,7 +79,7 @@ class HtmlAssetLinkChecker {
     }
 
     private boolean isAbsoluteOrSpecial(String url) {
-        String lower = url.toLowerCase(java.util.Locale.ROOT);
+        String lower = url.toLowerCase(Locale.ROOT);
         return lower.startsWith("http://") || lower.startsWith("https://")
                 || lower.startsWith("//") || lower.startsWith("data:")
                 || lower.startsWith("mailto:") || lower.startsWith("javascript:")
