@@ -27,3 +27,5 @@ __pycache__/
 /polychro-python/*.egg-info/
 /polychro-node/node_modules/
 /polychro-node/dist/
+/polychro-format-common/target
+/polychro-html/target
