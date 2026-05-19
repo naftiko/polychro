@@ -62,6 +62,10 @@ interface MarkdownFormat {
         return headings;
     }
 
+    /**
+     * Shared recursive helper for the default heading traversal methods, kept here to avoid a
+     * separate utility type for a single interface-local concern.
+     */
     private static void collectHeadingBlocks(List<JsonNode> headings, JsonNode blocks) {
         for (JsonNode block : blocks) {
             if ("heading".equals(block.path("type").asText())) {
