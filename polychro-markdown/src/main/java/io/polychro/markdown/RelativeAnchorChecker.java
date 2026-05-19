@@ -29,8 +29,17 @@ import java.util.List;
  */
 class RelativeAnchorChecker {
 
-    private final MarkdownParserFacade parserFacade = new MarkdownParserFacade(new FrontmatterParser());
-    private final MarkdownProjector projector = new MarkdownProjector();
+    private final MarkdownParserFacade parserFacade;
+    private final MarkdownProjector projector;
+
+    RelativeAnchorChecker() {
+        this(new MarkdownParserFacade(new FrontmatterParser()), new MarkdownProjector());
+    }
+
+    RelativeAnchorChecker(MarkdownParserFacade parserFacade, MarkdownProjector projector) {
+        this.parserFacade = parserFacade;
+        this.projector = projector;
+    }
 
     List<Diagnostic> check(List<MarkdownValidator.LinkInfo> links, Path documentDir) {
         List<Diagnostic> diagnostics = new ArrayList<>();
