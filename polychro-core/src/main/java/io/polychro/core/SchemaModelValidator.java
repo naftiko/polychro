@@ -84,6 +84,10 @@ class SchemaModelValidator implements Validator {
         if (JSON_STRUCTURE_NAME.equals(defaultSchemaValidator) || JSON_SCHEMA_NAME.equals(defaultSchemaValidator)) {
             return defaultSchemaValidator;
         }
+        // Unrecognised configured value (or null) — prefer json-schema when its factory
+        // is available, otherwise fall back to json-structure. This keeps the validator
+        // usable instead of failing hard on misconfiguration; callers that need strict
+        // behaviour should validate the LinterConfig before constructing the linter.
         if (jsonSchemaValidator != null) {
             return JSON_SCHEMA_NAME;
         }
