@@ -34,17 +34,15 @@ class HtmlAccessibilityChecker {
     }
 
     private void checkImgAlt(HtmlParseResult parsed, List<Diagnostic> diagnostics) {
-        int idx = 0;
         for (Element img : parsed.document().select("img")) {
             if (!img.hasAttr("alt")) {
                 diagnostics.add(new Diagnostic(
                         Severity.WARN,
                         "html-img-missing-alt",
                         "<img> element is missing alt attribute",
-                        "$.document.nodes[img:" + idx + "].alt",
+                        "$.document.nodes",
                         rangeFor(img)));
             }
-            idx++;
         }
     }
 
