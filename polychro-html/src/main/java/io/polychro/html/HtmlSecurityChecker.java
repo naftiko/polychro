@@ -43,7 +43,6 @@ class HtmlSecurityChecker {
     }
 
     private void checkInlineEventHandlers(HtmlParseResult parsed, List<Diagnostic> diagnostics) {
-        int idx = 0;
         for (Element el : parsed.document().getAllElements()) {
             for (Attribute attr : el.attributes()) {
                 String key = attr.getKey().toLowerCase(Locale.ROOT);
@@ -52,16 +51,14 @@ class HtmlSecurityChecker {
                             Severity.ERROR,
                             "html-inline-event-handler",
                             "Inline event handler '" + attr.getKey() + "' is not allowed",
-                            "$.document.nodes[" + idx + "].attributes." + attr.getKey(),
+                            "$.document.nodes",
                             rangeFor(el)));
                 }
             }
-            idx++;
         }
     }
 
     private void checkJavascriptUrls(HtmlParseResult parsed, List<Diagnostic> diagnostics) {
-        int idx = 0;
         for (Element el : parsed.document().select("a[href], area[href], iframe[src], form[action]")) {
             String url = el.hasAttr("href") ? el.attr("href")
                     : el.hasAttr("src") ? el.attr("src") : el.attr("action");
@@ -70,15 +67,13 @@ class HtmlSecurityChecker {
                         Severity.ERROR,
                         "html-javascript-url",
                         "javascript: URL is not allowed on <" + el.tagName() + ">",
-                        "$.document.links[" + idx + "]",
+                        "$.document.nodes",
                         rangeFor(el)));
             }
-            idx++;
         }
     }
 
     private void checkTargetBlankNoopener(HtmlParseResult parsed, List<Diagnostic> diagnostics) {
-        int idx = 0;
         for (Element a : parsed.document().select("a[target=_blank], area[target=_blank]")) {
             String rel = a.attr("rel").toLowerCase(Locale.ROOT);
             if (!rel.contains("noopener") && !rel.contains("noreferrer")) {
@@ -86,36 +81,31 @@ class HtmlSecurityChecker {
                         Severity.WARN,
                         "html-target-blank-noopener",
                         "target=\"_blank\" requires rel=\"noopener\" (or noreferrer)",
-                        "$.document.links[" + idx + "].rel",
+                        "$.document.nodes",
                         rangeFor(a)));
             }
-            idx++;
         }
     }
 
     private void checkScriptsDisallowed(HtmlParseResult parsed, List<Diagnostic> diagnostics) {
-        int idx = 0;
         for (Element script : parsed.document().select("script")) {
             diagnostics.add(new Diagnostic(
                     Severity.ERROR,
                     "html-script-disallowed",
                     "<script> is not allowed by the current profile",
-                    "$.document.scripts[" + idx + "]",
+                    "$.document.scripts",
                     rangeFor(script)));
-            idx++;
         }
     }
 
     private void checkInlineStylesDisallowed(HtmlParseResult parsed, List<Diagnostic> diagnostics) {
-        int idx = 0;
         for (Element el : parsed.document().select("[style]")) {
             diagnostics.add(new Diagnostic(
                     Severity.WARN,
                     "html-inline-style-disallowed",
                     "Inline style attribute is not allowed by the current profile",
-                    "$.document.nodes[" + idx + "].attributes.style",
+                    "$.document.nodes",
                     rangeFor(el)));
-            idx++;
         }
     }
 

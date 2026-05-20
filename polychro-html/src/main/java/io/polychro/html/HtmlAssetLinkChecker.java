@@ -43,16 +43,13 @@ class HtmlAssetLinkChecker {
         if (basePath == null) {
             return;
         }
-        int idx = 0;
         for (Element el : parsed.document().select("a[href], img[src], link[href], script[src]")) {
             String url = el.hasAttr("href") ? el.attr("href") : el.attr("src");
             if (url.isEmpty() || isAbsoluteOrSpecial(url)) {
-                idx++;
                 continue;
             }
             String pathPart = stripFragmentAndQuery(url);
             if (pathPart.isEmpty()) {
-                idx++;
                 continue;
             }
             Path resolved = basePath.resolve(pathPart).normalize();
@@ -61,10 +58,9 @@ class HtmlAssetLinkChecker {
                         Severity.WARN,
                         "html-missing-local-asset",
                         "Local asset '" + url + "' does not exist",
-                        "$.document.links[" + idx + "].href",
+                        "$.document.nodes",
                         rangeFor(el)));
             }
-            idx++;
         }
     }
 

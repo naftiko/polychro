@@ -40,7 +40,6 @@ class HtmlStructureChecker {
 
     private void checkDuplicateIds(HtmlParseResult parsed, List<Diagnostic> diagnostics) {
         Set<String> seen = new HashSet<>();
-        int index = 0;
         for (Element el : parsed.document().getAllElements()) {
             String id = el.id();
             if (id.isEmpty()) {
@@ -51,10 +50,9 @@ class HtmlStructureChecker {
                         Severity.ERROR,
                         "html-duplicate-id",
                         "Duplicate id '" + id + "' on element <" + el.tagName() + ">",
-                        "$.document.nodes[" + index + "].id",
+                        "$.document.nodes",
                         rangeFor(el)));
             }
-            index++;
         }
     }
 
@@ -89,7 +87,7 @@ class HtmlStructureChecker {
             }
         }
         int idx = 0;
-        for (Element a : parsed.document().select("a[href]")) {
+        for (Element a : parsed.document().select("a[href], link[href]")) {
             String href = a.attr("href");
             if (href.startsWith("#") && href.length() > 1) {
                 String fragment = href.substring(1);
