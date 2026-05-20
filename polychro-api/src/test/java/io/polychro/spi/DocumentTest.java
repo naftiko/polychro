@@ -313,6 +313,13 @@ class DocumentTest {
     }
 
     @Test
+    void constructorShouldInferHtmlFormatFromXhtmlExtension() {
+        Document doc = new Document(null, "site/index.xhtml");
+
+        assertEquals("html", doc.format());
+    }
+
+    @Test
     void constructorShouldLeaveFormatNullForBlankSourcePath() {
         Document doc = new Document(null, "   ");
 
