@@ -180,17 +180,23 @@ public record Document(JsonNode root, String format, String sourcePath, SourceMa
         if (effectiveFormat == null) {
             effectiveFormat = detectFormat(content);
         }
+        JsonNode root = switch (effectiveFormat) {
+            case "markdown", "html" -> TextNode.valueOf(content);
+            default -> parseStructured(content, effectiveFormat);
+        };
+        return new Document(root, effectiveFormat, sourcePath);
+    }
+
+    private static JsonNode parseStructured(String content, String format) {
         try {
-            JsonNode root = switch (effectiveFormat) {
+            return switch (format) {
                 case "yaml" -> YAML_MAPPER.readTree(content);
                 case "json" -> JSON_MAPPER.readTree(content);
                 case "xml" -> XML_MAPPER.readTree(content);
-                case "markdown", "html" -> TextNode.valueOf(content);
-                default -> throw new IllegalArgumentException("Unknown format: " + effectiveFormat);
+                default -> throw new IllegalArgumentException("Unknown format: " + format);
             };
-            return new Document(root, effectiveFormat, sourcePath);
         } catch (IOException e) {
-            throw new UncheckedIOException("Failed to parse content as " + effectiveFormat, e);
+            throw new UncheckedIOException("Failed to parse content as " + format, e);
         }
     }
 
@@ -233,6 +239,9 @@ public record Document(JsonNode root, String format, String sourcePath, SourceMa
             return "markdown";
         }
         if (lowerSourcePath.endsWith(".html") || lowerSourcePath.endsWith(".htm")) {
+            return "html";
+        }
+        if (lowerSourcePath.endsWith(".xhtml")) {
             return "html";
         }
         return null;
