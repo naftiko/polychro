@@ -20,6 +20,7 @@ import io.polychro.spi.Document;
 import io.polychro.spi.FormatProjector;
 import io.polychro.spi.SourceRange;
 import org.commonmark.node.AbstractVisitor;
+import org.commonmark.node.BlockQuote;
 import org.commonmark.node.BulletList;
 import org.commonmark.node.FencedCodeBlock;
 import org.commonmark.node.Heading;
@@ -110,6 +111,9 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
         } else if (child instanceof FencedCodeBlock fencedCodeBlock) {
             ObjectNode block = blocks.addObject();
             block.put("type", "code-block");
+            // Defensive null check: commonmark-java's parser always returns "" for
+            // info-less fences, but the FencedCodeBlock API does not formally guarantee
+            // non-null, so a direct-construct or future parser change could still yield null.
             if (fencedCodeBlock.getInfo() == null) {
                 block.putNull("language");
             } else {
@@ -117,6 +121,14 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
             }
             block.put("content", fencedCodeBlock.getLiteral());
             sourceMapBuilder.put(path, rangeFor(fencedCodeBlock, bodyStartLine));
+        } else if (child instanceof BlockQuote) {
+            // Recurse into block-quote children so that headings, links, and other
+            // structural content inside block quotes are projected and visible to
+            // heading-hierarchy, duplicate-anchor, broken-internal-link, and similar rules.
+            // Children are flattened into the enclosing blocks array (the block quote itself
+            // is not projected as a node).
+            String blocksPath = path.substring(0, path.lastIndexOf('['));
+            appendBlocks(child, blocks, blocksPath, sourceMapBuilder, bodyStartLine);
         }
     }
 

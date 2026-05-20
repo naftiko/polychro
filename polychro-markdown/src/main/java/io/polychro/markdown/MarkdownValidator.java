@@ -27,10 +27,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -168,16 +166,14 @@ class MarkdownValidator implements Validator {
     void checkInternalLinks(Document projected, List<Diagnostic> diagnostics) {
         List<ProjectedHeadingInfo> headings = collectProjectedHeadings(projected);
         Set<String> anchors = new HashSet<>();
-        Map<String, Integer> anchorCounts = new HashMap<>();
         for (ProjectedHeadingInfo heading : headings) {
             String slug = slugify(heading.text());
             anchors.add(slug);
-            anchorCounts.merge(slug, 1, Integer::sum);
         }
 
         List<ProjectedLinkInfo> links = collectProjectedInternalLinks(projected);
         for (ProjectedLinkInfo link : links) {
-            // link.target() always starts with '#' (guaranteed by collectInternalLinks)
+            // link.target() always starts with '#' (guaranteed by collectProjectedInternalLinks)
             String target = link.target().substring(1);
             String normalizedTarget = target.toLowerCase();
             if (!anchors.contains(normalizedTarget)) {
