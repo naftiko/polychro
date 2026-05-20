@@ -184,4 +184,34 @@ class MarkdownProjectorTest {
 
         assertEquals(0, items.size());
     }
+
+    @Test
+    void projectShouldFlattenBlockQuoteContentIntoParentBlocks() {
+        MarkdownParseResult parsed = parserFacade.parse("""
+                # Before
+
+                > ## Quoted Heading
+                >
+                > Quoted paragraph with [a link](#before).
+
+                # After
+                """);
+
+        Document projected = projector.project(parsed, null);
+
+        // Block quote children are flattened: Before, Quoted Heading, Quoted paragraph, After
+        assertEquals("heading", projected.root().path("document").path("blocks").get(0).path("type").asText());
+        assertEquals("Before", projected.root().path("document").path("blocks").get(0).path("text").asText());
+
+        assertEquals("heading", projected.root().path("document").path("blocks").get(1).path("type").asText());
+        assertEquals("Quoted Heading", projected.root().path("document").path("blocks").get(1).path("text").asText());
+        assertEquals("quoted-heading", projected.root().path("document").path("blocks").get(1).path("anchor").asText());
+
+        assertEquals("paragraph", projected.root().path("document").path("blocks").get(2).path("type").asText());
+        assertEquals(1, projected.root().path("document").path("blocks").get(2).path("links").size());
+        assertEquals("#before", projected.root().path("document").path("blocks").get(2).path("links").get(0).path("target").asText());
+
+        assertEquals("heading", projected.root().path("document").path("blocks").get(3).path("type").asText());
+        assertEquals("After", projected.root().path("document").path("blocks").get(3).path("text").asText());
+    }
 }
