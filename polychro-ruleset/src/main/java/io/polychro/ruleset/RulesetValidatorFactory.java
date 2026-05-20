@@ -51,7 +51,7 @@ public class RulesetValidatorFactory implements ValidatorFactory {
      * PR #8 (html), at which point JSONPath rules become meaningful for them.
      */
     private static final Set<String> SUPPORTED_FORMATS = Set.of(
-            "json", "yaml", "xml", "markdown", "html");
+            "json", "yaml", "xml");
 
     @Override
     public String name() {
