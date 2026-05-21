@@ -111,14 +111,11 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
         } else if (child instanceof FencedCodeBlock fencedCodeBlock) {
             ObjectNode block = blocks.addObject();
             block.put("type", "code-block");
-            // Defensive null check: commonmark-java's parser always returns "" for
-            // info-less fences, but the FencedCodeBlock API does not formally guarantee
-            // non-null, so a direct-construct or future parser change could still yield null.
-            if (fencedCodeBlock.getInfo() == null) {
-                block.putNull("language");
-            } else {
-                block.put("language", fencedCodeBlock.getInfo());
-            }
+            // commonmark-java's parser always returns "" for fences without an info string;
+            // the downstream "no language" check is handled by language.isBlank() in
+            // MarkdownValidator.checkCodeBlockLanguage, which covers both "" and any future
+            // whitespace-only info string consistently.
+            block.put("language", fencedCodeBlock.getInfo());
             block.put("content", fencedCodeBlock.getLiteral());
             sourceMapBuilder.put(path, rangeFor(fencedCodeBlock, bodyStartLine));
         } else if (child instanceof BlockQuote) {
