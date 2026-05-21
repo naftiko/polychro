@@ -181,6 +181,11 @@ public class LintCommand implements Runnable {
 
     static Document loadDocument(Path file, PrintWriter err) {
         try {
+            // Read the whole file into memory. The lint CLI targets configuration-class
+            // documents (OpenAPI / AsyncAPI / JSON-Schema rulesets, etc.) which are
+            // typically a few hundred KB at most, so streaming parse is not worth the
+            // extra complexity here. Streaming would also break the format auto-detection
+            // path which inspects the leading characters of the content.
             return Document.fromString(Files.readString(file), null, file.toString());
         } catch (Exception e) {
             err.println("Error: failed to parse " + file + ": " + e.getMessage());

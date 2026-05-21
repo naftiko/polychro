@@ -108,7 +108,7 @@ class RulesetValidatorFactoryTest {
     }
 
     @Test
-    void supportedFormatsShouldAdvertiseProjectedFormats() {
+    void supportedFormatsShouldAdvertiseAllProjectedFormats() {
         RulesetValidatorFactory factory = new RulesetValidatorFactory();
 
         assertEquals(Set.of("json", "yaml", "xml", "markdown", "html"),

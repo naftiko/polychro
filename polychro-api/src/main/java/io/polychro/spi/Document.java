@@ -18,7 +18,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import com.fasterxml.jackson.dataformat.xml.XmlFactory;
 
+import javax.xml.stream.XMLInputFactory;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -29,7 +31,10 @@ import java.util.Map;
 /**
  * An in-memory representation of a document to be validated.
  *
- * @param root       the parsed document as a Jackson JsonNode tree
+ * @param root       the parsed document as a Jackson JsonNode tree;
+ *                   may be {@code null} for documents whose structural projection is
+ *                   deferred (e.g. raw {@code markdown} / {@code html} documents whose
+ *                   parse step is skipped because no rule requires a projected tree)
  * @param format     the canonical document format identifier, may be null when unknown
  * @param sourcePath the file path or identifier of the source, may be null for in-memory documents
  * @param sourceMap  source-location resolver for projected formats
@@ -46,7 +51,19 @@ public record Document(JsonNode root, String format, String sourcePath, SourceMa
      */
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
     private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
-    private static final ObjectMapper XML_MAPPER = new XmlMapper();
+    /**
+     * XML mapper hardened against XXE / billion-laughs style attacks: the underlying
+     * StAX {@link XMLInputFactory} has DTD support and external-entity resolution disabled
+     * so untrusted documents cannot pull in remote resources or expand entity bombs.
+     */
+    private static final ObjectMapper XML_MAPPER = new XmlMapper(hardenedXmlFactory());
+
+    private static XmlFactory hardenedXmlFactory() {
+        XMLInputFactory inputFactory = XMLInputFactory.newFactory();
+        inputFactory.setProperty(XMLInputFactory.SUPPORT_DTD, Boolean.FALSE);
+        inputFactory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, Boolean.FALSE);
+        return new XmlFactory(inputFactory);
+    }
 
     public Document {
         String resolvedFormat = (format == null || format.isBlank())
@@ -166,6 +183,9 @@ public record Document(JsonNode root, String format, String sourcePath, SourceMa
             }
             return "xml";
         }
+        // Last resort: treat as YAML. Only reached when neither the source path
+        // nor the leading bytes give a stronger hint, so we lean on YAML's
+        // forgiving grammar as the broadest default.
         return "yaml";
     }
 

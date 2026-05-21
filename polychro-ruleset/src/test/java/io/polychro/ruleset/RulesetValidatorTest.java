@@ -181,57 +181,66 @@ class RulesetValidatorTest {
     }
 
     @Test
-    void matchesFormatShouldReturnTrueWhenRuleFormatsAreEmpty() {
-        RulesetValidator validator = newValidator();
+    void validateShouldRunRulesWhenRuleFormatsAreEmpty() {
+        // A rule with an explicit but empty formats list applies to every document
+        // (this exercises the early-return branch in the format filter).
         Rule rule = new Rule("any-format", "Any format", null, "warn", true,
                 List.of(), null, List.of("$.info.name"),
                 List.of(new RuleAction(null, "truthy", Map.of())));
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("any-format", rule), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
         Document doc = Document.fromString("{\"info\": {\"name\": \"\"}}", "json");
 
-        assertTrue(validator.matchesFormat(rule, doc));
+        List<Diagnostic> results = validator.validate(doc);
+        assertEquals(1, results.size());
+        assertEquals("Any format", results.get(0).message());
     }
 
     @Test
-    void matchesFormatShouldReturnFalseWhenDocumentFormatIsBlank() {
-        RulesetValidator validator = newValidator();
+    void validateShouldSkipRulesWhenDocumentFormatIsBlank() {
+        // Blank format strings normalize to null inside the Document constructor;
+        // a rule that restricts to a concrete format must therefore be skipped.
         Rule rule = new Rule("json-only", "JSON only", null, "warn", true,
                 List.of("json"), null, List.of("$.info.name"),
                 List.of(new RuleAction(null, "truthy", Map.of())));
-        Document doc = new Document(null, "   ", null);
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("json-only", rule), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
+        Document doc = new Document(com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode(),
+                "   ", null);
 
-        assertFalse(validator.matchesFormat(rule, doc));
+        List<Diagnostic> results = validator.validate(doc);
+        assertTrue(results.isEmpty());
     }
 
     @Test
-    void matchesFormatShouldReturnFalseWhenDocumentFormatIsNull() {
-        RulesetValidator validator = newValidator();
+    void validateShouldSkipRulesWhenDocumentFormatIsNull() {
         Rule rule = new Rule("json-only", "JSON only", null, "warn", true,
                 List.of("json"), null, List.of("$.info.name"),
                 List.of(new RuleAction(null, "truthy", Map.of())));
-        Document doc = new Document(null, (String) null, null);
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("json-only", rule), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
+        Document doc = new Document(com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode(),
+                (String) null, null);
 
-        assertFalse(validator.matchesFormat(rule, doc));
+        List<Diagnostic> results = validator.validate(doc);
+        assertTrue(results.isEmpty());
     }
 
     @Test
-    void matchesFormatShouldNormalizeMarkdownAlias() {
-        RulesetValidator validator = newValidator();
-        Rule rule = new Rule("md-only", "Markdown only", null, "warn", true,
-                List.of("md"), null, List.of("$"),
-                List.of(new RuleAction(null, "truthy", Map.of())));
-        Document doc = new Document(null, "markdown", null);
-
-        assertTrue(validator.matchesFormat(rule, doc));
-    }
-
-    @Test
-    void matchesFormatShouldNormalizeHtmlAlias() {
-        RulesetValidator validator = newValidator();
+    void validateShouldRunRulesWhenRuleFormatUsesHtmlAlias() {
+        // The "htm" alias must normalise to "html" so a rule restricted to "htm"
+        // still fires against an html-formatted document. We use the `falsy`
+        // builtin against the (non-blank) projected root so the rule produces
+        // exactly one diagnostic when format filtering admits it.
         Rule rule = new Rule("htm-only", "HTML only", null, "warn", true,
                 List.of("htm"), null, List.of("$"),
-                List.of(new RuleAction(null, "truthy", Map.of())));
-        Document doc = new Document(null, "html", null);
+                List.of(new RuleAction(null, "falsy", Map.of())));
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("htm-only", rule), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
+        Document doc = Document.fromString("<html><body>hi</body></html>", "html");
 
-        assertTrue(validator.matchesFormat(rule, doc));
+        List<Diagnostic> results = validator.validate(doc);
+        assertEquals(1, results.size(), "Rule must have fired to produce its diagnostic");
+        assertEquals("HTML only", results.get(0).message());
     }
 }
