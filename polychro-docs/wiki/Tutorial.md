@@ -82,9 +82,33 @@ polychro lint --ruleset polychro:security my-spec.yml
 
 The same rulesets are available through the MCP server (`polychro serve --ruleset polychro:ai-safety`) and the Java API (`Linter.builder().ruleset("polychro:ai-safety").build()`).
 
-## Step 5 — Polyglot Custom Functions
+## Step 5 — Custom Functions
 
-For complex cross-object rules, write custom functions in JavaScript, Python, or Groovy:
+For complex cross-object rules, write custom functions in **Java** (best performance) or in **JavaScript, Python, or Groovy** via the optional polyglot module.
+
+### Java (recommended)
+
+```java
+public class CheckPortUniqueFunction implements RuleFunction {
+    @Override public String name() { return "check-port-unique"; }
+
+    @Override
+    public List<String> evaluate(JsonNode target, Map<String, Object> options) {
+        Set<Integer> seen = new HashSet<>();
+        for (JsonNode adapter : target) {
+            int port = adapter.path("port").asInt();
+            if (!seen.add(port)) {
+                return List.of("Duplicate port: " + port);
+            }
+        }
+        return List.of();
+    }
+}
+```
+
+Expose it through a `FunctionProvider` registered via `META-INF/services/io.polychro.ruleset.FunctionProvider`, drop the JAR on the classpath — no `functionsDir` configuration needed.
+
+### Polyglot (JavaScript / Python / Groovy)
 
 ```javascript
 // functions/check-port-unique.js
@@ -98,7 +122,7 @@ export default function (input) {
 }
 ```
 
-Reference in your ruleset:
+Reference in your ruleset (same syntax for Java and polyglot):
 
 ```yaml
 rules:
@@ -109,7 +133,7 @@ rules:
     severity: error
 ```
 
-Configure the functions directory:
+For polyglot functions, configure the functions directory:
 
 ```yaml
 validators:
@@ -117,6 +141,8 @@ validators:
     path: my-rules.yml
     functionsDir: rules/functions/
 ```
+
+See [Guide ‐ Rulesets](Guide-‐-Rulesets) for the full comparison and signatures.
 
 ## Step 6 — MCP Server for AI Agents
 

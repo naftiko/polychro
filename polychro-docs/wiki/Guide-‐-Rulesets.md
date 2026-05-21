@@ -118,11 +118,98 @@ rules:
     severity: error
 ```
 
-## Custom Functions (Polyglot)
+## Custom Functions
 
-For rules that require complex logic beyond built-in functions, write custom functions in JavaScript, Python, or Groovy.
+For rules that require complex logic beyond built-in functions, write custom functions in **Java** (best performance, recommended for JVM authors) or in **JavaScript, Python, or Groovy** via the optional polyglot module.
 
-### JavaScript
+| Language | Module | Discovery | Startup | Per-call cost |
+|---|---|---|---|---|
+| **Java** | `polychro-ruleset` (built-in) | `ServiceLoader` (`FunctionProvider`) | None | Native JVM call — fastest |
+| JavaScript / Python / Groovy | `polychro-ruleset-polyglot` (optional) | `functionsDir` resolution | GraalVM context init | Sandboxed Polyglot call |
+
+Prefer Java for production rulesets — there is no GraalVM dependency, no sandbox overhead, and native compilation works out of the box. Reach for polyglot when the rule author is not on the JVM, or when an existing script is being ported in.
+
+### Java (Recommended)
+
+Implement `RuleFunction` and expose it through a `FunctionProvider` registered via `META-INF/services`.
+
+```java
+// src/main/java/com/example/NoTrailingSlashFunction.java
+package com.example;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import io.polychro.ruleset.RuleFunction;
+
+import java.util.List;
+import java.util.Map;
+
+public class NoTrailingSlashFunction implements RuleFunction {
+
+    @Override
+    public String name() {
+        return "no-trailing-slash";
+    }
+
+    @Override
+    public List<String> evaluate(JsonNode target, Map<String, Object> options) {
+        if (target != null && target.isTextual() && target.asText().endsWith("/")) {
+            return List.of("URI must not end with a trailing slash: " + target.asText());
+        }
+        return List.of();
+    }
+}
+```
+
+```java
+// src/main/java/com/example/MyFunctionProvider.java
+package com.example;
+
+import io.polychro.ruleset.FunctionProvider;
+import io.polychro.ruleset.RuleFunction;
+
+import java.util.List;
+
+public class MyFunctionProvider implements FunctionProvider {
+    @Override
+    public List<RuleFunction> functions() {
+        return List.of(new NoTrailingSlashFunction());
+    }
+}
+```
+
+Register the provider:
+
+```
+# src/main/resources/META-INF/services/io.polychro.ruleset.FunctionProvider
+com.example.MyFunctionProvider
+```
+
+Reference the function by name in any ruleset — no `functionsDir` configuration is required:
+
+```yaml
+rules:
+  no-trailing-slash:
+    given: $.consumes[*].baseUri
+    then:
+      function: no-trailing-slash
+    severity: error
+```
+
+Drop the JAR on the classpath next to `polychro-core` and the function participates automatically.
+
+### Polyglot (JavaScript, Python, Groovy)
+
+Add the optional polyglot module to enable scripted functions:
+
+```xml
+<dependency>
+    <groupId>io.polychro</groupId>
+    <artifactId>polychro-ruleset-polyglot</artifactId>
+    <version>0.1.0</version>
+</dependency>
+```
+
+#### JavaScript
 
 ```javascript
 // functions/no-trailing-slash.js
@@ -134,7 +221,7 @@ export default function (input) {
 }
 ```
 
-### Python
+#### Python
 
 ```python
 # functions/no_trailing_slash.py
@@ -144,7 +231,7 @@ def evaluate(input):
     return []
 ```
 
-### Groovy
+#### Groovy
 
 ```groovy
 // functions/noTrailingSlash.groovy
@@ -156,7 +243,7 @@ def evaluate(input) {
 }
 ```
 
-### Configuring Functions Directory
+#### Configuring the Functions Directory
 
 ```yaml
 validators:
@@ -165,7 +252,66 @@ validators:
     functionsDir: rules/functions/
 ```
 
-Functions are resolved by name: a rule referencing `function: no-trailing-slash` loads `no-trailing-slash.js`, `no_trailing_slash.py`, or `noTrailingSlash.groovy` from the functions directory.
+Functions are resolved by name: a rule referencing `function: no-trailing-slash` loads `no-trailing-slash.js`, `no_trailing_slash.py`, or `noTrailingSlash.groovy` from the functions directory. Polyglot functions require GraalVM 21+.
+
+## Targeting XML Documents
+
+XML is a first-class structured format for ruleset validation alongside YAML and JSON. `polychro-api` parses XML through a hardened Jackson `XmlMapper` (XXE / billion-laughs protections enabled) and projects it into the same Jackson tree the ruleset engine uses, so JSONPath `given` expressions work the same way they do for YAML or JSON.
+
+A small XML configuration document:
+
+```xml
+<!-- service.xml -->
+<service>
+  <metadata>
+    <name>orders</name>
+    <description></description>
+  </metadata>
+  <consumes>
+    <api baseUri="https://api.example.com/"/>
+  </consumes>
+</service>
+```
+
+A ruleset that catches the empty description and the trailing-slash `baseUri`:
+
+```yaml
+formats: [xml]
+
+rules:
+  service-description-present:
+    given: $.metadata.description
+    then:
+      function: truthy
+    message: Service must include a non-empty description
+    severity: warn
+
+  service-base-uri-no-trailing-slash:
+    given: $.consumes.api['@baseUri']
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: ".*/$"
+    message: baseUri must not end with a trailing slash
+    severity: error
+```
+
+Notes:
+
+- Jackson's `XmlMapper` projects attributes as fields prefixed with `@` (e.g. `@baseUri`). Use the `['@name']` bracket syntax in JSONPath to address them.
+- Repeated child elements collapse into arrays automatically — `$.consumes.api[*]` works for multiple `<api>` children.
+- The `formats: [xml]` filter at the top of the ruleset scopes it so YAML/JSON inputs don't trigger XML-specific rules.
+
+### What's Not Available for XML (Yet)
+
+| Layer | Status |
+|---|---|
+| Well-formedness | ✅ Implicit — XXE-hardened parser fails fast on malformed XML |
+| Schema-model | ❌ No XSD / RelaxNG validator module today |
+| Ruleset | ✅ Full JSONPath ruleset support (this section) |
+| Format-aware | ❌ No dedicated `polychro-xml` module (no namespace consistency, no DTD checks). Tracked on the [Roadmap](Roadmap) |
+
+For now, model your XML governance as ruleset rules — the same SPI extension path that already covers YAML and JSON.
 
 ## Extending Built-in Rulesets
 
