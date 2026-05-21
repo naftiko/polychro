@@ -31,10 +31,11 @@ class CrossFormatBrokenReferenceTest {
     void markdownInternalAnchorMustResolve() {
         Document md = TestDocuments.markdown("""
                 {"document":{"blocks":[
-                  {"type":"heading","level":1,"text":"Intro","anchor":"intro"}
-                ],"links":[
-                  {"target":"#intro","kind":"internal-anchor","text":"jump"},
-                  {"target":"#missing","kind":"internal-anchor","text":"broken"}
+                  {"type":"heading","level":1,"text":"Intro","anchor":"intro"},
+                  {"type":"paragraph","text":"links","links":[
+                    {"target":"#intro","kind":"internal-anchor","text":"jump"},
+                    {"target":"#missing","kind":"internal-anchor","text":"broken"}
+                  ]}
                 ]}}""");
         BrokenLocalReferenceRule rule = new BrokenLocalReferenceRule(
                 new MarkdownReferenceAdapter(), path -> true);
@@ -65,8 +66,10 @@ class CrossFormatBrokenReferenceTest {
     @Test
     void sameBrokenLinkDetectedIdenticallyFromMarkdownAndHtml() {
         Document md = TestDocuments.markdown("""
-                {"document":{"blocks":[],"links":[
-                  {"target":"#nowhere","kind":"internal-anchor","text":""}
+                {"document":{"blocks":[
+                  {"type":"paragraph","text":"x","links":[
+                    {"target":"#nowhere","kind":"internal-anchor","text":""}
+                  ]}
                 ]}}""");
         Document html = TestDocuments.html("""
                 {"document":{"nodes":[],"links":[
@@ -88,9 +91,10 @@ class CrossFormatBrokenReferenceTest {
         // Anchor reference "#" yields a fragment of null, which cannot match any declared id.
         Document md = TestDocuments.markdown("""
                 {"document":{"blocks":[
-                  {"type":"heading","level":1,"text":"X","anchor":"x"}
-                ],"links":[
-                  {"target":"#","kind":"internal-anchor","text":""}
+                  {"type":"heading","level":1,"text":"X","anchor":"x"},
+                  {"type":"paragraph","text":"x","links":[
+                    {"target":"#","kind":"internal-anchor","text":""}
+                  ]}
                 ]}}""");
         List<Diagnostic> diagnostics = new BrokenLocalReferenceRule(
                 new MarkdownReferenceAdapter(), p -> true).apply(md);
@@ -100,9 +104,11 @@ class CrossFormatBrokenReferenceTest {
     @Test
     void relativeFileMustExistOnDisk() {
         Document md = TestDocuments.markdown("""
-                {"document":{"blocks":[],"links":[
-                  {"target":"./present.md","kind":"relative","text":""},
-                  {"target":"./missing.md","kind":"relative","text":""}
+                {"document":{"blocks":[
+                  {"type":"paragraph","text":"x","links":[
+                    {"target":"./present.md","kind":"relative","text":""},
+                    {"target":"./missing.md","kind":"relative","text":""}
+                  ]}
                 ]}}""", "docs/parent.md");
         Set<String> existing = Set.of(
                 java.nio.file.Path.of("docs").resolve("present.md").normalize().toString());
@@ -116,8 +122,10 @@ class CrossFormatBrokenReferenceTest {
     @Test
     void relativeFileChecksUseCurrentDirectoryWhenSourcePathHasNoParent() {
         Document md = TestDocuments.markdown("""
-                {"document":{"blocks":[],"links":[
-                  {"target":"present.md","kind":"relative","text":""}
+                {"document":{"blocks":[
+                  {"type":"paragraph","text":"x","links":[
+                    {"target":"present.md","kind":"relative","text":""}
+                  ]}
                 ]}}""", "parent.md");
         java.util.concurrent.atomic.AtomicReference<java.nio.file.Path> probed =
                 new java.util.concurrent.atomic.AtomicReference<>();
@@ -131,8 +139,10 @@ class CrossFormatBrokenReferenceTest {
     @Test
     void relativeFileCheckSkippedWhenDocumentHasNoSourcePath() {
         Document md = TestDocuments.markdown("""
-                {"document":{"blocks":[],"links":[
-                  {"target":"./x.md","kind":"relative","text":""}
+                {"document":{"blocks":[
+                  {"type":"paragraph","text":"x","links":[
+                    {"target":"./x.md","kind":"relative","text":""}
+                  ]}
                 ]}}""", null);
         List<Diagnostic> diagnostics = new BrokenLocalReferenceRule(
                 new MarkdownReferenceAdapter(), p -> false).apply(md);
@@ -164,11 +174,13 @@ class CrossFormatBrokenReferenceTest {
     void sourceMapIsConsultedForRange() {
         SourceRange expected = new SourceRange(5, 1, 5, 12);
         Document base = TestDocuments.markdown("""
-                {"document":{"blocks":[],"links":[
-                  {"target":"#missing","kind":"internal-anchor","text":""}
+                {"document":{"blocks":[
+                  {"type":"paragraph","text":"x","links":[
+                    {"target":"#missing","kind":"internal-anchor","text":""}
+                  ]}
                 ]}}""");
         Document md = TestDocuments.withSourceMap(base,
-                Map.of("$.document.links[0].target", expected));
+                Map.of("$.document.blocks[0].links[0].target", expected));
         List<Diagnostic> diagnostics = new BrokenLocalReferenceRule(
                 new MarkdownReferenceAdapter(), p -> true).apply(md);
         assertEquals(expected, diagnostics.get(0).range());

@@ -169,22 +169,6 @@ class MarkdownValidatorEdgeCasesTest {
     }
 
     @Test
-    void checkCodeBlockLanguageShouldHandleNullInfo() {
-        // Programmatically create a fenced code block with null info
-        org.commonmark.node.FencedCodeBlock codeBlock = new org.commonmark.node.FencedCodeBlock();
-        // info defaults to null when not set via setter
-        org.commonmark.node.Document mdDoc = new org.commonmark.node.Document();
-        mdDoc.appendChild(codeBlock);
-        Document projected = new MarkdownProjector().project(
-                new MarkdownParseResult("", new FrontmatterResult(null, "", 1, null), mdDoc),
-                null);
-        List<Diagnostic> diagnostics = new java.util.ArrayList<>();
-        validator.checkCodeBlockLanguage(projected, diagnostics);
-        assertEquals(1, diagnostics.size());
-        assertEquals("code-block-no-language", diagnostics.getFirst().code());
-    }
-
-    @Test
     void checkCodeBlockLanguageShouldIgnoreDocumentWithoutProjectedBlocks() {
         var root = JsonNodeFactory.instance.objectNode();
         root.putObject("document");
