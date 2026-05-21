@@ -5,6 +5,7 @@
 - **CLI / MCP Server**: Download the native binary — no JVM needed
 - **Java library**: Java 21+, Maven 3.9+
 - **Polyglot functions**: GraalVM 21+ (optional)
+- **SDK clients**: Go 1.22+, Node.js 18+, or Python 3.10+ (the SDK shells out to the native binary, which must be installed separately)
 
 ## Installation
 
@@ -63,6 +64,59 @@ For polyglot custom functions (requires GraalVM 21+):
     <version>0.1.0</version>
 </dependency>
 ```
+
+### SDK Clients (Go, Node.js, Python)
+
+For non-JVM applications, install the SDK for your language. Each SDK is a thin wrapper that shells out to the native `polychro` binary (resolved via `POLYCHRO_BIN`, an adjacent `bin/` directory, or `PATH`).
+
+**Go:**
+
+```bash
+go get github.com/naftiko/polychro/polychro-go
+```
+
+```go
+import "github.com/naftiko/polychro/polychro-go"
+
+result, err := polychro.Lint("my-spec.yml", polychro.Options{
+    Ruleset: "polychro:ai-safety",
+})
+if result.HasErrors() {
+    fmt.Println(result.ToAgentFormat())
+}
+```
+
+**Node.js / TypeScript:**
+
+```bash
+npm install polychro
+```
+
+```ts
+import { lint } from "polychro";
+
+const result = await lint("my-spec.yml", { ruleset: "polychro:ai-safety" });
+if (result.diagnostics.some(d => d.severity === "error")) {
+    console.log(result.diagnostics);
+}
+```
+
+**Python:**
+
+```bash
+pip install polychro
+```
+
+```python
+from polychro import Linter
+
+linter = Linter(ruleset="polychro:ai-safety")
+result = linter.lint("my-spec.yml")
+if result.has_errors:
+    print(result.to_agent_format())
+```
+
+All three SDKs share the same surface: `lint`, `lintString` / `lint_string`, `validateSchema` / `validate_schema`, with typed `LintResult` and `Diagnostic` types.
 
 ### Build from Source
 
@@ -150,6 +204,32 @@ validators:
 ```
 
 See [Guide ‐ Configuration](Guide-‐-Configuration) for the full reference.
+
+## Running in CI with the GitHub Action
+
+For GitHub-hosted projects, the `naftiko/polychro-action` composite action wraps the CLI with glob expansion, SARIF output, automatic upload to GitHub Code Scanning, and a configurable `fail-on` severity threshold:
+
+```yaml
+# .github/workflows/lint.yml
+- uses: naftiko/polychro-action@v1
+  with:
+    files: '**/*.yml,**/*.yaml'
+    fail-on: error
+```
+
+See [Guide ‐ GitHub Action](Guide-‐-GitHub-Action) for the full inputs/outputs reference and recipes (PR comments, Checkov in the same run, version pinning).
+
+## Security scanning with Checkov
+
+For infrastructure-as-code documents (Terraform, Kubernetes, CloudFormation, Dockerfile), enable the optional `polychro-checkov` validator to layer security findings on top of Polychro's structural checks:
+
+```yaml
+validators:
+  checkov:
+    enabled: true
+```
+
+Requires a local `checkov` install (`pip install checkov`). See [Guide ‐ Checkov](Guide-‐-Checkov) for framework auto-detection, skip lists, and graceful-degradation behaviour.
 
 ## Next Steps
 

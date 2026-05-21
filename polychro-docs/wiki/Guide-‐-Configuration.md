@@ -4,6 +4,20 @@
 
 Polychro reads configuration from `.polychro.yml` at the project root. The file controls which validators run, their settings, and the overall pipeline behavior.
 
+### Supported Input Formats
+
+The configuration is format-agnostic — the same `.polychro.yml` lints any mix of YAML, JSON, XML, Markdown, and HTML files. The validators that actually run on a given document depend on its format:
+
+| Format | Well-formedness | Schema-Model | Ruleset | Format-aware |
+|---|---|---|---|---|
+| YAML | ✅ | ✅ JSON Schema, JSON Structure | ✅ | — |
+| JSON | ✅ | ✅ JSON Schema, JSON Structure | ✅ | — |
+| **XML** | ✅ (XXE-hardened) | ❌ (no XSD/RelaxNG today) | ✅ JSONPath against the Jackson tree | ❌ |
+| Markdown | ✅ | — | ✅ (via projection) | ✅ `polychro-markdown` |
+| HTML | ✅ | — | ✅ (via projection) | ✅ `polychro-html` |
+
+XML rulesets behave the same way as YAML/JSON ones — see [Guide ‐ Rulesets › Targeting XML Documents](Guide-‐-Rulesets#targeting-xml-documents).
+
 ## Full Reference
 
 ```yaml

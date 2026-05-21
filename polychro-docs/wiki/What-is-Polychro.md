@@ -13,7 +13,7 @@ Schema validation alone is not enough. A document can be schema-valid yet broken
 
 ## The Solution
 
-Polychro fills this gap with **composable validation layers applied consistently across semi-structured specifications** such as YAML, JSON, and Markdown:
+Polychro fills this gap with **composable validation layers applied consistently across semi-structured specifications** such as YAML, JSON, XML, Markdown, and HTML:
 
 1. **Well-formedness validation** — catches document-level structural issues such as duplicate keys, encoding problems, and depth limits before any semantic analysis begins
 2. **Schema-model validation** — applies formal document models such as JSON Schema Draft 2020-12 or [JSON Structure](https://json-structure.org/), depending on what the specification adopts
@@ -43,12 +43,14 @@ All layers produce the same `Diagnostic` format. One API call, one result type, 
 
 ## Relationship to Naftiko
 
-Polychro is a standalone open-source library sponsored by [Naftiko](https://github.com/naftiko). Its core linting engine has no dependency on [Ikanos](https://github.com/naftiko/ikanos), [Naftiko Fleet](https://github.com/naftiko/fleet), or any other Naftiko product, and can lint semi-structured specifications such as YAML, JSON, and Markdown on its own.
+Polychro is a standalone open-source library sponsored by [Naftiko](https://github.com/naftiko). Its core linting engine (`polychro-core` and every validator module) has no dependency on [Ikanos](https://github.com/naftiko/ikanos), [Naftiko Fleet](https://github.com/naftiko/fleet), or any other Naftiko product, and can lint semi-structured specifications such as YAML, JSON, XML, Markdown, and HTML on its own.
 
-It ships with built-in rulesets optimized for [Ikanos](https://github.com/naftiko/ikanos) capability files, and its optional capability module depends on [Ikanos](https://github.com/naftiko/ikanos) to expose MCP and Skills adapters, but the engine itself remains format-agnostic and extensible through its validator SPI.
+The one exception is the **optional `polychro-capability` module**, which depends on [Ikanos](https://github.com/naftiko/ikanos) to expose Polychro as an MCP server (and Skills adapters). This dependency is mostly transparent: end users invoke `polychro serve` and the native binary or JAR transitively brings Ikanos in. If you only use the CLI for linting, the GitHub Action, or the embeddable Java API, no Ikanos dependency is pulled in.
+
+Polychro ships with built-in rulesets optimized for [Ikanos](https://github.com/naftiko/ikanos) capability files, but the engine itself remains format-agnostic and extensible through its validator SPI.
 
 [Ikanos](https://github.com/naftiko/ikanos) is Naftiko's sister open-source project for spec-driven integration, and Polychro can serve as its validation layer for capability files — both at development time (CLI, IDE) and at runtime (MCP server mode for AI agents).
 
 Naftiko also offers [Naftiko Fleet](https://github.com/naftiko/fleet) as a product line for operating and governing capabilities at scale, with a free Community edition and premium editions.
 
-Polychro remains an independent open-source project whether or not you use [Ikanos](https://github.com/naftiko/ikanos) or [Naftiko Fleet](https://github.com/naftiko/fleet).
+Polychro is governed and released as an independent open-source project. Adopting [Ikanos](https://github.com/naftiko/ikanos) or [Naftiko Fleet](https://github.com/naftiko/fleet) is optional — the linting engine, CLI, GitHub Action, and Java API all work without them; only the MCP server mode (`polychro-capability`) pulls in Ikanos transparently as a runtime dependency.

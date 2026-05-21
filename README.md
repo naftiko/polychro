@@ -2,23 +2,25 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
-Polychro is a deterministic linting engine for spec-driven development. It validates semi-structured specifications such as YAML, JSON, and Markdown through composable layers including well-formedness, schema-model, ruleset, and format-aware validation in a single, embeddable pipeline with sub-second latency.
+Polychro is a deterministic linting engine for spec-driven development. It validates semi-structured specifications such as YAML, JSON, XML, Markdown, and HTML through composable layers including well-formedness, schema-model, ruleset, and format-aware validation in a single, embeddable pipeline with sub-second latency.
 
 Designed for AI agent loops where non-deterministic generation needs deterministic guardrails.
 
 | Feature | Description |
 |---|---|
-| CLI | Single binary — lint any YAML/JSON/Markdown spec from the command line |
+| CLI | Single binary — lint any YAML/JSON/XML/Markdown/HTML spec from the command line |
 | MCP Server Mode | Expose linting as MCP tools for AI agent consumption |
 | Native Executable | Standalone binaries for **Linux**, **macOS**, and **Windows** — no JVM required |
 | GitHub Action | Lint specs in CI with structured SARIF output |
 | Spectral-Format Rulesets | Execute governance rulesets with `given`/`then` semantics |
 | Polyglot Custom Functions | JavaScript, Python, and Groovy custom functions via sandboxed GraalVM |
+| Java Custom Functions | Native `RuleFunction` SPI — fastest path, no GraalVM required |
 | Schema-Model Validation | Formal document models including JSON Schema Draft 2020-12 and [JSON Structure](https://json-structure.org/) |
 | Well-Formedness Validation | Duplicate keys, encoding, depth limits, YAML-specific traps |
-| Format-Aware Validation | Heading hierarchy, internal links, relative file references, and other document-specific checks |
+| Format-Aware Validation | Heading hierarchy, internal links, relative file references, HTML structure / accessibility / security, and other document-specific checks |
 | Unified Diagnostics | All validators produce the same `Diagnostic` format — one pipeline, one output |
 | Embeddable Java API | In-process linting for JVM applications — no subprocess, no Node.js |
+| SDK Clients | Idiomatic wrappers for **Go**, **Node.js / TypeScript**, and **Python** over the native binary |
 | Pluggable SPI | Add custom validators via `ServiceLoader` — zero framework coupling |
 
 ***
@@ -47,6 +49,7 @@ Here are additional documents to learn more:
 ```bash
 polychro lint my-spec.yml
 polychro lint --ruleset polychro:governance my-spec.yml
+polychro lint --validator html=email welcome-email.html
 polychro lint --format agent my-spec.yml
 ```
 
@@ -86,9 +89,34 @@ Document doc = Document.fromString(yamlContent, "yaml");
 List<Diagnostic> issues = linter.lint(doc);
 ```
 
+### SDK Clients (Go, Node.js, Python)
+
+```bash
+# Go
+go get github.com/naftiko/polychro/polychro-go
+
+# Node.js / TypeScript
+npm install polychro
+
+# Python
+pip install polychro
+```
+
+```python
+# Python example — same surface in Go and Node.js
+from polychro import Linter
+
+linter = Linter(ruleset="polychro:ai-safety")
+result = linter.lint("my-spec.yml")
+if result.has_errors:
+    print(result.to_agent_format())
+```
+
 ***
 
 ## Module Overview
+
+### Validators and engine
 
 | Module | Purpose |
 |---|---|
@@ -102,8 +130,22 @@ List<Diagnostic> issues = linter.lint(doc);
 | `polychro-json-schema` | JSON Schema Draft 2020-12 validation |
 | `polychro-json-structure` | JSON Structure validation |
 | `polychro-wellformedness` | Duplicate keys, encoding, depth limits |
-| `polychro-markdown` | Markdown structural validation |
+| `polychro-markdown` | Markdown structural validation (front-matter, headings, links) |
+| `polychro-html` | HTML structure, accessibility, security and asset rules across `document`, `fragment`, `email`, and `embedded-ui` profiles |
+| `polychro-format-common` | Cross-format utilities shared by `polychro-markdown` and `polychro-html` (anchor collection, link resolution, broken-local-reference and duplicate-anchor checks) |
 | `polychro-api` | SPI contracts: `Validator`, `Diagnostic`, `Document` |
+
+### SDK clients
+
+Thin idiomatic wrappers around the native binary — no JVM required at runtime.
+
+| Module | Package | Install |
+|---|---|---|
+| `polychro-go` | `github.com/naftiko/polychro/polychro-go` | `go get github.com/naftiko/polychro/polychro-go` |
+| `polychro-node` | `polychro` (npm) | `npm install polychro` |
+| `polychro-python` | `polychro` (PyPI) | `pip install polychro` |
+
+All SDKs expose the same surface: `lint(file, opts)`, `lintString(content)`, `validateSchema(file)`, and a typed `LintResult` / `Diagnostic` model — they shell out to `polychro` and parse its JSON / agent output.
 
 ***
 

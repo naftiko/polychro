@@ -1,23 +1,25 @@
 <img src="https://naftiko.github.io/docs/images/logos/logo_polychro_horizontal.png" width="300">
 
-Welcome to Polychro, a deterministic linting engine for spec-driven development. Polychro validates semi-structured specifications such as YAML, JSON, and Markdown through composable layers including well-formedness, schema-model, ruleset, and format-aware validation — available as a CLI, an MCP server, a GitHub Action, or an embeddable Java library.
+Welcome to Polychro, a deterministic linting engine for spec-driven development. Polychro validates semi-structured specifications such as YAML, JSON, XML, Markdown, and HTML through composable layers including well-formedness, schema-model, ruleset, and format-aware validation — available as a CLI, an MCP server, a GitHub Action, an embeddable Java library, or via idiomatic SDKs for **Go**, **Node.js / TypeScript**, and **Python**.
 
 When AI agents generate specifications at scale, deterministic linting is the essential safety net: the only layer that guarantees structural correctness and domain invariants before a spec reaches production.
 
 | Feature | Description |
 |---|---|
-| CLI | Single binary — lint any YAML/JSON/Markdown spec from the command line |
+| CLI | Single binary — lint any YAML/JSON/XML/Markdown/HTML spec from the command line |
 | MCP Server Mode | Expose linting as MCP tools for AI agent consumption |
 | Native Executable | Standalone binaries for **Linux**, **macOS**, and **Windows** — no JVM required |
 | GitHub Action | Lint specs in CI with structured SARIF output |
 | Spectral-Format Rulesets | Execute governance rulesets with `given`/`then` semantics |
 | Polyglot Custom Functions | JavaScript, Python, and Groovy custom functions via sandboxed GraalVM |
+| Java Custom Functions | Native `RuleFunction` SPI — fastest path, no GraalVM required |
 | Schema-Model Validation | Formal document models including JSON Schema Draft 2020-12 and [JSON Structure](https://json-structure.org/) |
 | Well-Formedness Validation | Duplicate keys, encoding, depth limits, YAML-specific traps |
-| Format-Aware Validation | Heading hierarchy, internal links, relative file references, and other document-specific checks |
+| Format-Aware Validation | Heading hierarchy, internal links, relative file references, HTML structure / accessibility / security, and other document-specific checks |
 | Unified Diagnostics | All validators produce the same `Diagnostic` format — one pipeline, one output |
 | Pluggable SPI | Add custom validators via `ServiceLoader` — zero framework coupling |
 | Embeddable Java API | In-process linting for JVM applications — no subprocess, no Node.js |
+| SDK Clients | Idiomatic wrappers for **Go**, **Node.js / TypeScript**, and **Python** over the native binary |
 
 ***
 
@@ -27,8 +29,12 @@ When AI agents generate specifications at scale, deterministic linting is the es
 - :rowboat: [Getting Started](Getting-Started)
 - :sailboat: [Tutorial](Tutorial)
 - :ship: [Guide ‐ Rulesets](Guide-‐-Rulesets)
+- :memo: [Guide ‐ Markdown](Guide-‐-Markdown)
+- :spider_web: [Guide ‐ HTML](Guide-‐-HTML)
 - :wrench: [Guide ‐ Configuration](Guide-‐-Configuration)
 - :electric_plug: [Guide ‐ MCP Server](Guide-‐-MCP-Server)
+- :shield: [Guide ‐ Checkov](Guide-‐-Checkov)
+- :octocat: [Guide ‐ GitHub Action](Guide-‐-GitHub-Action)
 - :building_construction: [Architecture](Architecture)
 - :jigsaw: [Writing a Validator Plugin](Writing-a-Validator-Plugin)
 - :ocean: [FAQ](FAQ)
