@@ -97,7 +97,7 @@ class RulesetValidator implements Validator {
         return diagnostics;
     }
 
-    boolean matchesFormat(Rule rule, Document doc) {
+    private boolean matchesFormat(Rule rule, Document doc) {
         if (rule.formats() == null || rule.formats().isEmpty()) {
             return true;
         }
