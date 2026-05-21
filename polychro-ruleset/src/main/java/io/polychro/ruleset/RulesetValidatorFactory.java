@@ -13,6 +13,7 @@
  */
 package io.polychro.ruleset;
 
+import io.polychro.spi.Document;
 import io.polychro.spi.Validator;
 import io.polychro.spi.ValidatorConfig;
 import io.polychro.spi.ValidatorFactory;
@@ -33,6 +34,22 @@ import java.util.Set;
  */
 public class RulesetValidatorFactory implements ValidatorFactory {
 
+    /**
+     * Formats this factory advertises as supported.
+     *
+     * <p>{@code json}, {@code yaml} and {@code xml} are <em>structured</em> formats:
+     * documents are parsed into a Jackson tree and JSONPath {@code given} expressions
+     * (e.g. {@code $.info.name}) are evaluated against that tree.
+     *
+     * <p>{@code markdown} and {@code html} are <em>text-node</em> formats today:
+     * {@link Document#root()} is a {@code TextNode} holding the raw content, so a
+     * JSONPath selector like {@code $.info.name} will never match and a ruleset
+     * scoped to {@code formats: [markdown]} or {@code formats: [html]} will silently
+     * produce zero diagnostics. They are listed here so callers can route documents
+     * of those formats to the ruleset validator; the projection layer that exposes
+     * structured AST nodes for these formats is introduced in PR #7 (markdown) and
+     * PR #8 (html), at which point JSONPath rules become meaningful for them.
+     */
     private static final Set<String> SUPPORTED_FORMATS = Set.of(
             "json", "yaml", "xml", "markdown", "html");
 

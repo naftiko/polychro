@@ -131,19 +131,44 @@ public record Document(JsonNode root, String format, String sourcePath, SourceMa
     }
 
     /**
-     * Parse a string into a Document, auto-detecting format.
+     * Parse a string into a Document, auto-detecting format from the content when
+     * {@code format} is {@code null} or blank.
+     *
+     * <p>Equivalent to {@link #fromString(String, String, String) fromString(content, format, null)}.
      *
      * @param content the document content as a string
      * @param format  the format: {@code "yaml"}, {@code "json"}, {@code "xml"}, {@code "markdown"},
-     *                {@code "html"}, or {@code null} for auto-detection from source path and content
+     *                {@code "html"}, or {@code null} for auto-detection from content
      * @return the parsed Document
      * @throws UncheckedIOException     if the content is not valid for the specified format
      * @throws IllegalArgumentException if the format is not recognized
+     * @see #fromString(String, String, String)
      */
     public static Document fromString(String content, String format) {
         return fromString(content, format, null);
     }
 
+    /**
+     * Parse a string into a Document, resolving the effective format from
+     * {@code format} (if non-blank), then the {@code sourcePath} extension, and
+     * finally from the leading bytes of the content.
+     *
+     * <p>The resulting {@link Document#root() root} is a structured Jackson tree
+     * for {@code yaml}/{@code json}/{@code xml}, or a {@code TextNode} preserving
+     * the raw content for {@code markdown}/{@code html}.
+     *
+     * @param content    the document content as a string (must not be {@code null} or blank)
+     * @param format     the format hint: {@code "yaml"}, {@code "json"}, {@code "xml"},
+     *                   {@code "markdown"}, {@code "html"}, or {@code null}/blank to
+     *                   defer to {@code sourcePath} and content sniffing
+     * @param sourcePath the originating path used both for format detection (via file
+     *                   extension) and to populate {@link Document#sourcePath()}; may
+     *                   be {@code null} when the content was not loaded from a file
+     * @return the parsed Document
+     * @throws IllegalArgumentException if {@code content} is {@code null} or blank,
+     *                                  or if the resolved format is not recognized
+     * @throws UncheckedIOException     if the content is not valid for the resolved format
+     */
     public static Document fromString(String content, String format, String sourcePath) {
         if (content == null || content.isBlank()) {
             throw new IllegalArgumentException("Document content must not be null or blank");

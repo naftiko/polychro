@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 class ProjectedRuleTest {
 
     @Test
-    void evaluateShouldReceiveProjectedDocument() {
+    void evaluateShouldPassDocumentFormatAndSourcePathToDiagnostic() {
         Document document = new Document(null, "markdown", "docs/example.md");
         ProjectedRule rule = new ProjectedRule() {
             @Override
