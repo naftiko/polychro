@@ -138,4 +138,27 @@ class ReferenceAdapterTypesTest {
         assertEquals(1, anchors.size());
         assertEquals("a", anchors.get(0).id());
     }
+
+    @Test
+    void htmlAdapterReferencesSkipsLinkHeadElementsAndKeepsAnchorElements() {
+        // Cover the tag-filter branch in HtmlReferenceAdapter#references(): <link rel="stylesheet">,
+        // <link rel="canonical">, and entries with a missing tag should all be skipped, while
+        // anchor (<a>) entries pass through to LinkResolver. This protects BrokenLocalReferenceRule
+        // from false-positive "broken local reference" diagnostics on legitimate asset paths.
+        HtmlReferenceAdapter adapter = new HtmlReferenceAdapter();
+        Document html = TestDocuments.html("""
+                {"document":{"nodes":[],"links":[
+                  {"tag":"link","href":"styles.css","kind":"relative"},
+                  {"tag":"link","rel":"canonical","href":"https://example.com/page","kind":"external"},
+                  {"href":"orphan.css","kind":"relative"},
+                  {"tag":"a","href":"#intro","text":"jump","kind":"fragment"},
+                  {"tag":"a","href":"docs/guide.md","text":"guide","kind":"relative"}
+                ]}}""");
+        List<LinkReference> references = adapter.references(html);
+        assertEquals(2, references.size(), "only <a> entries should be forwarded");
+        assertEquals(LinkKind.INTERNAL_ANCHOR, references.get(0).kind());
+        assertEquals("intro", references.get(0).fragment());
+        assertEquals(LinkKind.RELATIVE_FILE, references.get(1).kind());
+        assertEquals("docs/guide.md", references.get(1).filePart());
+    }
 }
