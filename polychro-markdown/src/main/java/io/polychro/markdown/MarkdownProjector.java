@@ -70,11 +70,11 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
             int index = blocks.size();
             String path = blocksPath + "[" + index + "]";
 
-            appendBlock(child, blocks, path, sourceMapBuilder, bodyStartLine);
+            appendBlock(child, blocks, blocksPath, path, sourceMapBuilder, bodyStartLine);
         }
     }
 
-    void appendBlock(org.commonmark.node.Node child, ArrayNode blocks, String path,
+    void appendBlock(org.commonmark.node.Node child, ArrayNode blocks, String blocksPath, String path,
                      MarkdownSourceMapBuilder sourceMapBuilder, int bodyStartLine) {
         if (child instanceof Heading heading) {
             ObjectNode block = blocks.addObject();
@@ -123,8 +123,11 @@ class MarkdownProjector implements FormatProjector<MarkdownParseResult> {
             // structural content inside block quotes are projected and visible to
             // heading-hierarchy, duplicate-anchor, broken-internal-link, and similar rules.
             // Children are flattened into the enclosing blocks array (the block quote itself
-            // is not projected as a node).
-            String blocksPath = path.substring(0, path.lastIndexOf('['));
+            // is not projected as a node). Reuse the caller's blocksPath so that nested
+            // block-quote children inherit the correct path prefix (e.g. when projecting a
+            // block-quote inside a list item, the children must live under
+            // "$.document.blocks[i].items[j].blocks[k]" — not under a recomputed prefix that
+            // could collide with a previously recorded path).
             appendBlocks(child, blocks, blocksPath, sourceMapBuilder, bodyStartLine);
         }
     }

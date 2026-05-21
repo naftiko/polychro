@@ -451,7 +451,7 @@ class MarkdownValidator implements Validator {
         return links;
     }
 
-    void collectProjectedLinks(List<LinkInfo> links, Document projected, JsonNode linkNodes, String pathPrefix) {
+    void appendProjectedLinks(List<LinkInfo> links, Document projected, JsonNode linkNodes, String pathPrefix) {
         if (!linkNodes.isArray()) {
             return;
         }
@@ -469,7 +469,7 @@ class MarkdownValidator implements Validator {
     }
 
     void collectProjectedBlockLinks(List<LinkInfo> links, Document projected, JsonNode block, String blockPath) {
-        collectProjectedLinks(links, projected, block.path("links"), blockPath + ".links");
+        appendProjectedLinks(links, projected, block.path("links"), blockPath + ".links");
         JsonNode items = block.path("items");
         if (!items.isArray()) {
             return;
@@ -481,7 +481,7 @@ class MarkdownValidator implements Validator {
     }
 
     void collectProjectedItemLinks(List<LinkInfo> links, Document projected, JsonNode item, String itemPath) {
-        collectProjectedLinks(links, projected, item.path("links"), itemPath + ".links");
+        appendProjectedLinks(links, projected, item.path("links"), itemPath + ".links");
         JsonNode blocks = item.path("blocks");
         if (!blocks.isArray()) {
             return;
