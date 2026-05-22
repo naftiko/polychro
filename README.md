@@ -145,7 +145,7 @@ Thin idiomatic wrappers around the native binary — no JVM required at runtime.
 | `polychro-node` | `polychro` (npm) | `npm install polychro` |
 | `polychro-python` | `polychro` (PyPI) | `pip install polychro` |
 
-All SDKs expose the same surface: `lint(file, opts)`, `lintString(content)`, `validateSchema(file)`, and a typed `LintResult` / `Diagnostic` model — they shell out to `polychro` and parse its JSON / agent output.
+All SDKs expose the same surface: language-specific variants of `lint(file, opts)`, `lintString(content)`, `validateSchema(file)` (Go uses PascalCase: `LintString`, `ValidateSchema`; Python uses snake_case: `lint_string`, `validate_schema`), and a typed `LintResult` / `Diagnostic` model — they shell out to `polychro` and parse its JSON / agent output.
 
 ***
 
