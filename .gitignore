@@ -21,6 +21,9 @@ build-output.txt
 /polychro-capability/target
 /polychro-format-common/target
 
+# flatten-maven-plugin output
+.flattened-pom.xml
+
 # SDK directories (non-Maven)
 __pycache__/
 *.pyc
