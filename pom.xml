@@ -36,7 +36,6 @@
         <module>polychro-format-common</module>
         <module>polychro-html</module>
         <module>polychro-checkov</module>
-        <module>polychro-docs</module>
     </modules>
 
     <properties>
