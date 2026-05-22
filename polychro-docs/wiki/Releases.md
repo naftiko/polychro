@@ -28,6 +28,11 @@ First public release.
 - `polychro-format-common` — Shared cross-format utilities: anchor collection, link resolution, broken-local-reference and duplicate-anchor checks, opt-in external link probing
 - `polychro-checkov` — Optional external-process bridge to [Checkov](https://www.checkov.io/) for security and compliance scanning. Framework auto-detection (Terraform, Kubernetes, CloudFormation, Dockerfile, YAML), configurable skip lists, custom-check directories, and graceful degradation when the `checkov` binary is absent.
 
+**Rulesets:**
+- `polychro:governance` — Completeness and discoverability — metadata, consumers, operations, orchestration, exposed adapters
+- `polychro:ai-safety` — Catches patterns that fool schema validation but break at runtime — port conflicts, dangling references, circular dependencies
+- `polychro:security` — Hardened security posture for production specs — authentication enforcement, secret exposure prevention
+
 **Distribution:**
 - `polychro-cli` — Command-line interface with `text`, `json`, `sarif`, and `agent` output formats
 - `polychro-capability` — MCP server mode (`polychro serve`)

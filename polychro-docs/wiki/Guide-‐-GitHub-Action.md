@@ -112,15 +112,16 @@ like:
 
       - name: Comment on PR
         if: github.event_name == 'pull_request' && always()
+        env:
+          SUMMARY: ${{ steps.polychro.outputs.summary }}
         uses: actions/github-script@v7
         with:
           script: |
-            const summary = `${{ steps.polychro.outputs.summary }}`;
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: summary
+              body: process.env.SUMMARY
             });
 ```
 

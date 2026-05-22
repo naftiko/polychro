@@ -31,6 +31,7 @@ Polychro runs validators in an ordered, composable sequence. Some layers are uni
 │              3. Ruleset Validation                          │
 │     Spectral-format rules with JSONPath + functions         │
 │     Targets YAML / JSON / XML structured trees              │
+│     — built-in and custom functions                         │
 └─────────────────────┬───────────────────────────────────────┘
                       │
                       ▼
