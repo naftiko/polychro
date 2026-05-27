@@ -153,8 +153,6 @@
                                         <!--
                                           Exclude signature files and native-image configs from
                                           all third-party deps to avoid conflicts in the fat jar.
-                                          Our own reflect-config.json (io.polychro:polychro-cli)
-                                          is preserved via the explicit include filter below.
                                         -->
                                         <filter>
                                             <artifact>*:*</artifact>
@@ -164,13 +162,6 @@
                                                 <exclude>META-INF/*.RSA</exclude>
                                                 <exclude>META-INF/native-image/**</exclude>
                                             </excludes>
-                                        </filter>
-                                        <!-- Re-include our own native-image configs excluded by the wildcard filter above -->
-                                        <filter>
-                                            <artifact>io.polychro:polychro-cli</artifact>
-                                            <includes>
-                                                <include>META-INF/native-image/**</include>
-                                            </includes>
                                         </filter>
                                     </filters>
                                 </configuration>
@@ -198,6 +189,12 @@
                                     <buildArgs>
                                         <buildArg>-H:+ReportExceptionStackTraces</buildArg>
                                         <buildArg>--enable-url-protocols=https</buildArg>
+                                        <!--
+                                          Our reflect-config.json is excluded from the shaded jar
+                                          by the META-INF/native-image/** filter above (to avoid
+                                          third-party config conflicts). Pass it explicitly here.
+                                        -->
+                                        <buildArg>-H:ReflectionConfigurationFiles=${project.build.outputDirectory}/META-INF/native-image/io.polychro/polychro-cli/reflect-config.json</buildArg>
                                     </buildArgs>
                                 </configuration>
                             </execution>
