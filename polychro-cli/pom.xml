@@ -100,4 +100,99 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- Profile for GraalVM native build -->
+        <profile>
+            <id>native</id>
+            <build>
+                <plugins>
+                    <!-- Create a CLI fat jar for native-image compilation -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-shade-plugin</artifactId>
+                        <version>3.5.1</version>
+                        <executions>
+                            <execution>
+                                <id>cli-native</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>shade</goal>
+                                </goals>
+                                <configuration>
+                                    <outputFile>${project.build.directory}/polychro-cli-shaded.jar</outputFile>
+                                    <transformers>
+                                        <transformer
+                                            implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                            <mainClass>io.polychro.cli.PolychroCli</mainClass>
+                                        </transformer>
+                                        <transformer
+                                            implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                                    </transformers>
+                                    <artifactSet>
+                                        <excludes>
+                                            <!-- GraalVM SDK builder classes must NOT be in the application classpath -->
+                                            <exclude>org.graalvm.sdk:nativeimage</exclude>
+                                            <exclude>org.graalvm.sdk:word</exclude>
+                                            <exclude>org.graalvm.sdk:collections</exclude>
+                                            <exclude>org.graalvm.sdk:nativebridge</exclude>
+                                            <exclude>org.graalvm.sdk:jniutils</exclude>
+                                            <!-- GraalVM Truffle builder JARs contain libgraal/SVM classes reserved for the native builder -->
+                                            <exclude>org.graalvm.truffle:truffle-compiler</exclude>
+                                            <exclude>org.graalvm.truffle:truffle-enterprise</exclude>
+                                            <!--
+                                              Groovy 4.x uses invokedynamic (Indy) SwitchPoints which call
+                                              MethodHandleNatives.setCallSiteTargetNormal — a method deleted
+                                              by GraalVM SVM. Groovy is pulled transitively by ikanos-engine
+                                              but is not needed at native-image build time for the CLI.
+                                            -->
+                                            <exclude>org.apache.groovy:groovy</exclude>
+                                        </excludes>
+                                    </artifactSet>
+                                    <filters>
+                                        <filter>
+                                            <artifact>*:*</artifact>
+                                            <excludes>
+                                                <exclude>META-INF/*.SF</exclude>
+                                                <exclude>META-INF/*.DSA</exclude>
+                                                <exclude>META-INF/*.RSA</exclude>
+                                                <exclude>META-INF/native-image/**</exclude>
+                                            </excludes>
+                                        </filter>
+                                    </filters>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.graalvm.buildtools</groupId>
+                        <artifactId>native-maven-plugin</artifactId>
+                        <version>0.10.3</version>
+                        <executions>
+                            <execution>
+                                <id>build-cli-native</id>
+                                <goals>
+                                    <goal>compile-no-fork</goal>
+                                </goals>
+                                <phase>package</phase>
+                                <configuration>
+                                    <mainClass>io.polychro.cli.PolychroCli</mainClass>
+                                    <imageName>polychro-cli</imageName>
+                                    <classpath>
+                                        <param>${project.build.directory}/polychro-cli-shaded.jar</param>
+                                    </classpath>
+                                    <buildArgs>
+                                        <buildArg>-H:+ReportExceptionStackTraces</buildArg>
+                                        <buildArg>--enable-url-protocols=https</buildArg>
+                                    </buildArgs>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
 </project>
