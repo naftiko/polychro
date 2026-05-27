@@ -21,7 +21,7 @@ import picocli.CommandLine;
 @CommandLine.Command(
         name = "polychro",
         mixinStandardHelpOptions = true,
-        version = "polychro 0.1.0",
+        version = "polychro 1.0.0-alpha3",
         description = "Polyglot spec linting engine",
         subcommands = {LintCommand.class, ServeCommand.class}
 )
