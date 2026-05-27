@@ -80,9 +80,10 @@ class RulesetValidatorFactoryTest {
         RulesetValidatorFactory factory = new RulesetValidatorFactory();
         ValidatorConfig config = new ValidatorConfig(Map.of());
 
-        RulesetParseException ex = assertThrows(RulesetParseException.class,
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> factory.create(config));
-        assertTrue(ex.getMessage().contains("No ruleset configured"));
+        assertTrue(ex.getMessage().contains("rulesetPath")
+                || ex.getMessage().contains("rulesetContent"));
     }
 
     @Test

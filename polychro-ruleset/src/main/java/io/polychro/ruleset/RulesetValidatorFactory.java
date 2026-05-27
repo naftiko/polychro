@@ -89,6 +89,11 @@ public class RulesetValidatorFactory implements ValidatorFactory {
             return composer.compose(ruleset);
         }
 
-        throw new RulesetParseException("No ruleset configured: provide either 'rulesetPath' or 'rulesetContent'");
+        // Use IllegalArgumentException (consistent with JsonSchemaValidatorFactory and
+        // JsonStructureValidatorFactory) so the Linter.Builder can recognise this as
+        // a "missing-config" signal and silently skip the factory when it was
+        // auto-discovered without user-supplied configuration. See issue #20.
+        throw new IllegalArgumentException(
+                "RulesetValidatorFactory requires either 'rulesetPath' or 'rulesetContent' in config");
     }
 }

@@ -55,14 +55,15 @@ class CheckovValidator implements Validator {
     @Override
     public List<Diagnostic> validate(Document doc) {
         if (doc.sourcePath() == null) {
-            return List.of(new Diagnostic(Severity.INFO, "checkov-no-file",
-                    "Checkov requires a file path; skipping in-memory document", null, null));
+            // No physical file to scan — checkov requires a file path. Silently
+            // skip rather than emit an INFO diagnostic; surfacing this on every
+            // in-memory invocation pollutes output. See issue #20.
+            return List.of();
         }
 
         Path filePath = Path.of(doc.sourcePath());
         if (!Files.exists(filePath)) {
-            return List.of(new Diagnostic(Severity.INFO, "checkov-file-not-found",
-                    "File not found: " + doc.sourcePath(), null, null));
+            return List.of();
         }
 
         CheckovFramework framework = resolveFramework(filePath);
@@ -73,8 +74,10 @@ class CheckovValidator implements Validator {
             String msg = result.error();
             if (msg.contains("not available") || msg.contains("No such file")
                     || msg.contains("cannot find") || msg.contains("CreateProcess")) {
-                return List.of(new Diagnostic(Severity.INFO, "checkov-not-installed",
-                        "Checkov is not installed or not on PATH; skipping security scan", null, null));
+                // Checkov is not installed. Don't surface this on every lint
+                // invocation — auto-discovered validators must stay silent when
+                // they cannot run. See issue #20.
+                return List.of();
             }
             return List.of(new Diagnostic(Severity.ERROR, "checkov-execution-error",
                     msg, null, null));

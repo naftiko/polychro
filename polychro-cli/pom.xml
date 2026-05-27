@@ -30,6 +30,61 @@
             <artifactId>polychro-capability</artifactId>
             <version>${project.version}</version>
         </dependency>
+
+        <!--
+          Validator modules. Each registers a ValidatorFactory via
+          META-INF/services/io.polychro.spi.ValidatorFactory and must be on
+          the runtime classpath (and bundled into the shaded/native jar) for
+          ServiceLoader to discover it. Without these, `polychro lint`
+          discovers zero validators and silently reports "No issues found."
+          (see issue #20).
+        -->
+        <dependency>
+            <groupId>io.polychro</groupId>
+            <artifactId>polychro-wellformedness</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.polychro</groupId>
+            <artifactId>polychro-ruleset</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.polychro</groupId>
+            <artifactId>polychro-ruleset-polyglot</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.polychro</groupId>
+            <artifactId>polychro-rulesets</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.polychro</groupId>
+            <artifactId>polychro-json-schema</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.polychro</groupId>
+            <artifactId>polychro-json-structure</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.polychro</groupId>
+            <artifactId>polychro-markdown</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.polychro</groupId>
+            <artifactId>polychro-html</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.polychro</groupId>
+            <artifactId>polychro-checkov</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>info.picocli</groupId>
             <artifactId>picocli</artifactId>

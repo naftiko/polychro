@@ -91,12 +91,18 @@ class JsonStructureValidatorFactoryTest {
     }
 
     @Test
-    void createShouldDefaultToSchemaModeWhenNoSchemaConfig() {
+    void createShouldThrowWhenNoSchemaOrModeConfigured() {
+        // Issue #20: factory now requires explicit configuration so that
+        // Linter.Builder can silently skip it during auto-discovery. Previously
+        // the factory defaulted to SCHEMA mode when no config was provided,
+        // which caused spurious schema-validation diagnostics on every document.
         ValidatorConfig config = new ValidatorConfig(Map.of());
-        Validator validator = new JsonStructureValidatorFactory().create(config);
 
-        assertNotNull(validator);
-        assertInstanceOf(JsonStructureValidator.class, validator);
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> new JsonStructureValidatorFactory().create(config));
+        assertTrue(ex.getMessage().contains("schemaNode")
+                || ex.getMessage().contains("schemaPath")
+                || ex.getMessage().contains("mode"));
     }
 
     @Test

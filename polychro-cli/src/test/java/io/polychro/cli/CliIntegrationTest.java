@@ -99,6 +99,80 @@ class CliIntegrationTest {
         assertTrue(result.stdout().contains("polychro"));
     }
 
+    // ── Regression tests for issue #20 ──────────────────────────────────────
+
+    @Test
+    void lintWithRulesetShouldDetectGovernanceViolations() throws Exception {
+        // Reproduces issue #20: `polychro lint --ruleset governance.yml bad-capability.yml`
+        // must report `capability-version-format` and `capability-description-present`
+        // diagnostics. Before the fix, the CLI silently returned "No issues found."
+        // because validator modules were not on the classpath, and a missing-config
+        // IAE in JsonSchemaValidatorFactory would otherwise have crashed this combo.
+        Path ruleset = governanceRulesetPath();
+        Path file = createFile("bad-capability.yml",
+                "info:\n  name: my-capability\n  version: not-semver\n");
+
+        ExecutionResult result = run("lint", "--ruleset", ruleset.toString(), file.toString());
+
+        assertEquals(1, result.exitCode(), () ->
+                "Expected exit code 1 (warnings only) but got " + result.exitCode()
+                        + ". stdout=" + result.stdout() + " stderr=" + result.stderr());
+        assertTrue(result.stdout().contains("capability-version-format"),
+                () -> "Expected capability-version-format diagnostic in output: " + result.stdout());
+        assertTrue(result.stdout().contains("capability-description-present"),
+                () -> "Expected capability-description-present diagnostic in output: " + result.stdout());
+    }
+
+    @Test
+    void lintWithRulesetAndSchemaShouldNotCrash() throws Exception {
+        // Second half of issue #20: passing both --schema and --ruleset must not
+        // crash because of an unconfigured json-schema factory IAE. Before the
+        // Linter.Builder fix, this flag combination would propagate IAE for
+        // factories the user did not configure.
+        Path ruleset = governanceRulesetPath();
+        Path schema = createFile("schema.json", "{\"type\": \"object\"}");
+        Path file = createFile("bad-capability.yml",
+                "info:\n  name: my-capability\n  version: not-semver\n");
+
+        ExecutionResult result = run("lint",
+                "--schema", schema.toString(),
+                "--ruleset", ruleset.toString(),
+                file.toString());
+
+        // The schema is permissive and the ruleset reports warnings → exit 1.
+        // The important assertion is that the CLI does not crash (exit code != 2
+        // unless there's an actual error) and does produce diagnostics.
+        assertNotEquals(2, result.exitCode(), () ->
+                "CLI should not crash with both --schema and --ruleset. stderr=" + result.stderr());
+        assertTrue(result.stdout().contains("capability-version-format"),
+                () -> "Expected ruleset diagnostics in output: " + result.stdout());
+    }
+
+    @Test
+    void lintWithoutAnyConfigShouldStillRunValidators() throws Exception {
+        // Verifies that running `polychro lint file.yml` with no flags actually
+        // discovers and runs validator factories that do not require configuration
+        // (wellformedness, markdown, html, checkov). Before fix A, ServiceLoader
+        // found zero factories because none were on the shaded-jar classpath.
+        // After the fix, the linter runs the no-config factories and silently
+        // skips the ones requiring explicit config (json-schema, ruleset, ...).
+        Path file = createFile("test.yml", "name: test\n");
+        ExecutionResult result = run("lint", file.toString());
+
+        assertEquals(0, result.exitCode());
+        // A clean YAML file should still produce "No issues found." from the
+        // wellformedness validator (which runs unconditionally).
+        assertTrue(result.stdout().contains("No issues found."));
+    }
+
+    private Path governanceRulesetPath() {
+        // The polychro-rulesets module is now a runtime dependency of the CLI,
+        // but for the test we point at the source file directly so the test
+        // does not depend on classpath-resource extraction.
+        return Path.of("../polychro-rulesets/src/main/resources/rulesets/governance.yml")
+                .toAbsolutePath();
+    }
+
     private ExecutionResult run(String... args) {
         StringWriter stdout = new StringWriter();
         StringWriter stderr = new StringWriter();
