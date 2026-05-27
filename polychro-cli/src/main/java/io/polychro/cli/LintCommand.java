@@ -156,7 +156,12 @@ public class LintCommand implements Runnable {
         java.util.Map<String, java.util.Map<String, Object>> configMap = new java.util.LinkedHashMap<>();
 
         if (ruleset != null) {
-            configMap.put("ruleset", java.util.Map.of("path", ruleset.toString()));
+            // RulesetValidatorFactory expects the key 'rulesetPath' (not 'path').
+            // See io.polychro.ruleset.RulesetValidatorFactory#loadRuleset. Fixed
+            // as part of issue #20: the previous 'path' key was silently ignored,
+            // so even when the validator factory was on the classpath it would
+            // never see a ruleset and would fail with a missing-config error.
+            configMap.put("ruleset", java.util.Map.of("rulesetPath", ruleset.toString()));
         }
         if (schema != null) {
             java.util.Map<String, Object> schemaConfig = java.util.Map.of("schemaPath", schema.toString());
@@ -199,6 +204,17 @@ public class LintCommand implements Runnable {
         }
         boolean hasError = diagnostics.stream()
                 .anyMatch(d -> d.severity() == Severity.ERROR);
-        return hasError ? 2 : 1;
+        if (hasError) {
+            return 2;
+        }
+        boolean hasWarning = diagnostics.stream()
+                .anyMatch(d -> d.severity() == Severity.WARN);
+        if (hasWarning) {
+            return 1;
+        }
+        // Only INFO / HINT diagnostics: nothing actionable, treat as success.
+        // See issue #20 — checkov-not-installed surfaces as INFO and should not
+        // fail the exit code.
+        return 0;
     }
 }

@@ -220,6 +220,82 @@ class LinterBuilderTest {
         assertEquals("known", linter.validators().get(0).name());
     }
 
+    @Test
+    void buildShouldSilentlySkipAutoDiscoveredFactoryThatRequiresMissingConfig() {
+        // Reproduces the second half of issue #20: when validators are auto-discovered
+        // (no explicit `validators:` list), a factory that throws
+        // IllegalArgumentException on empty config (e.g. JsonSchemaValidatorFactory
+        // when neither schemaPath nor schemaNode is provided) must be silently
+        // skipped instead of crashing the linter for flag combinations the user
+        // did not ask for.
+        ValidatorFactory good = new StubValidatorFactory("wellformedness");
+        ValidatorFactory needsConfig = new RequiresConfigFactory("ruleset");
+
+        LinterConfig config = new LinterConfig(List.of(), Map.of(), false, "json-schema");
+        Linter linter = Linter.builder()
+                .config(config)
+                .factories(List.of(good, needsConfig))
+                .build();
+
+        assertEquals(1, linter.validators().size());
+        assertEquals("wellformedness", linter.validators().get(0).name());
+    }
+
+    @Test
+    void buildShouldStillInstantiateAutoDiscoveredFactoryWhenItsConfigIsProvided() {
+        // When the user provided a config block for a factory (e.g. --ruleset foo.yml),
+        // that factory must run — only factories without any user-supplied config are
+        // silently skipped on IAE.
+        ValidatorFactory good = new StubValidatorFactory("wellformedness");
+        ValidatorFactory needsConfig = new RequiresConfigFactory("ruleset");
+
+        LinterConfig config = new LinterConfig(
+                List.of(),
+                Map.of("ruleset", Map.of("rulesetPath", "foo.yml")),
+                false,
+                "json-schema");
+        Linter linter = Linter.builder()
+                .config(config)
+                .factories(List.of(good, needsConfig))
+                .build();
+
+        assertEquals(2, linter.validators().size());
+    }
+
+    @Test
+    void buildShouldPropagateIllegalArgumentExceptionWhenValidatorWasExplicitlyRequested() {
+        // If the user explicitly listed a validator name in `validators:`, a missing-
+        // config IAE thrown by its factory is a real misconfiguration and must
+        // surface to the caller rather than being silently swallowed.
+        ValidatorFactory needsConfig = new RequiresConfigFactory("ruleset");
+
+        LinterConfig config = new LinterConfig(List.of("ruleset"), Map.of(), false, "json-schema");
+        Linter.Builder builder = Linter.builder()
+                .config(config)
+                .factories(List.of(needsConfig));
+
+        assertThrows(IllegalArgumentException.class, builder::build);
+    }
+
+    @Test
+    void buildShouldPropagateIllegalArgumentExceptionWhenConfigBlockIsProvidedButInvalid() {
+        // The user provided a config block (so they explicitly want the validator
+        // to run) but the configuration is invalid. The factory's IAE must surface
+        // because silently skipping would hide real user errors.
+        ValidatorFactory needsConfig = new RequiresConfigFactory("ruleset");
+
+        LinterConfig config = new LinterConfig(
+                List.of(),
+                Map.of("ruleset", Map.of("wrongKey", "x")),
+                false,
+                "json-schema");
+        Linter.Builder builder = Linter.builder()
+                .config(config)
+                .factories(List.of(needsConfig));
+
+        assertThrows(IllegalArgumentException.class, builder::build);
+    }
+
     private static class StubValidator implements Validator {
         private final String name;
 
@@ -272,6 +348,32 @@ class LinterBuilderTest {
         @Override
         public Validator create(ValidatorConfig config) {
             this.lastConfig = config;
+            return new StubValidator(name);
+        }
+    }
+
+    /**
+     * Mimics {@link io.polychro.spi.ValidatorFactory} implementations that require a
+     * specific configuration key and throw {@link IllegalArgumentException} when it
+     * is absent (e.g. {@code JsonSchemaValidatorFactory}, {@code RulesetValidatorFactory}).
+     */
+    private static class RequiresConfigFactory implements ValidatorFactory {
+        private final String name;
+
+        RequiresConfigFactory(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public Validator create(ValidatorConfig config) {
+            if (config.get("rulesetPath", String.class).isEmpty()) {
+                throw new IllegalArgumentException(name + " requires 'rulesetPath'");
+            }
             return new StubValidator(name);
         }
     }

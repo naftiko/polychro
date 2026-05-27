@@ -77,8 +77,9 @@ class CheckovSkipConfigTest {
         var doc = new io.polychro.spi.Document(null, yamlFile.toString());
         var diagnostics = validator.validate(doc);
 
-        // Should gracefully degrade since binary doesn't exist
-        assertEquals(1, diagnostics.size());
-        assertEquals("checkov-not-installed", diagnostics.get(0).code());
+        // Should gracefully degrade silently when binary doesn't exist
+        // (issue #20: auto-discovered validators must not surface INFO noise).
+        assertTrue(diagnostics.isEmpty(),
+                () -> "Expected no diagnostics when binary missing, got: " + diagnostics);
     }
 }

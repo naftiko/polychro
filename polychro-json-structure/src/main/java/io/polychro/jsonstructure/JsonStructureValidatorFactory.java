@@ -49,6 +49,20 @@ public class JsonStructureValidatorFactory implements ValidatorFactory {
 
     @Override
     public Validator create(ValidatorConfig config) {
+        boolean hasSchemaNode = config.get("schemaNode", JsonNode.class).isPresent();
+        boolean hasSchemaPath = config.get("schemaPath", String.class).isPresent();
+        boolean hasExplicitMode = config.get("mode", String.class).isPresent();
+        if (!hasSchemaNode && !hasSchemaPath && !hasExplicitMode) {
+            // Mirror JsonSchemaValidatorFactory and RulesetValidatorFactory so that
+            // Linter.Builder can silently skip this factory when it is auto-discovered
+            // without any user-supplied configuration. Without this check the factory
+            // would default to SCHEMA mode and validate every document (e.g. plain
+            // YAML / JSON) as if it were a JSON-Structure schema, producing spurious
+            // diagnostics. See issue #20.
+            throw new IllegalArgumentException(
+                    "JsonStructureValidatorFactory requires 'schemaNode', 'schemaPath',"
+                            + " or an explicit 'mode' in config");
+        }
         JsonNode schemaNode = resolveSchemaNode(config);
         ValidationOptions options = buildOptions(config);
         JsonStructureValidator.Mode mode = resolveMode(config, schemaNode);

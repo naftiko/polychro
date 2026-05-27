@@ -146,15 +146,32 @@ class LintCommandTest {
 
     @Test
     void lintShouldSupportRulesetFlag() throws Exception {
+        // With validator modules now on the classpath (issue #20), the ruleset
+        // factory is actually instantiated when --ruleset is provided, so the
+        // referenced file must exist and contain a valid ruleset.
+        Path rules = createFile("custom-rules.yml", """
+                rules:
+                  always-pass:
+                    message: "info.name is present"
+                    severity: info
+                    given: "$"
+                    then:
+                      field: "name"
+                      function: defined
+                """);
         Path file = createFile("test.yml", "name: test\n");
-        int exitCode = executeLint("--ruleset", "custom-rules.yml", file.toString());
+        int exitCode = executeLint("--ruleset", rules.toString(), file.toString());
         assertEquals(0, exitCode);
     }
 
     @Test
     void lintShouldSupportSchemaFlag() throws Exception {
+        // With validator modules now on the classpath (issue #20), the json-schema
+        // factory is actually instantiated when --schema is provided, so the
+        // referenced file must exist and contain a valid schema.
+        Path schemaFile = createFile("custom-schema.json", "{\"type\": \"object\"}");
         Path file = createFile("test.yml", "name: test\n");
-        int exitCode = executeLint("--schema", "custom-schema.json", file.toString());
+        int exitCode = executeLint("--schema", schemaFile.toString(), file.toString());
         assertEquals(0, exitCode);
     }
 
@@ -221,6 +238,21 @@ class LintCommandTest {
     void computeExitCodeShouldReturnTwoForErrors() {
         Diagnostic error = new Diagnostic(Severity.ERROR, "c", "msg", null, null);
         assertEquals(2, LintCommand.computeExitCode(List.of(error)));
+    }
+
+    @Test
+    void computeExitCodeShouldReturnZeroForInfoOnly() {
+        // Issue #20: INFO/HINT diagnostics should not drive a non-zero exit code,
+        // otherwise advisory output (e.g. checkov-not-installed) breaks CI when
+        // there is nothing actually wrong with the document.
+        Diagnostic info = new Diagnostic(Severity.INFO, "c", "msg", null, null);
+        assertEquals(0, LintCommand.computeExitCode(List.of(info)));
+    }
+
+    @Test
+    void computeExitCodeShouldReturnZeroForHintOnly() {
+        Diagnostic hint = new Diagnostic(Severity.HINT, "c", "msg", null, null);
+        assertEquals(0, LintCommand.computeExitCode(List.of(hint)));
     }
 
     @Test

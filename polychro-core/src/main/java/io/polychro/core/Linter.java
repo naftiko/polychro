@@ -27,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
+import java.util.Set;
 
 /**
  * The core orchestrator that discovers validators via {@link ServiceLoader},
@@ -161,7 +162,8 @@ public class Linter {
             List<Validator> validators = new ArrayList<>();
 
             List<String> requestedNames = config.validators();
-            if (requestedNames.isEmpty()) {
+            boolean autoDiscovered = requestedNames.isEmpty();
+            if (autoDiscovered) {
                 // Use all discovered factories
                 requestedNames = new ArrayList<>(factories.keySet());
             }
@@ -186,12 +188,62 @@ public class Linter {
                 if (factory != null) {
                     Map<String, Object> props = config.validatorConfigs()
                             .getOrDefault(name, Map.of());
-                    validators.add(factory.create(new ValidatorConfig(props)));
+                    boolean hasExplicitConfig = config.validatorConfigs().containsKey(name);
+                    Validator created = createValidator(factory, props, autoDiscovered, hasExplicitConfig);
+                    if (created != null) {
+                        validators.add(wrapWithFormatGate(created, factory.supportedFormats()));
+                    }
                 }
             }
 
             validators.addAll(additionalValidators);
             return validators;
+        }
+
+        /**
+         * Instantiate a validator from a factory. When the linter is auto-discovering
+         * factories (no explicit {@code validators:} list in config) and the user has
+         * not supplied a config block for this factory, missing-config exceptions
+         * thrown by {@link ValidatorFactory#create(ValidatorConfig)} are swallowed
+         * and the factory is silently skipped. This lets a CLI invocation like
+         * {@code polychro lint --ruleset foo.yml file.yml} succeed even though
+         * other auto-discovered factories (json-schema, json-structure, ...)
+         * have no configuration. When the user explicitly requested a validator
+         * (either by name in {@code validators:} or by providing a config block
+         * for it), the exception is propagated so misconfiguration is loud.
+         */
+        private Validator createValidator(ValidatorFactory factory, Map<String, Object> props,
+                                          boolean autoDiscovered, boolean hasExplicitConfig) {
+            try {
+                return factory.create(new ValidatorConfig(props));
+            } catch (IllegalArgumentException e) {
+                if (autoDiscovered && !hasExplicitConfig) {
+                    // Factory requires configuration the user did not provide.
+                    // Skip silently rather than crash the linter on a flag combination
+                    // the user did not ask for.
+                    return null;
+                }
+                throw e;
+            }
+        }
+
+        /**
+         * Wrap a validator so that it only runs against documents whose
+         * {@link Document#format() format} matches the factory's
+         * {@link ValidatorFactory#supportedFormats() supportedFormats}.
+         * <p>
+         * A factory that declares an empty set is treated as unconstrained:
+         * the validator will run on every document. This preserves the
+         * existing behaviour for validators that genuinely apply to all
+         * formats (e.g. {@code wellformedness}) while preventing
+         * format-specific validators (e.g. {@code markdown}) from emitting
+         * spurious diagnostics on unrelated documents — see issue #20.
+         */
+        private static Validator wrapWithFormatGate(Validator delegate, Set<String> supportedFormats) {
+            if (supportedFormats == null || supportedFormats.isEmpty()) {
+                return delegate;
+            }
+            return new FormatGatedValidator(delegate, Set.copyOf(supportedFormats));
         }
 
         private boolean hasSchemaModelConfig() {

@@ -136,8 +136,10 @@ class CheckovRunnerIntegrationTest {
         var doc = new io.polychro.spi.Document(null, yamlFile.toString());
         List<Diagnostic> diagnostics = validator.validate(doc);
 
-        assertEquals(1, diagnostics.size());
-        assertEquals("checkov-not-installed", diagnostics.get(0).code());
+        // Issue #20: "not installed" detection now silently skips checkov instead
+        // of emitting an INFO diagnostic, so auto-discovery output stays clean.
+        assertTrue(diagnostics.isEmpty(),
+                () -> "Expected no diagnostics for 'cannot find' error, got: " + diagnostics);
     }
 
     @Test
@@ -156,8 +158,8 @@ class CheckovRunnerIntegrationTest {
         var doc = new io.polychro.spi.Document(null, yamlFile.toString());
         List<Diagnostic> diagnostics = validator.validate(doc);
 
-        assertEquals(1, diagnostics.size());
-        assertEquals("checkov-not-installed", diagnostics.get(0).code());
+        assertTrue(diagnostics.isEmpty(),
+                () -> "Expected no diagnostics for 'No such file' error, got: " + diagnostics);
     }
 
     @Test
@@ -176,8 +178,8 @@ class CheckovRunnerIntegrationTest {
         var doc = new io.polychro.spi.Document(null, yamlFile.toString());
         List<Diagnostic> diagnostics = validator.validate(doc);
 
-        assertEquals(1, diagnostics.size());
-        assertEquals("checkov-not-installed", diagnostics.get(0).code());
+        assertTrue(diagnostics.isEmpty(),
+                () -> "Expected no diagnostics for 'CreateProcess' error, got: " + diagnostics);
     }
 
     @Test

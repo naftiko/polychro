@@ -38,33 +38,33 @@ class CheckovValidatorTest {
     }
 
     @Test
-    void validateShouldReturnInfoWhenSourcePathIsNull() {
+    void validateShouldReturnEmptyWhenSourcePathIsNull() {
+        // Issue #20: auto-discovered checkov must stay silent when it cannot
+        // run, otherwise advisory INFO diagnostics pollute every lint output.
         CheckovRunner runner = new CheckovRunner("checkov", 60, List.of(), null);
         CheckovValidator validator = new CheckovValidator(runner, null);
 
         var doc = new io.polychro.spi.Document(null, null);
         List<Diagnostic> diagnostics = validator.validate(doc);
 
-        assertEquals(1, diagnostics.size());
-        assertEquals(Severity.INFO, diagnostics.get(0).severity());
-        assertEquals("checkov-no-file", diagnostics.get(0).code());
+        assertTrue(diagnostics.isEmpty(),
+                () -> "Expected no diagnostics when document has no source path, got: " + diagnostics);
     }
 
     @Test
-    void validateShouldReturnInfoWhenFileNotFound() {
+    void validateShouldReturnEmptyWhenFileNotFound() {
         CheckovRunner runner = new CheckovRunner("checkov", 60, List.of(), null);
         CheckovValidator validator = new CheckovValidator(runner, null);
 
         var doc = new io.polychro.spi.Document(null, "/non/existent/file.yaml");
         List<Diagnostic> diagnostics = validator.validate(doc);
 
-        assertEquals(1, diagnostics.size());
-        assertEquals(Severity.INFO, diagnostics.get(0).severity());
-        assertEquals("checkov-file-not-found", diagnostics.get(0).code());
+        assertTrue(diagnostics.isEmpty(),
+                () -> "Expected no diagnostics when source file is missing, got: " + diagnostics);
     }
 
     @Test
-    void validateShouldReturnInfoWhenCheckovNotInstalled() throws IOException {
+    void validateShouldReturnEmptyWhenCheckovNotInstalled() throws IOException {
         Path yamlFile = tempDir.resolve("test.yaml");
         Files.writeString(yamlFile, "name: test\n");
 
@@ -74,9 +74,8 @@ class CheckovValidatorTest {
         var doc = new io.polychro.spi.Document(null, yamlFile.toString());
         List<Diagnostic> diagnostics = validator.validate(doc);
 
-        assertEquals(1, diagnostics.size());
-        assertEquals(Severity.INFO, diagnostics.get(0).severity());
-        assertEquals("checkov-not-installed", diagnostics.get(0).code());
+        assertTrue(diagnostics.isEmpty(),
+                () -> "Expected no diagnostics when checkov binary missing, got: " + diagnostics);
     }
 
     @Test
