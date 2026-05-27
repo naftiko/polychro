@@ -1,0 +1,18 @@
+{
+  "resources": {
+    "includes": [
+      {
+        "pattern": "META-INF/services/io.polychro.spi.ValidatorFactory"
+      },
+      {
+        "pattern": "META-INF/services/io.polychro.ruleset.FunctionProvider"
+      },
+      {
+        "pattern": "rulesets/.*\\.yml"
+      },
+      {
+        "pattern": "version\\.properties"
+      }
+    ]
+  }
+}
