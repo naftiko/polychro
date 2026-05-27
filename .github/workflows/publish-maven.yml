@@ -1,0 +1,12 @@
+name: Publish Maven to Sonatype and GitHub Packages
+
+on:
+  workflow_dispatch:
+
+jobs:
+  say-hello:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Print Hello World
+        run: echo "Hello world"
