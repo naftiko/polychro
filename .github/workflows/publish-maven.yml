@@ -1,12 +1,108 @@
 name: Publish Maven to Sonatype and GitHub Packages
 
 on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 jobs:
-  say-hello:
+  github-snapshot:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: read
+      packages: write
     steps:
-      - name: Print Hello World
-        run: echo "Hello world"
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Configure Maven
+        run: bash ./scripts/builder.sh config_maven_github
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get version
+        run: echo "VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)" >> $GITHUB_ENV
+
+      - name: Publish snapshot
+        if: contains(env.VERSION, 'SNAPSHOT')
+        run: mvn --batch-mode -Dgpg.skip=true deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  maven-central:
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Configure Maven Central
+        run: bash ./scripts/builder.sh config_maven_central
+        env:
+          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure GPG
+        run: bash ./scripts/builder.sh config_gpg
+        env:
+          GPG_SIGNING_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Publish to Maven Central
+        run: bash ./scripts/builder.sh central
+        env:
+          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      #- name: Test deploy (local repo)
+      #  run: bash ./scripts/builder.sh deploy_local_repo
+
+      #- name: List repo content
+      #  run: find local-repo -type f
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -rf ~/.gnupg
+          rm -f ~/.m2/settings.xml
+
+  github-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Configure Maven
+        run: bash ./scripts/builder.sh config_maven_github
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to GitHub Packages (release)
+        run: mvn --batch-mode -Dgpg.skip=true deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
