@@ -150,6 +150,12 @@
                                         </excludes>
                                     </artifactSet>
                                     <filters>
+                                        <!--
+                                          Exclude signature files and native-image configs from
+                                          all third-party deps to avoid conflicts in the fat jar.
+                                          Our own reflect-config.json (io.polychro:polychro-cli)
+                                          is preserved via the explicit include filter below.
+                                        -->
                                         <filter>
                                             <artifact>*:*</artifact>
                                             <excludes>
@@ -158,6 +164,13 @@
                                                 <exclude>META-INF/*.RSA</exclude>
                                                 <exclude>META-INF/native-image/**</exclude>
                                             </excludes>
+                                        </filter>
+                                        <!-- Re-include our own native-image configs excluded by the wildcard filter above -->
+                                        <filter>
+                                            <artifact>io.polychro:polychro-cli</artifact>
+                                            <includes>
+                                                <include>META-INF/native-image/**</include>
+                                            </includes>
                                         </filter>
                                     </filters>
                                 </configuration>
@@ -185,13 +198,6 @@
                                     <buildArgs>
                                         <buildArg>-H:+ReportExceptionStackTraces</buildArg>
                                         <buildArg>--enable-url-protocols=https</buildArg>
-                                        <!--
-                                          picocli uses reflection to read @Command/@Option/@Parameters
-                                          annotations at runtime. Initializing picocli at build time
-                                          lets GraalVM capture those annotations statically, avoiding
-                                          the AutoHelpMixin InitializationException in the native binary.
-                                        -->
-                                        <buildArg>--initialize-at-build-time=picocli</buildArg>
                                     </buildArgs>
                                 </configuration>
                             </execution>
