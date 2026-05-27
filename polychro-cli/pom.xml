@@ -195,6 +195,7 @@
                                           third-party config conflicts). Pass it explicitly here.
                                         -->
                                         <buildArg>-H:ReflectionConfigurationFiles=${project.build.outputDirectory}/META-INF/native-image/io.polychro/polychro-cli/reflect-config.json</buildArg>
+                                        <buildArg>-H:ResourceConfigurationFiles=${project.build.outputDirectory}/META-INF/native-image/io.polychro/polychro-cli/resource-config.json</buildArg>
                                     </buildArgs>
                                 </configuration>
                             </execution>
