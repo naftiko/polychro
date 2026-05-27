@@ -185,6 +185,13 @@
                                     <buildArgs>
                                         <buildArg>-H:+ReportExceptionStackTraces</buildArg>
                                         <buildArg>--enable-url-protocols=https</buildArg>
+                                        <!--
+                                          picocli uses reflection to read @Command/@Option/@Parameters
+                                          annotations at runtime. Initializing picocli at build time
+                                          lets GraalVM capture those annotations statically, avoiding
+                                          the AutoHelpMixin InitializationException in the native binary.
+                                        -->
+                                        <buildArg>--initialize-at-build-time=picocli</buildArg>
                                     </buildArgs>
                                 </configuration>
                             </execution>
