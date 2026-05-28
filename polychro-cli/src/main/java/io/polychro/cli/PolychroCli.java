@@ -15,13 +15,18 @@ package io.polychro.cli;
 
 import picocli.CommandLine;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.util.Properties;
+
 /**
  * Main entry point for the Polychro CLI.
  */
 @CommandLine.Command(
         name = "polychro",
         mixinStandardHelpOptions = true,
-        version = "polychro 1.0.0-alpha3",
+        versionProvider = PolychroCli.VersionProvider.class,
         description = "Polyglot spec linting engine",
         subcommands = {LintCommand.class, ServeCommand.class}
 )
@@ -53,5 +58,28 @@ public class PolychroCli implements Runnable {
             return 2;
         });
         return cmd;
+    }
+
+    /**
+     * Reads the version from {@code version.properties}, which is generated at
+     * build time by Maven resource filtering from {@code ${project.version}}.
+     * This ensures the binary always reports the version it was actually built from,
+     * rather than a hardcoded string that can drift from the POM.
+     */
+    static class VersionProvider implements CommandLine.IVersionProvider {
+        @Override
+        public String[] getVersion() {
+            Properties props = new Properties();
+            try (InputStream in =
+                    VersionProvider.class.getClassLoader().getResourceAsStream("version.properties")) {
+                if (in == null) {
+                    return new String[]{"polychro (version unknown)"};
+                }
+                props.load(in);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+            return new String[]{"polychro " + props.getProperty("version", "unknown")};
+        }
     }
 }

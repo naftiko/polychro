@@ -99,6 +99,27 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <!--
+                  Enable Maven property filtering for version.properties so that
+                  ${project.version} is substituted at build time. All other
+                  resources (native-image configs, rulesets) are copied as-is.
+                -->
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>version.properties</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>version.properties</exclude>
+                </excludes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -147,6 +168,7 @@
                             </rules>
                             <excludes>
                                 <exclude>io/polychro/cli/PolychroCli.class</exclude>
+                                <exclude>io/polychro/cli/PolychroCli$VersionProvider.class</exclude>
                                 <exclude>io/polychro/cli/ServeCommand.class</exclude>
                             </excludes>
                         </configuration>
@@ -208,6 +230,21 @@
                                         <!--
                                           Exclude signature files and native-image configs from
                                           all third-party deps to avoid conflicts in the fat jar.
+
+                                          IMPORTANT — coupling between this filter and the native-image plugin:
+                                          The <exclude>META-INF/native-image/**</exclude> line below strips
+                                          ALL native-image config files from the shaded jar, including
+                                          polychro-cli's own reflect-config.json and resource-config.json.
+                                          Those files are therefore passed to GraalVM explicitly via
+                                          -H:ReflectionConfigurationFiles and -H:ResourceConfigurationFiles
+                                          build args below, pointing to ${project.build.outputDirectory}.
+
+                                          If ${project.build.outputDirectory} is ever overridden (e.g. by a
+                                          parent POM profile), the config files will silently vanish from the
+                                          native image with no compile error. To make this coupling explicit,
+                                          the build args below must always reference the same effective
+                                          output directory that Maven compiles classes into.
+                                          See: https://github.com/naftiko/polychro/issues/TODO-shade-filter-refactor
                                         -->
                                         <filter>
                                             <artifact>*:*</artifact>

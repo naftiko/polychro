@@ -16,6 +16,7 @@ package io.polychro.cli;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Files;
@@ -165,12 +166,17 @@ class CliIntegrationTest {
         assertTrue(result.stdout().contains("No issues found."));
     }
 
-    private Path governanceRulesetPath() {
-        // The polychro-rulesets module is now a runtime dependency of the CLI,
-        // but for the test we point at the source file directly so the test
-        // does not depend on classpath-resource extraction.
-        return Path.of("../polychro-rulesets/src/main/resources/rulesets/governance.yml")
-                .toAbsolutePath();
+    private Path governanceRulesetPath() throws Exception {
+        // polychro-rulesets is a runtime dependency of the CLI — its resources are on
+        // the test classpath. We copy via InputStream instead of Path.of(uri) because
+        // Path.of() fails with FileSystemNotFoundException when the resource lives
+        // inside a jar (e.g. Maven fat-jar on CI); InputStream works in both cases.
+        Path dest = tempDir.resolve("governance.yml");
+        try (InputStream in = getClass().getClassLoader()
+                .getResourceAsStream("rulesets/governance.yml")) {
+            Files.copy(in, dest);
+        }
+        return dest;
     }
 
     private ExecutionResult run(String... args) {
