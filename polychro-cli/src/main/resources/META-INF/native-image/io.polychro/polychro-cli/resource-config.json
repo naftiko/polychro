@@ -12,6 +12,9 @@
       },
       {
         "pattern": "version\\.properties"
+      },
+      {
+        "pattern": "jsv-messages.*\\.properties"
       }
     ]
   }
