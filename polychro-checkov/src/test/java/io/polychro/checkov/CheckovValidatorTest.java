@@ -14,7 +14,6 @@
 package io.polychro.checkov;
 
 import io.polychro.spi.Diagnostic;
-import io.polychro.spi.Severity;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
