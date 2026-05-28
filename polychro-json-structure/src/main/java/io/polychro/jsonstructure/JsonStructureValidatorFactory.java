@@ -93,10 +93,11 @@ public class JsonStructureValidatorFactory implements ValidatorFactory {
                 default -> JsonStructureValidator.Mode.INSTANCE;
             };
         }
-        // Auto-detect: if no schema provided, validate as schema document
-        if (schemaNode == null) {
-            return JsonStructureValidator.Mode.SCHEMA;
-        }
+        // The factory's create() precondition guarantees that when mode is
+        // absent, a schemaNode or schemaPath must have been supplied (and
+        // resolveSchemaNode returns a non-null node when schemaPath is set),
+        // so schemaNode is non-null here. Auto-detect as instance validation
+        // against the provided schema. See issue #20.
         return JsonStructureValidator.Mode.INSTANCE;
     }
 

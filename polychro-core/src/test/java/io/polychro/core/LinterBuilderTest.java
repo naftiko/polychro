@@ -27,6 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -296,6 +297,66 @@ class LinterBuilderTest {
         assertThrows(IllegalArgumentException.class, builder::build);
     }
 
+    @Test
+    void buildShouldWrapAutoDiscoveredValidatorInFormatGateWhenFactoryDeclaresFormats() {
+        // Issue #20: when an auto-discovered factory declares supportedFormats(),
+        // the resulting validator must be wrapped in a FormatGatedValidator so it
+        // only runs against documents whose format is in the supported set. This
+        // prevents e.g. the markdown validator from emitting `no-content` errors
+        // on YAML documents during auto-discovery.
+        ValidatorFactory markdownFactory = new FormatScopedValidatorFactory("markdown", Set.of("markdown"));
+
+        LinterConfig config = new LinterConfig(List.of(), Map.of(), false, "json-schema");
+        Linter linter = Linter.builder()
+                .config(config)
+                .factories(List.of(markdownFactory))
+                .build();
+
+        assertEquals(1, linter.validators().size());
+        Validator v = linter.validators().get(0);
+        assertInstanceOf(FormatGatedValidator.class, v,
+                "auto-discovered validator with non-empty supportedFormats must be wrapped");
+        FormatGatedValidator gated = (FormatGatedValidator) v;
+        assertEquals(Set.of("markdown"), gated.supportedFormats());
+    }
+
+    @Test
+    void buildShouldNotWrapValidatorWhenFactoryDeclaresEmptySupportedFormats() {
+        // Factories that declare an empty supportedFormats() set are treated as
+        // unconstrained — wrapping them would be a no-op and adds an extra
+        // delegation hop. Verify the builder leaves them bare.
+        ValidatorFactory unconstrained = new StubValidatorFactory("wellformedness");
+
+        LinterConfig config = new LinterConfig(List.of(), Map.of(), false, "json-schema");
+        Linter linter = Linter.builder()
+                .config(config)
+                .factories(List.of(unconstrained))
+                .build();
+
+        assertEquals(1, linter.validators().size());
+        assertFalse(linter.validators().get(0) instanceof FormatGatedValidator,
+                "validator with empty supportedFormats must not be wrapped");
+    }
+
+    @Test
+    void buildShouldNotWrapValidatorWhenFactoryReturnsNullSupportedFormats() {
+        // Defensive: although the SPI default returns Set.of(), a third-party
+        // ValidatorFactory could return null from supportedFormats(). The builder
+        // must treat that the same as an empty set and skip the format gate
+        // instead of NPE-ing during auto-discovery.
+        ValidatorFactory nullFormats = new FormatScopedValidatorFactory("legacy", null);
+
+        LinterConfig config = new LinterConfig(List.of(), Map.of(), false, "json-schema");
+        Linter linter = Linter.builder()
+                .config(config)
+                .factories(List.of(nullFormats))
+                .build();
+
+        assertEquals(1, linter.validators().size());
+        assertFalse(linter.validators().get(0) instanceof FormatGatedValidator,
+                "validator with null supportedFormats must not be wrapped");
+    }
+
     private static class StubValidator implements Validator {
         private final String name;
 
@@ -374,6 +435,35 @@ class LinterBuilderTest {
             if (config.get("rulesetPath", String.class).isEmpty()) {
                 throw new IllegalArgumentException(name + " requires 'rulesetPath'");
             }
+            return new StubValidator(name);
+        }
+    }
+
+    /**
+     * Factory that declares a non-empty supported-format set, exercising the
+     * {@link Linter.Builder} format-gate wrapping path added for issue #20.
+     */
+    private static class FormatScopedValidatorFactory implements ValidatorFactory {
+        private final String name;
+        private final java.util.Set<String> formats;
+
+        FormatScopedValidatorFactory(String name, java.util.Set<String> formats) {
+            this.name = name;
+            this.formats = formats;
+        }
+
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public java.util.Set<String> supportedFormats() {
+            return formats;
+        }
+
+        @Override
+        public Validator create(ValidatorConfig config) {
             return new StubValidator(name);
         }
     }
