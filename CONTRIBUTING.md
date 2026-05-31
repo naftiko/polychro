@@ -91,8 +91,9 @@ This section provides **machine-readable guidance** for AI coding agents contrib
 ### Repository context
 
 - **Language**: Java 21 (Maven multi-module build)
-- **Description**: Polyglot Spec Linting Engine — validates specification documents against schemas and rulesets
-- **Modules**: `polychro-api`, `polychro-wellformedness`, `polychro-json-schema`, `polychro-json-structure`, `polychro-ruleset`
+- **Description**: Polyglot spec linting engine — validates YAML, JSON, XML, Markdown, and HTML specs against schemas and rulesets through a composable pipeline (well-formedness → schema-model → ruleset → format-aware)
+- **Modules**: `polychro-api`, `polychro-core`, `polychro-wellformedness`, `polychro-json-schema`, `polychro-json-structure`, `polychro-ruleset`, `polychro-markdown`, `polychro-html`, `polychro-cli`, plus Go / Node.js / Python SDKs
+- **Documentation**: the [Naftiko Shipyard](https://shipyard.naftiko.io/docs/1.0.0-alpha3/polychro/) hosts the full Polychro documentation (Features, Architecture, CLI, Guides, Tutorial, FAQ)
 
 ### Agent contribution rules
 
@@ -107,11 +108,16 @@ This section provides **machine-readable guidance** for AI coding agents contrib
 
 | File / Path | Purpose |
 |---|---|
-| `polychro-api/` | Core API module — public interfaces and contracts |
+| `polychro-api/` | SPI contracts — `Validator`, `Diagnostic`, `Document` |
+| `polychro-core/` | Pipeline orchestrator (`Linter`, formatters) |
 | `polychro-wellformedness/` | Well-formedness validation |
 | `polychro-json-schema/` | JSON Schema validation engine |
-| `polychro-json-structure/` | JSON structure validation |
-| `polychro-ruleset/` | Ruleset definitions and evaluation |
+| `polychro-json-structure/` | JSON / YAML structure validation |
+| `polychro-ruleset/` | Spectral-format ruleset model and evaluation |
+| `polychro-rulesets/` | Built-in rulesets (`governance`, `ai-safety`, `security`) |
+| `polychro-markdown/` | Markdown structural validation |
+| `polychro-html/` | HTML structure / accessibility / security validation |
+| `polychro-cli/` | Picocli CLI (`lint`, `serve`) |
 | `pom.xml` | Parent POM with module declarations |
 
 ---
