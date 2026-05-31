@@ -3,11 +3,12 @@
 ## Project Context
 
 **Polychro** is a polyglot spec linting engine. Rules are declared in YAML rulesets; validators are
-pluggable via a Java SPI. The engine can lint YAML, JSON, Markdown, and OpenAPI documents and
-exposes its results as SARIF, JSON, text, or LLM-native (agent) output.
+pluggable via a Java SPI. The engine lints YAML, JSON, XML, Markdown, and HTML documents through a
+composable pipeline (well-formedness → schema-model → ruleset → format-aware) and exposes its
+results as SARIF, JSON, text, or LLM-native (agent) output.
 
 - **Language**: Java 21, Maven build system (multi-module)
-- **Wiki**: https://github.com/naftiko/polychro/wiki
+- **Shipyard**: https://shipyard.naftiko.io/docs/1.0.0-alpha3/polychro/ (Features, Architecture, CLI, Guides, Tutorial, FAQ)
 
 ### Module map
 
@@ -19,6 +20,8 @@ exposes its results as SARIF, JSON, text, or LLM-native (agent) output.
 | `polychro-json-schema` | JSON Schema validator |
 | `polychro-json-structure` | JSON/YAML structure validator |
 | `polychro-markdown` | Markdown validator |
+| `polychro-html` | HTML structure / accessibility / security validator (`document`, `fragment`, `email`, `embedded-ui` profiles) |
+| `polychro-format-common` | Cross-format utilities shared by `polychro-markdown` and `polychro-html` (anchors, link resolution) |
 | `polychro-checkov` | Checkov bridge validator |
 | `polychro-ruleset` | Ruleset model and loader |
 | `polychro-ruleset-polyglot` | Polyglot ruleset support |
@@ -29,7 +32,6 @@ exposes its results as SARIF, JSON, text, or LLM-native (agent) output.
 | `polychro-go` | Go SDK (thin binary wrapper) |
 | `polychro-node` | Node.js / TypeScript SDK (thin binary wrapper) |
 | `polychro-python` | Python SDK (thin binary wrapper) |
-| `polychro-docs` | Wiki sources |
 
 ---
 
