@@ -52,7 +52,7 @@ The "lint your specs" space mostly solves a 2019 problem: *how do we govern Open
 
 Polychro replaces the *rule-engine layer* and absorbs the *spec-validation slice* of the meta-linters — collapsing what is today three or four tools, two or three config files, and a Docker dependency into one binary, one config, one diagnostic format, sub-second. Because it speaks the **Spectral ruleset format** natively, existing rule investment carries over unchanged.
 
-> For a dimension-by-dimension comparison, and guidance on when another tool is a better fit, see the [FAQ](https://shipyard.naftiko.io/docs/1.0.0-alpha3/polychro/faq/) on the Shipyard.
+> For a dimension-by-dimension comparison, and guidance on when another tool is a better fit, see the [Comparison guide](https://shipyard.naftiko.io/docs/1.0.0-alpha3/polychro/comparison/) on the Shipyard.
 
 ## Quick start
 
