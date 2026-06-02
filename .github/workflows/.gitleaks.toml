@@ -1,0 +1,10 @@
+title = "Custom Gitleaks config"
+
+[allowlist]
+description = "Ignore heavy/generated directories"
+paths = [
+  "^sonar-report/",
+  "^target/",
+  "^node_modules/",
+  "^.git/"
+]
