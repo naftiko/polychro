@@ -6,6 +6,7 @@
 [![Bugs](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/farah-t-trigui/7c4f0187bd2f5df1122abe46daa78a97/raw/polychro-bugs.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
 [![Trivy](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/farah-t-trigui/7c4f0187bd2f5df1122abe46daa78a97/raw/polychro-trivy.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
 [![Gitleaks](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/farah-t-trigui/7c4f0187bd2f5df1122abe46daa78a97/raw/polychro-gitleaks.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
+
 Welcome to **Polychro**, the polyglot, deterministic linting engine for the AI era — validating any semi-structured specification, in-process, at the speed an agent can generate it.
 
 > Polychro comes from the Greek *πολύχρωμος* — **many-colored**, for the many formats and many languages it lints.
