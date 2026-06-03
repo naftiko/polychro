@@ -5,6 +5,7 @@ on:
 
 permissions:
   contents: write
+  packages: read
 
 jobs:
     
@@ -486,11 +487,15 @@ jobs:
           publish_badge "polychro-trivy.json"        "trivy"         "$TRIVY_MSG"    "$TRIVY_COLOR"
           publish_badge "polychro-gitleaks.json"     "gitleaks"      "$LEAKS_MSG"    "$LEAKS_COLOR"
 
+  smoke-tests:
+    uses: ./.github/workflows/publish-cli-bin.yml
+
 
   nightly-report:
     name: Nightly Report
     needs:
         - test-and-analyze
+        - smoke-tests
 
     if: always()
 
@@ -506,3 +511,4 @@ jobs:
             echo "|------|------|" >> $GITHUB_STEP_SUMMARY
 
             echo "| Quality Gate | ${{ needs.test-and-analyze.result }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Smoke Tests | ${{ needs.smoke-tests.result }} |" >> $GITHUB_STEP_SUMMARY

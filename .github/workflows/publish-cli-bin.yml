@@ -5,6 +5,7 @@ on:
     tags:
       - 'v*'  # Only trigger by new tags starting by "v" (v1.0.0, v2.1.3...). Because the build takes time.
   workflow_dispatch:
+  workflow_call:  
 
 jobs:
   build-native:
@@ -98,3 +99,69 @@ jobs:
           files: polychro-cli/target/${{ matrix.artifact_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  test-binary:
+    name: Smoke test on ${{ matrix.os }}
+    needs: build-native
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: polychro-cli-linux-amd64
+          - os: ubuntu-24.04-arm
+            artifact_name: polychro-cli-linux-arm64
+          - os: macos-latest
+            artifact_name: polychro-cli-macos-arm64
+          - os: windows-latest
+            artifact_name: polychro-cli-windows-amd64.exe
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ./bin
+
+      - name: Make executable
+        if: runner.os != 'Windows'
+        run: chmod +x ./bin/${{ matrix.artifact_name }}
+
+      - name: Smoke test version
+        shell: bash
+        run: |
+          BIN="./bin/${{ matrix.artifact_name }}"
+
+          OUT=$("$BIN" --version 2>&1 || true)
+          echo "$OUT"
+
+          echo "$OUT" | grep -E "polychro|[0-9]+\.[0-9]+"
+
+          if echo "$OUT" | grep -E "MissingResourceException|ExceptionInInitializerError"; then
+            echo "FAIL"
+            exit 1
+          fi
+
+      - name: Smoke test CLI help
+        shell: bash
+        run: |
+          BIN="./bin/${{ matrix.artifact_name }}"
+          "$BIN" --help
+          "$BIN" lint --help
+          
+      - name: Smoke test — JSON Schema lint (regression guard)
+        shell: bash
+        run: |
+          BIN="./bin/${{ matrix.artifact_name }}"
+
+          echo '{"type":"object","required":["missing"]}' > schema.json
+          echo 'foo: bar' > sample.yaml
+
+          STDERR=$("$BIN" lint sample.yaml -s schema.json 2>&1 || true)
+
+          echo "$STDERR"
+
+          if echo "$STDERR" | grep -E "MissingResourceException|ExceptionInInitializerError"; then
+            echo "FAIL: native runtime regression"
+            exit 1
+          fi
