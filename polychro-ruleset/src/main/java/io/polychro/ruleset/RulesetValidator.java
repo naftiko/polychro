@@ -13,7 +13,6 @@
  */
 package io.polychro.ruleset;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Document;
 import io.polychro.spi.Formats;
@@ -53,7 +52,6 @@ class RulesetValidator implements Validator {
 
     @Override
     public List<Diagnostic> validate(Document doc) {
-        JsonNode root = doc.root();
         List<Diagnostic> diagnostics = new ArrayList<>();
 
         // Collect effective aliases (base + override-scoped)
@@ -90,7 +88,7 @@ class RulesetValidator implements Validator {
                         rule.documentationUrl(), resolvedGiven, rule.then());
             }
 
-            diagnostics.addAll(executor.execute(resolvedRule, root));
+            diagnostics.addAll(executor.execute(resolvedRule, doc));
         }
 
         diagnostics.sort(null);

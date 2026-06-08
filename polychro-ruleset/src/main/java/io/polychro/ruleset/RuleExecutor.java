@@ -16,6 +16,9 @@ package io.polychro.ruleset;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.MissingNode;
 import io.polychro.spi.Diagnostic;
+import io.polychro.spi.Document;
+import io.polychro.spi.SourceMap;
+import io.polychro.spi.SourceRange;
 import io.polychro.spi.Severity;
 
 import java.util.ArrayList;
@@ -38,34 +41,88 @@ class RuleExecutor {
     }
 
     /**
-     * Execute a rule against a document root, producing diagnostics for each violation.
+     * Execute a rule against a bare document root, with no source map. Diagnostics produced this
+     * way carry a {@code null} range (the same graceful fallback as an unresolvable path). Provided
+     * for unit tests and callers that hold only a parsed {@link JsonNode} without the originating
+     * {@link Document}; production validation goes through {@link #execute(Rule, Document)}.
      *
      * @param rule the rule to execute
      * @param root the document root node
      * @return diagnostics for any violations found
      */
     List<Diagnostic> execute(Rule rule, JsonNode root) {
+        return execute(rule, new Document(root, null, null, SourceMap.NONE, null));
+    }
+
+    /**
+     * Execute a rule against a document, producing diagnostics for each violation.
+     *
+     * <p>For every match the concrete path (e.g. {@code $.consumes[0].baseUri}) is resolved against
+     * the document's {@link SourceMap} so the resulting {@link Diagnostic} carries a
+     * {@link SourceRange} (issue #32). If the source map cannot locate a path, the range falls back
+     * to {@code null} — no regression for unresolvable paths.
+     *
+     * @param rule the rule to execute
+     * @param doc  the document under validation
+     * @return diagnostics for any violations found
+     */
+    List<Diagnostic> execute(Rule rule, Document doc) {
         List<Diagnostic> diagnostics = new ArrayList<>();
         Severity severity = mapSeverity(rule.severity());
+        JsonNode root = doc.root();
+        SourceMap sourceMap = doc.sourceMap();
 
         for (String given : rule.given()) {
             List<JsonNode> matches = evaluator.evaluate(root, given);
-            for (JsonNode match : matches) {
+            List<String> matchPaths = evaluator.evaluatePaths(root, given);
+            for (int i = 0; i < matches.size(); i++) {
+                JsonNode match = matches.get(i);
+                String matchPath = pathAt(matchPaths, i, given);
                 for (RuleAction action : rule.then()) {
                     JsonNode target = resolveField(match, action.field());
                     Optional<RuleFunction> function = BuiltinFunctions.get(action.functionName());
                     if (function.isEmpty()) {
                         continue;
                     }
+                    String effectivePath = effectivePath(matchPath, action.field());
                     List<String> errors = function.get().evaluate(target, action.functionOptions());
                     for (String error : errors) {
                         String message = rule.message() != null ? rule.message() : error;
-                        diagnostics.add(new Diagnostic(severity, rule.name(), message, given, null));
+                        SourceRange range = sourceMap.resolve(effectivePath);
+                        diagnostics.add(new Diagnostic(severity, rule.name(), message,
+                                effectivePath, range));
                     }
                 }
             }
         }
         return diagnostics;
+    }
+
+    /**
+     * Compose the path of the actual evaluated node: the matched path, plus the resolved
+     * {@code field} segment when the action narrows into a child field.
+     *
+     * <p>{@code field} must be a <em>simple identifier</em> — a plain object key — never a JSONPath
+     * expression or an array-index notation. It is appended verbatim after a {@code '.'}, so a
+     * bracket expression such as {@code [0]} would yield an invalid path like {@code $.info.[0]}.
+     * The only caller passes a child field name resolved from the rule action, which satisfies this
+     * contract.
+     */
+    static String effectivePath(String matchPath, String field) {
+        if (field == null || field.isEmpty()) {
+            return matchPath;
+        }
+        return matchPath + "." + field;
+    }
+
+    /**
+     * Select the concrete path for the match at index {@code i}. {@link JsonPathEvaluator#evaluate}
+     * and {@link JsonPathEvaluator#evaluatePaths} return lists of the same cardinality for the same
+     * expression, so {@code matchPaths.get(i)} is normally present; the fallback to the {@code given}
+     * selector guards the rare case where the path list is shorter, keeping a non-null path.
+     */
+    static String pathAt(List<String> matchPaths, int i, String given) {
+        return i < matchPaths.size() ? matchPaths.get(i) : given;
     }
 
     JsonNode resolveField(JsonNode match, String field) {

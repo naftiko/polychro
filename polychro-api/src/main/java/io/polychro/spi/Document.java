@@ -184,7 +184,13 @@ public record Document(JsonNode root, String format, String sourcePath, SourceMa
             case "markdown", "html" -> TextNode.valueOf(content);
             default -> parseStructured(content, effectiveFormat);
         };
-        return new Document(root, effectiveFormat, sourcePath);
+        // Build a real source map for structured formats so ruleset diagnostics can carry
+        // a SourceRange (issue #32); xml/markdown/html keep SourceMap.NONE.
+        SourceMap sourceMap = switch (effectiveFormat) {
+            case "yaml", "json" -> JacksonSourceMap.forContent(content, effectiveFormat);
+            default -> SourceMap.NONE;
+        };
+        return new Document(root, effectiveFormat, sourcePath, sourceMap, null);
     }
 
     private static JsonNode parseStructured(String content, String format) {

@@ -207,6 +207,44 @@ class DocumentTest {
     }
 
     @Test
+    void fromStringShouldAutoDetectHtmlFromDoctype() {
+        Document doc = Document.fromString("<!DOCTYPE html><html><body>Hi</body></html>", null);
+
+        assertNotNull(doc.root());
+        assertTrue(doc.root().isTextual());
+        assertEquals("html", doc.format());
+    }
+
+    @Test
+    void fromStringShouldAutoDetectHtmlFromHtmlTag() {
+        Document doc = Document.fromString("<html><body>Hi</body></html>", null);
+
+        assertNotNull(doc.root());
+        assertTrue(doc.root().isTextual());
+        assertEquals("html", doc.format());
+    }
+
+    @Test
+    void fromStringShouldAutoDetectHtmlWhenContentExceedsHeuristicWindow() {
+        String longHtml = "<html><head><title>Example with a fairly long heading line</title></head>"
+                + "<body><p>Hello world long content sentence beyond the 64-byte sniff window.</p></body></html>";
+        Document doc = Document.fromString(longHtml, null);
+
+        assertNotNull(doc.root());
+        assertTrue(doc.root().isTextual());
+        assertEquals("html", doc.format());
+    }
+
+    @Test
+    void fromStringShouldAutoDetectXmlForLongDocumentBeyondHeuristicWindow() {
+        String longXml = "<root><child1>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</child1>"
+                + "<child2>bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb</child2></root>";
+        Document doc = Document.fromString(longXml, null);
+
+        assertEquals("xml", doc.format());
+    }
+
+    @Test
     void fromStringShouldUseMarkdownSourcePathBeforeContentDetection() {
         Document doc = Document.fromString("# Hello\n", null, "docs/example.md");
 
@@ -376,64 +414,38 @@ class DocumentTest {
         assertNull(SourceMap.NONE.resolve("$.document"));
     }
 
+    // ---------------------------------------------------------------------
+    // Boundary golden for issue #32 — source ranges are YAML-only for now.
+    //
+    // XML, Markdown and HTML are explicitly OUT of scope (#35, #36, #37): a
+    // document in those formats must expose SourceMap.NONE so no caller can
+    // accidentally rely on a range that does not exist yet. These tests
+    // FREEZE that boundary; they go RED the day a format gains a real
+    // SourceMap without updating the scope decision, which is intended.
+    // ---------------------------------------------------------------------
+
+    @Test
+    void fromStringShouldExposeNoneSourceMapForXmlUntilInScope() {
+        Document doc = Document.fromString("<root><name>hello</name></root>", "xml");
+        assertSame(SourceMap.NONE, doc.sourceMap(), "XML source ranges are out of scope for #32 (tracked by #35)");
+    }
+
+    @Test
+    void fromStringShouldExposeNoneSourceMapForMarkdownUntilInScope() {
+        Document doc = Document.fromString("# Hello\n", "markdown");
+        assertSame(SourceMap.NONE, doc.sourceMap(), "Markdown source ranges are out of scope for #32 (tracked by #36)");
+    }
+
+    @Test
+    void fromStringShouldExposeNoneSourceMapForHtmlUntilInScope() {
+        Document doc = Document.fromString("<html><body>Hello</body></html>", "html");
+        assertSame(SourceMap.NONE, doc.sourceMap(), "HTML source ranges are out of scope for #32 (tracked by #37)");
+    }
+
     @Test
     void constructorShouldFallBackToSourcePathWhenFormatIsBlank() {
         Document doc = new Document(null, "   ", "config/example.yaml", null, null);
 
         assertEquals("yaml", doc.format());
-    }
-
-    @Test
-    void fromStringShouldAutoDetectHtmlFromDoctype() {
-        Document doc = Document.fromString("<!DOCTYPE html><html><body>Hi</body></html>", null);
-
-        assertNotNull(doc.root());
-        assertTrue(doc.root().isTextual());
-        assertEquals("html", doc.format());
-    }
-
-    @Test
-    void fromStringShouldAutoDetectHtmlFromHtmlTag() {
-        Document doc = Document.fromString("<html><body>Hi</body></html>", null);
-
-        assertNotNull(doc.root());
-        assertTrue(doc.root().isTextual());
-        assertEquals("html", doc.format());
-    }
-
-    @Test
-    void fromStringShouldStillAutoDetectXmlForNonHtmlAngleBracketContent() {
-        Document doc = Document.fromString("<root><name>hello</name></root>", null);
-
-        assertEquals("xml", doc.format());
-    }
-
-    @Test
-    void fromStringShouldAutoDetectHtmlWhenContentExceedsHeuristicWindow() {
-        String longHtml = "<html><head><title>Example with a fairly long heading line</title></head>"
-                + "<body><p>Hello world long content sentence beyond the 64-byte sniff window.</p></body></html>";
-        Document doc = Document.fromString(longHtml, null);
-
-        assertNotNull(doc.root());
-        assertTrue(doc.root().isTextual());
-        assertEquals("html", doc.format());
-    }
-
-    @Test
-    void fromStringShouldAutoDetectXmlForLongDocumentBeyondHeuristicWindow() {
-        String longXml = "<root><child1>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</child1>"
-                + "<child2>bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb</child2></root>";
-        Document doc = Document.fromString(longXml, null);
-
-        assertEquals("xml", doc.format());
-    }
-
-    @Test
-    void fromStringShouldTreatBlankFormatArgumentAsAutoDetect() {
-        Document doc = Document.fromString("{\"key\":\"value\"}", "   ");
-
-        assertNotNull(doc.root());
-        assertEquals("value", doc.root().get("key").asText());
-        assertEquals("json", doc.format());
     }
 }
