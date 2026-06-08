@@ -16,6 +16,9 @@ package io.polychro.cli;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -149,6 +152,41 @@ class CliIntegrationTest {
                 () -> "Expected ruleset diagnostics in output: " + result.stdout());
     }
 
+    // ── Regression test for issue #32 ───────────────────────────────────────
+
+    @Test
+    void lintWithRulesetJsonFormatShouldPopulateSourceRange() throws Exception {
+        // Issue #32 (end-to-end): a ruleset violation emitted as `--format json` must carry a
+        // populated `range` object (startLine/startColumn/endLine/endColumn), the way Spectral
+        // does — not range == null. `capability-version-format` is a built-in `pattern` rule on
+        // `$.info.version`, which sits on line 3 of the fixture below (0-based line 2).
+        Path ruleset = governanceRulesetPath();
+        Path file = createFile("bad-capability.yml",
+                "info:\n  name: my-capability\n  version: not-semver\n");
+
+        ExecutionResult result = run("lint",
+                "--ruleset", ruleset.toString(),
+                "--format", "json",
+                file.toString());
+
+        assertEquals(1, result.exitCode(), () ->
+                "Expected exit code 1 (warnings) but got " + result.exitCode()
+                        + ". stdout=" + result.stdout() + " stderr=" + result.stderr());
+
+        JsonNode diagnostics =
+                new ObjectMapper().readTree(result.stdout());
+        JsonNode versionDiag = findDiagnostic(diagnostics, "capability-version-format");
+        assertNotNull(versionDiag, () ->
+                "#32: expected a capability-version-format diagnostic. stdout=" + result.stdout());
+        JsonNode range = versionDiag.get("range");
+        assertNotNull(range, () ->
+                "#32: ruleset diagnostic must carry a populated range, not null. diag=" + versionDiag);
+        assertEquals(2, range.get("startLine").asInt(),
+                "#32: range must point at the version scalar on line 3 (0-based line 2)");
+        assertEquals("$.info.version", versionDiag.path("path").asText(),
+                "#32: path must be the concrete matched location");
+    }
+
     @Test
     void lintWithoutAnyConfigShouldStillRunValidators() throws Exception {
         // Verifies that running `polychro lint file.yml` with no flags actually
@@ -196,5 +234,14 @@ class CliIntegrationTest {
     }
 
     private record ExecutionResult(int exitCode, String stdout, String stderr) {
+    }
+
+    private static JsonNode findDiagnostic(JsonNode diagnostics, String code) {
+        for (JsonNode d : diagnostics) {
+            if (code.equals(d.path("code").asText())) {
+                return d;
+            }
+        }
+        return null;
     }
 }

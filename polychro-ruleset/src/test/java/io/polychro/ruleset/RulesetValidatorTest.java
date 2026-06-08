@@ -16,6 +16,7 @@ package io.polychro.ruleset;
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Document;
 import io.polychro.spi.Severity;
+import io.polychro.spi.SourceRange;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -242,5 +243,125 @@ class RulesetValidatorTest {
         List<Diagnostic> results = validator.validate(doc);
         assertEquals(1, results.size(), "Rule must have fired to produce its diagnostic");
         assertEquals("HTML only", results.get(0).message());
+    }
+
+    // --- Issue #32: ruleset diagnostics must carry source ranges (built-in functions) ---
+
+    @Test
+    void validateShouldPopulateSourceRangeForBuiltinViolationOnYaml() {
+        // Regression guard for #32: a `pattern` violation on a YAML document must
+        // produce a Diagnostic whose `range` points at the offending scalar, the way
+        // Spectral does — not range == null. The baseUri sits on line 3.
+        Rule rule = new Rule("baseuri-no-trailing-slash", "baseUri must not end with /",
+                null, "warn", true, null, null, List.of("$.consumes[*].baseUri"),
+                List.of(new RuleAction(null, "pattern", Map.of("notMatch", "/$"))));
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, null,
+                Map.of("baseuri-no-trailing-slash", rule), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
+        String yaml = "consumes:\n  - name: api\n    baseUri: \"https://example.com/\"\n";
+        Document doc = Document.fromString(yaml, "yaml");
+
+        List<Diagnostic> results = validator.validate(doc);
+        assertEquals(1, results.size());
+        assertNotNull(results.get(0).range(),
+                "#32: ruleset diagnostics must carry a SourceRange, not null");
+        assertEquals(2, results.get(0).range().startLine(),
+                "#32: range must point at the baseUri scalar (human line 3, 0-based 2)");
+    }
+
+    @Test
+    void validateShouldSetConcretePathForBuiltinViolation() {
+        // #32: the diagnostic path must be the concrete matched location
+        // ($.consumes[0].baseUri), not the rule's `given` selector pattern
+        // ($.consumes[*].baseUri), so path and range stay consistent.
+        Rule rule = new Rule("baseuri-no-trailing-slash", "baseUri must not end with /",
+                null, "warn", true, null, null, List.of("$.consumes[*].baseUri"),
+                List.of(new RuleAction(null, "pattern", Map.of("notMatch", "/$"))));
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, null,
+                Map.of("baseuri-no-trailing-slash", rule), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
+        String yaml = "consumes:\n  - name: api\n    baseUri: \"https://example.com/\"\n";
+        Document doc = Document.fromString(yaml, "yaml");
+
+        List<Diagnostic> results = validator.validate(doc);
+        assertEquals(1, results.size());
+        assertEquals("$.consumes[0].baseUri", results.get(0).path(),
+                "#32: path must be the concrete match, not the [*] selector");
+    }
+
+    @Test
+    void validateShouldResolveSourceRangeWhenKeyContainsDot() {
+        // #32 edge case: a key that itself contains a dot (e.g. "x-meta.owner") is keyed as
+        // $.x-meta.owner by BOTH JacksonSourceMap and JsonPathEvaluator.toDotNotation, so the two
+        // path strings COINCIDE and the lookup resolves. This proves the round-trip is consistent
+        // for an isolated dotted key — it does NOT prove the path is unambiguous: $.x-meta.owner is
+        // indistinguishable from a nested x-meta: { owner: ... } (see the collision test below and
+        // the JacksonSourceMap / toDotNotation Javadocs). Here there is no nesting, so resolution
+        // is exact and the range is not silently lost.
+        Rule rule = new Rule("owner-required", "owner must be present",
+                null, "warn", true, null, null, List.of("$['x-meta.owner']"),
+                List.of(new RuleAction(null, "truthy", null)));
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, null,
+                Map.of("owner-required", rule), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
+        String yaml = "name: api\n\"x-meta.owner\": \"\"\n";
+        Document doc = Document.fromString(yaml, "yaml");
+
+        List<Diagnostic> results = validator.validate(doc);
+        assertEquals(1, results.size());
+        assertNotNull(results.get(0).range(),
+                "#32: a dotted key must still resolve to a SourceRange, not null");
+        assertEquals(1, results.get(0).range().startLine(),
+                "#32: range must point at the dotted-key scalar (human line 2, 0-based 1)");
+    }
+
+    @Test
+    void validateShouldKeepFirstLocationWhenDottedKeyCollidesWithNestedPath() {
+        // #32 ambiguity guard: a flat key "x-meta.owner" and a nested structure x-meta: { owner }
+        // BOTH map to the path $.x-meta.owner. The source map keeps the FIRST token encountered
+        // (putIfAbsent), so resolution is documented-but-imprecise rather than throwing or
+        // silently returning null. This test pins that behaviour so a future change to the keying
+        // (or to putIfAbsent -> put) is caught.
+        Rule rule = new Rule("owner-required", "owner must be present",
+                null, "warn", true, null, null, List.of("$['x-meta.owner']"),
+                List.of(new RuleAction(null, "truthy", null)));
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, null,
+                Map.of("owner-required", rule), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
+        // The flat dotted key appears on line 2, the colliding nested "owner" on line 4.
+        String yaml = "name: api\n\"x-meta.owner\": \"\"\nx-meta:\n  owner: present\n";
+        Document doc = Document.fromString(yaml, "yaml");
+
+        List<Diagnostic> results = validator.validate(doc);
+        assertEquals(1, results.size());
+        assertNotNull(results.get(0).range(),
+                "#32: a colliding dotted path still resolves to a SourceRange, never null");
+        assertEquals(1, results.get(0).range().startLine(),
+                "#32: on a $.x-meta.owner collision the FIRST token (flat key, human line 2, 0-based 1) wins");
+    }
+
+    @Test
+    void validateShouldPropagateEndOfRangeToDiagnosticOnYaml() {
+        // #32 end propagation (HIGH golden): the Diagnostic range must not collapse to a
+        // single point. For a quoted scalar, Spectral spans the whole value INCLUDING both
+        // quotes, so on a mono-line scalar the end sits strictly after the start on the same
+        // line. JacksonSourceMap.toRange() now spans the quoted scalar end-exclusive.
+        Rule rule = new Rule("baseuri-no-trailing-slash", "baseUri must not end with /",
+                null, "warn", true, null, null, List.of("$.consumes[*].baseUri"),
+                List.of(new RuleAction(null, "pattern", Map.of("notMatch", "/$"))));
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, null,
+                Map.of("baseuri-no-trailing-slash", rule), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
+        String yaml = "consumes:\n  - name: api\n    baseUri: \"https://example.com/\"\n";
+        Document doc = Document.fromString(yaml, "yaml");
+
+        List<Diagnostic> results = validator.validate(doc);
+        assertEquals(1, results.size());
+        SourceRange range = results.get(0).range();
+        assertNotNull(range, "#32: ruleset diagnostics must carry a SourceRange, not null");
+        assertEquals(range.startLine(), range.endLine(),
+                "#32: a mono-line scalar must stay on a single line");
+        assertTrue(range.endColumn() > range.startColumn(),
+                "#32: the range must span the scalar (quotes included), so end must follow start");
     }
 }

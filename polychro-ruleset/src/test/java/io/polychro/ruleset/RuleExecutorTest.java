@@ -224,4 +224,29 @@ class RuleExecutorTest {
         assertEquals(1, results.size());
         assertNotNull(results.get(0).message());
     }
+
+    @Test
+    void effectivePathShouldReturnMatchPathWhenFieldIsNull() {
+        assertEquals("$.info", RuleExecutor.effectivePath("$.info", null));
+    }
+
+    @Test
+    void effectivePathShouldReturnMatchPathWhenFieldIsEmpty() {
+        assertEquals("$.info", RuleExecutor.effectivePath("$.info", ""));
+    }
+
+    @Test
+    void effectivePathShouldAppendFieldSegmentWhenFieldIsPresent() {
+        assertEquals("$.info.name", RuleExecutor.effectivePath("$.info", "name"));
+    }
+
+    @Test
+    void pathAtShouldReturnConcretePathWhenIndexInRange() {
+        assertEquals("$.a[0]", RuleExecutor.pathAt(List.of("$.a[0]", "$.a[1]"), 0, "$.a[*]"));
+    }
+
+    @Test
+    void pathAtShouldFallBackToGivenWhenIndexOutOfRange() {
+        assertEquals("$.a[*]", RuleExecutor.pathAt(List.of(), 0, "$.a[*]"));
+    }
 }

@@ -139,4 +139,60 @@ class JsonPathEvaluatorTest {
         assertEquals("https://api.example.com/", results.get(0).asText());
         assertEquals("https://other.com", results.get(1).asText());
     }
+
+    // --- Issue #32: concrete-path resolution (evaluatePaths + toDotNotation) ---
+
+    @Test
+    void evaluatePathsShouldReturnConcreteDotNotationPathsForWildcard() throws Exception {
+        String yaml = "consumes:\n  - baseUri: a\n  - baseUri: b\n";
+        JsonNode root = YAML.readTree(yaml);
+        List<String> paths = evaluator.evaluatePaths(root, "$.consumes[*].baseUri");
+        assertEquals(List.of("$.consumes[0].baseUri", "$.consumes[1].baseUri"), paths);
+    }
+
+    @Test
+    void evaluatePathsShouldReturnSinglePathForScalar() throws Exception {
+        JsonNode root = JSON.readTree("{\"info\": {\"name\": \"x\"}}");
+        List<String> paths = evaluator.evaluatePaths(root, "$.info.name");
+        assertEquals(List.of("$.info.name"), paths);
+    }
+
+    @Test
+    void evaluatePathsShouldReturnEmptyForNullDocument() {
+        assertTrue(evaluator.evaluatePaths(null, "$.info").isEmpty());
+    }
+
+    @Test
+    void evaluatePathsShouldReturnEmptyForNullExpression() throws Exception {
+        JsonNode root = JSON.readTree("{\"info\": {}}");
+        assertTrue(evaluator.evaluatePaths(root, null).isEmpty());
+    }
+
+    @Test
+    void evaluatePathsShouldReturnEmptyForBlankExpression() throws Exception {
+        JsonNode root = JSON.readTree("{\"info\": {}}");
+        assertTrue(evaluator.evaluatePaths(root, "   ").isEmpty());
+    }
+
+    @Test
+    void evaluatePathsShouldReturnEmptyForInvalidExpression() throws Exception {
+        JsonNode root = JSON.readTree("{\"info\": {}}");
+        assertTrue(evaluator.evaluatePaths(root, "$[invalid[[").isEmpty());
+    }
+
+    @Test
+    void toDotNotationShouldConvertBracketKeysAndIndexes() {
+        assertEquals("$.consumes[0].baseUri",
+                JsonPathEvaluator.toDotNotation("$['consumes'][0]['baseUri']"));
+    }
+
+    @Test
+    void toDotNotationShouldReturnInputForNull() {
+        assertNull(JsonPathEvaluator.toDotNotation(null));
+    }
+
+    @Test
+    void toDotNotationShouldReturnInputForEmptyString() {
+        assertEquals("", JsonPathEvaluator.toDotNotation(""));
+    }
 }
