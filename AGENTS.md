@@ -105,7 +105,8 @@ The framework's `maven-shade-plugin` does not fully inline restlet and the MCP S
 published jar, causing `NoClassDefFoundError` at test time (tracked in
 [naftiko/framework#433](https://github.com/naftiko/framework/issues/433)).
 The workaround (explicit `org.restlet:org.restlet:2.7.0-m2` and
-`io.modelcontextprotocol.sdk:mcp-core:1.0.0` dependencies + Talend repository) is already
+`io.modelcontextprotocol.sdk:mcp-core:1.0.0` dependencies — `org.restlet` resolves from Maven
+Central, no extra repository needed) is already
 applied in `polychro-capability/pom.xml` — all 31 `PolychroCapabilityTest` tests pass locally.
 
 **Separate known issue:** `polychro-rulesets` fails the JaCoCo coverage check on `main` — this

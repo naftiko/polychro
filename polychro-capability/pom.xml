@@ -66,8 +66,9 @@
         </dependency>
 
         <!-- Workaround for naftiko/framework#433: the framework's shade plugin does not fully
-             inline restlet classes, causing NoClassDefFoundError at test time. Remove this
-             dependency once the upstream issue is fixed. -->
+             inline restlet classes, causing NoClassDefFoundError at test time.
+             org.restlet:org.restlet:2.7.0-m2 is available from Maven Central (no extra
+             repository needed). Remove this dependency once the upstream issue is fixed. -->
         <dependency>
             <groupId>org.restlet</groupId>
             <artifactId>org.restlet</artifactId>
@@ -129,16 +130,6 @@
     </build>
 
     <repositories>
-        <!-- Workaround for naftiko/framework#433: restlet classes are not fully inlined
-             by the framework's shade plugin. Scoped here (not in parent) to avoid Maven
-             querying Talend for unrelated modules. Remove once upstream is fixed. -->
-        <repository>
-            <id>talend-restlet</id>
-            <name>Talend Restlet Repository</name>
-            <url>https://maven.restlet.talend.com/</url>
-            <releases><enabled>true</enabled></releases>
-            <snapshots><enabled>false</enabled></snapshots>
-        </repository>
         <!-- GitHub Packages: SNAPSHOT releases of io.ikanos:ikanos-engine and io.ikanos:ikanos-spec
              are published here. The server-id 'github-naftiko' must match setup-java's server-id
              in ci.yml. -->
