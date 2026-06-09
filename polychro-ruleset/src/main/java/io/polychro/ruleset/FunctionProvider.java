@@ -13,6 +13,7 @@
  */
 package io.polychro.ruleset;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.ServiceLoader;
 
@@ -24,6 +25,31 @@ public interface FunctionProvider {
 
     /**
      * @return the list of rule functions provided by this implementation
+     * @deprecated superseded by {@link #functions(Path, List)}, which supplies the ruleset's
+     *             {@code functionsDir} and declared function names so providers discovered via
+     *             {@link ServiceLoader} (and thus instantiated with a no-arg constructor) can
+     *             load functions on demand. Retained for providers that are pre-configured with
+     *             their own source and ignore the ruleset context.
      */
-    List<RuleFunction> functions();
+    @Deprecated
+    default List<RuleFunction> functions() {
+        return List.of();
+    }
+
+    /**
+     * Provide the rule functions declared by a ruleset.
+     *
+     * <p>Called once per ruleset with the ruleset's {@code functionsDir} (the directory holding
+     * custom function source files) and the list of declared {@code functions} names. A provider
+     * that has no functions to contribute for this ruleset returns an empty list. The default
+     * implementation delegates to the deprecated {@link #functions()} so existing pre-configured
+     * providers keep working.
+     *
+     * @param functionsDir   the ruleset's custom-functions directory, or {@code null} if undeclared
+     * @param functionNames  the function names declared by the ruleset (never {@code null})
+     * @return the rule functions this provider contributes for the given ruleset
+     */
+    default List<RuleFunction> functions(Path functionsDir, List<String> functionNames) {
+        return functions();
+    }
 }

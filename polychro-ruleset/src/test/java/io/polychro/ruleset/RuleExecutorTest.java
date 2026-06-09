@@ -16,6 +16,7 @@ package io.polychro.ruleset;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.polychro.spi.Diagnostic;
+import io.polychro.spi.Document;
 import io.polychro.spi.Severity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -226,6 +227,26 @@ class RuleExecutorTest {
     }
 
     @Test
+    void executeShouldResolveRangeForCustomFunctionViolationWithRelativePath() throws Exception {
+        // A custom function reports a violation pinned to a relative path ("name"); the executor
+        // must combine it with the matched path and resolve a SourceRange from the document's
+        // source map (issue #32, Layer 1).
+        FunctionRegistry registry = FunctionRegistry.forRuleset(null, List.of());
+        RuleExecutor pathExecutor = new RuleExecutor(new JsonPathEvaluator(), registry);
+        Rule rule = new Rule("path-rule", null, null, "warn", true, null, null,
+                List.of("$.info"),
+                List.of(new RuleAction(null, "testPathReportingFunction", Map.of())));
+        Document doc = Document.fromString("info:\n  name: value\n", "yaml");
+
+        List<Diagnostic> results = pathExecutor.execute(rule, doc);
+
+        assertEquals(1, results.size());
+        assertEquals("$.info.name", results.get(0).path());
+        assertNotNull(results.get(0).range(),
+                "range must resolve from the combined path via the source map");
+    }
+
+    @Test
     void effectivePathShouldReturnMatchPathWhenFieldIsNull() {
         assertEquals("$.info", RuleExecutor.effectivePath("$.info", null));
     }
@@ -248,5 +269,26 @@ class RuleExecutorTest {
     @Test
     void pathAtShouldFallBackToGivenWhenIndexOutOfRange() {
         assertEquals("$.a[*]", RuleExecutor.pathAt(List.of(), 0, "$.a[*]"));
+    }
+
+    @Test
+    void combinePathShouldReturnBaseWhenRelativeIsNull() {
+        assertEquals("$.consumes[0]", RuleExecutor.combinePath("$.consumes[0]", null));
+    }
+
+    @Test
+    void combinePathShouldReturnBaseWhenRelativeIsEmpty() {
+        assertEquals("$.consumes[0]", RuleExecutor.combinePath("$.consumes[0]", ""));
+    }
+
+    @Test
+    void combinePathShouldAppendDottedRelativeSegment() {
+        assertEquals("$.consumes[0].namespace",
+                RuleExecutor.combinePath("$.consumes[0]", "namespace"));
+    }
+
+    @Test
+    void combinePathShouldAppendBracketRelativeWithoutDot() {
+        assertEquals("$.consumes[0]", RuleExecutor.combinePath("$.consumes", "[0]"));
     }
 }

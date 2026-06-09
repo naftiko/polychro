@@ -25,7 +25,7 @@ public class TestFunctionProvider implements FunctionProvider {
 
     @Override
     public List<RuleFunction> functions() {
-        return List.of(new TestFunction());
+        return List.of(new TestFunction(), new PathReportingFunction());
     }
 
     static class TestFunction implements RuleFunction {
@@ -37,6 +37,27 @@ public class TestFunctionProvider implements FunctionProvider {
         @Override
         public List<String> evaluate(JsonNode targetNode, Map<String, Object> options) {
             return List.of();
+        }
+    }
+
+    /**
+     * A function that always reports one violation pinned to a relative path, used to exercise the
+     * {@link RuleExecutor} path-combination + range-resolution branch (issue #32, Layer 1).
+     */
+    static class PathReportingFunction implements RuleFunction {
+        @Override
+        public String name() {
+            return "testPathReportingFunction";
+        }
+
+        @Override
+        public List<String> evaluate(JsonNode targetNode, Map<String, Object> options) {
+            return List.of("offending child");
+        }
+
+        @Override
+        public List<Violation> evaluateViolations(JsonNode targetNode, Map<String, Object> options) {
+            return List.of(Violation.at("offending child", "name"));
         }
     }
 }

@@ -80,4 +80,40 @@ class PolyglotFunctionProviderTest {
         }
         assertTrue(found, "PolyglotFunctionProvider should be discoverable via ServiceLoader");
     }
+
+    // --- context-aware functions(Path, names) — the production wiring path (issue #32) ----------
+
+    @Test
+    void contextAwareFunctionsShouldLoadFromSuppliedContext() {
+        // The no-arg ServiceLoader instance carries no state; the ruleset supplies dir + names.
+        PolyglotFunctionProvider provider = new PolyglotFunctionProvider();
+        List<RuleFunction> functions =
+                provider.functions(FUNCTIONS_DIR, List.of("simple-check", "multi-result"));
+
+        assertEquals(2, functions.size());
+    }
+
+    @Test
+    void contextAwareFunctionsShouldFallBackToPreconfiguredContext() {
+        // No ruleset context supplied (null/null) → fall back to the forDirectory()-supplied state.
+        PolyglotFunctionProvider provider = PolyglotFunctionProvider.forDirectory(
+                FUNCTIONS_DIR, List.of("simple-check"));
+        List<RuleFunction> functions = provider.functions(null, null);
+
+        assertEquals(1, functions.size());
+    }
+
+    @Test
+    void contextAwareFunctionsShouldReturnEmptyWhenNoDirectoryResolvable() {
+        // No-arg provider (dir == null) and no context supplied → nothing to load.
+        PolyglotFunctionProvider provider = new PolyglotFunctionProvider();
+        assertTrue(provider.functions(null, List.of("simple-check")).isEmpty());
+    }
+
+    @Test
+    void contextAwareFunctionsShouldReturnEmptyWhenNamesResolveEmpty() {
+        // Directory resolvable but no names anywhere (supplied empty, none pre-configured).
+        PolyglotFunctionProvider provider = new PolyglotFunctionProvider();
+        assertTrue(provider.functions(FUNCTIONS_DIR, List.of()).isEmpty());
+    }
 }

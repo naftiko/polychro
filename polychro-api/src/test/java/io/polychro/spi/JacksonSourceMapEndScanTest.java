@@ -97,6 +97,34 @@ class JacksonSourceMapEndScanTest {
     }
 
     @Test
+    void endOfPlainScalarShouldStopBeforeEmptyTrailingComment() {
+        // A '#' that is the very last character of the line is still a comment marker:
+        // the range must hug 'value', not include the trailing ' #'. Iso-Spectral end column = 8.
+        String line = "k: value #";
+        int[] end = JacksonSourceMap.endOfPlainScalar(line, 0, 3);
+        assertArrayEquals(new int[] {0, 8}, end, "terminal '#' is excluded, range hugs 'value'");
+    }
+
+    @Test
+    void endOfPlainScalarShouldStopBeforeEmptyTrailingCommentWithExtraSpace() {
+        // Two spaces before a terminal '#': the comment marker is the last character and must
+        // still be detected, so the trailing '  #' is excluded. Iso-Spectral end column = 8.
+        String line = "k: value  #";
+        int[] end = JacksonSourceMap.endOfPlainScalar(line, 0, 3);
+        assertArrayEquals(new int[] {0, 8}, end, "terminal '#' after extra space is excluded");
+    }
+
+    @Test
+    void endOfPlainScalarShouldKeepTerminalHashGluedToValue() {
+        // A '#' glued to the value (no preceding whitespace) is part of the value, not a comment
+        // marker — even as the line's last character under the widened loop bound. The range must
+        // include the '#', so end == line.length() (the value is "value#").
+        String line = "k: value#";
+        int[] end = JacksonSourceMap.endOfPlainScalar(line, 0, 3);
+        assertArrayEquals(new int[] {0, 9}, end, "glued terminal '#' is part of the value, not a comment");
+    }
+
+    @Test
     void endOfPlainScalarShouldTrimTrailingWhitespace() {
         String line = "k: value   ";
         int[] end = JacksonSourceMap.endOfPlainScalar(line, 0, 3);

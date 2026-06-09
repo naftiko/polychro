@@ -35,9 +35,15 @@ import java.util.Optional;
 class RuleExecutor {
 
     private final JsonPathEvaluator evaluator;
+    private final FunctionRegistry functions;
 
     RuleExecutor(JsonPathEvaluator evaluator) {
+        this(evaluator, FunctionRegistry.forRuleset(null, List.of()));
+    }
+
+    RuleExecutor(JsonPathEvaluator evaluator, FunctionRegistry functions) {
         this.evaluator = evaluator;
+        this.functions = functions;
     }
 
     /**
@@ -45,6 +51,10 @@ class RuleExecutor {
      * way carry a {@code null} range (the same graceful fallback as an unresolvable path). Provided
      * for unit tests and callers that hold only a parsed {@link JsonNode} without the originating
      * {@link Document}; production validation goes through {@link #execute(Rule, Document)}.
+     *
+     * <p>The synthetic {@link Document} carries {@link SourceMap#NONE} precisely so range resolution
+     * is skipped: every lookup returns a {@code null} range and the {@code null} format is never
+     * read. This path therefore cannot throw.
      *
      * @param rule the rule to execute
      * @param root the document root node
@@ -80,17 +90,19 @@ class RuleExecutor {
                 String matchPath = pathAt(matchPaths, i, given);
                 for (RuleAction action : rule.then()) {
                     JsonNode target = resolveField(match, action.field());
-                    Optional<RuleFunction> function = BuiltinFunctions.get(action.functionName());
+                    Optional<RuleFunction> function = functions.get(action.functionName());
                     if (function.isEmpty()) {
                         continue;
                     }
                     String effectivePath = effectivePath(matchPath, action.field());
-                    List<String> errors = function.get().evaluate(target, action.functionOptions());
-                    for (String error : errors) {
-                        String message = rule.message() != null ? rule.message() : error;
-                        SourceRange range = sourceMap.resolve(effectivePath);
+                    List<Violation> violations =
+                            function.get().evaluateViolations(target, action.functionOptions());
+                    for (Violation violation : violations) {
+                        String message = rule.message() != null ? rule.message() : violation.message();
+                        String violationPath = combinePath(effectivePath, violation.path());
+                        SourceRange range = sourceMap.resolve(violationPath);
                         diagnostics.add(new Diagnostic(severity, rule.name(), message,
-                                effectivePath, range));
+                                violationPath, range));
                     }
                 }
             }
@@ -149,5 +161,26 @@ class RuleExecutor {
             case "hint" -> Severity.HINT;
             default -> Severity.WARN;
         };
+    }
+
+    /**
+     * Append a violation's optional <em>relative</em> path to the matched node's path so the
+     * source map can resolve the precise offender (issue #32, Layer 1).
+     *
+     * <p>The relative path uses dot/bracket notation rooted at the matched node
+     * (e.g. {@code consumes[0].namespace}). A {@code null} or empty relative path means the
+     * violation refers to the matched node itself, so {@code basePath} is returned unchanged —
+     * the pre-existing behaviour for built-in functions. A relative segment that already starts
+     * with {@code [} (an array index) is appended without a separating dot to avoid an invalid
+     * path like {@code $.consumes.[0]}.
+     */
+    static String combinePath(String basePath, String relativePath) {
+        if (relativePath == null || relativePath.isEmpty()) {
+            return basePath;
+        }
+        if (relativePath.startsWith("[")) {
+            return basePath + relativePath;
+        }
+        return basePath + "." + relativePath;
     }
 }

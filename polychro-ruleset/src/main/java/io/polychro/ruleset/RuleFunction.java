@@ -36,4 +36,25 @@ public interface RuleFunction {
      * @return list of error messages; empty if the node passes
      */
     List<String> evaluate(JsonNode targetNode, Map<String, Object> options);
+
+    /**
+     * Evaluate the given target node and report violations that may pinpoint a node
+     * <em>relative</em> to {@code targetNode} (issue #32, Layer 1).
+     *
+     * <p>The default implementation adapts {@link #evaluate(JsonNode, Map)}, mapping each
+     * message to a {@link Violation} with a {@code null} path — i.e. the diagnostic's range
+     * is that of the matched node. Built-in functions, which evaluate exactly the matched
+     * node, rely on this default and need no change. Functions that inspect a subtree and
+     * can locate a deeper offender (e.g. polyglot scripts returning {@code {message, path}})
+     * override this method to carry a relative path.
+     *
+     * @param targetNode the resolved JSON node to evaluate (may be null if field is missing)
+     * @param options    function-specific options from the rule action
+     * @return list of violations; empty if the node passes
+     */
+    default List<Violation> evaluateViolations(JsonNode targetNode, Map<String, Object> options) {
+        return evaluate(targetNode, options).stream()
+                .map(Violation::of)
+                .toList();
+    }
 }

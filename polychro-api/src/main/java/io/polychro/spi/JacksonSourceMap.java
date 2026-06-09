@@ -221,7 +221,7 @@ public final class JacksonSourceMap implements SourceMap {
      */
     static int[] endOfPlainScalar(String line, int startLine, int startColumn) {
         int end = line.length();
-        for (int i = startColumn; i < line.length() - 1; i++) {
+        for (int i = startColumn; i < line.length(); i++) {
             if (line.charAt(i) == '#' && i > startColumn && Character.isWhitespace(line.charAt(i - 1))) {
                 end = i;
                 break;

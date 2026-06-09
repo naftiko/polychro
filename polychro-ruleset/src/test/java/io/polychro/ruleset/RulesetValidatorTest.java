@@ -38,6 +38,18 @@ class RulesetValidatorTest {
     }
 
     @Test
+    void constructorShouldHandleNonNullFunctionsDir() {
+        // Exercises the functionsDir != null branch: a declared (but empty) custom-functions
+        // directory builds a FunctionRegistry without loading any custom function.
+        Ruleset ruleset = new Ruleset(null, null, null, null, "custom-functions", List.of(),
+                Map.of(), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
+        Document doc = Document.fromString("{\"info\": {\"name\": \"test\"}}", "json");
+
+        assertTrue(validator.validate(doc).isEmpty());
+    }
+
+    @Test
     void validateShouldReturnEmptyForEmptyRuleset() {
         Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of(), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
