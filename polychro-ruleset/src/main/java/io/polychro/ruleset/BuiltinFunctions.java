@@ -17,10 +17,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.ServiceLoader;
 
 /**
- * Registry of built-in rule functions and custom functions discovered via {@link FunctionProvider} SPI.
+ * Registry of the built-in rule functions.
  */
 class BuiltinFunctions {
 
@@ -39,14 +38,6 @@ class BuiltinFunctions {
         register(new CasingFunction());
         register(new XorFunction());
         register(new TypedEnumFunction());
-
-        // Discover custom functions via SPI
-        ServiceLoader<FunctionProvider> providers = ServiceLoader.load(FunctionProvider.class);
-        for (FunctionProvider provider : providers) {
-            for (RuleFunction function : provider.functions()) {
-                FUNCTIONS.put(function.name(), function);
-            }
-        }
     }
 
     private static void register(RuleFunction function) {
@@ -54,7 +45,7 @@ class BuiltinFunctions {
     }
 
     /**
-     * Look up a function by name.
+     * Look up a built-in function by name.
      *
      * @param name the function name (case-sensitive)
      * @return the function, or empty if not found
@@ -64,7 +55,7 @@ class BuiltinFunctions {
     }
 
     /**
-     * @return all registered function names
+     * @return all registered built-in function names
      */
     static List<String> names() {
         return List.copyOf(FUNCTIONS.keySet());

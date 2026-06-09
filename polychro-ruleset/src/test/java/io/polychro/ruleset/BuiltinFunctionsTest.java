@@ -41,7 +41,15 @@ class BuiltinFunctionsTest {
 
     @Test
     void registryShouldDiscoverCustomFunctionViaServiceLoader() {
-        Optional<RuleFunction> fn = BuiltinFunctions.get("testCustomFunction");
+        // Custom-function discovery moved from the static BuiltinFunctions registry to the
+        // per-ruleset FunctionRegistry (issue #32, Layer 1). Built-ins remain static; SPI
+        // providers are resolved with the ruleset context.
+        Optional<RuleFunction> builtinView = BuiltinFunctions.get("testCustomFunction");
+        assertTrue(builtinView.isEmpty(),
+                "custom functions are no longer part of the static built-in registry");
+
+        FunctionRegistry registry = FunctionRegistry.forRuleset(null, List.of());
+        Optional<RuleFunction> fn = registry.get("testCustomFunction");
         assertTrue(fn.isPresent());
         assertEquals("testCustomFunction", fn.get().name());
     }

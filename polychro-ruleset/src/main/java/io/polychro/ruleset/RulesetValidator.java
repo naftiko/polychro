@@ -18,6 +18,7 @@ import io.polychro.spi.Document;
 import io.polychro.spi.Formats;
 import io.polychro.spi.Validator;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -39,7 +40,9 @@ class RulesetValidator implements Validator {
 
     RulesetValidator(Ruleset ruleset, boolean includeNonRecommended) {
         this.ruleset = ruleset;
-        this.executor = new RuleExecutor(new JsonPathEvaluator());
+        Path functionsDir = ruleset.functionsDir() != null ? Path.of(ruleset.functionsDir()) : null;
+        FunctionRegistry functions = FunctionRegistry.forRuleset(functionsDir, ruleset.functions());
+        this.executor = new RuleExecutor(new JsonPathEvaluator(), functions);
         this.includeNonRecommended = includeNonRecommended;
         this.aliasResolver = new AliasResolver();
         this.overrideResolver = new OverrideResolver();

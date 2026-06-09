@@ -16,6 +16,7 @@ package io.polychro.ruleset.polyglot;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.polychro.ruleset.RuleFunction;
+import io.polychro.ruleset.Violation;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.HostAccess;
@@ -61,6 +62,13 @@ class PolyglotRuleFunction implements RuleFunction {
 
     @Override
     public List<String> evaluate(JsonNode targetNode, Map<String, Object> options) {
+        return evaluateViolations(targetNode, options).stream()
+                .map(Violation::message)
+                .toList();
+    }
+
+    @Override
+    public List<Violation> evaluateViolations(JsonNode targetNode, Map<String, Object> options) {
         Context context = createSandboxedContext();
         try {
             Value function = loadFunction(context);
@@ -72,10 +80,11 @@ class PolyglotRuleFunction implements RuleFunction {
             Value jsInput = context.eval("js", "(" + jsonInput + ")");
 
             Value result = function.execute(jsInput);
-            return extractMessages(result);
+            return extractViolations(result);
         } catch (Exception e) {
             LOG.warn("Error executing polyglot function '{}': {}", functionName, e.getMessage());
-            return List.of("Function '" + functionName + "' execution failed: " + e.getMessage());
+            return List.of(Violation.of(
+                    "Function '" + functionName + "' execution failed: " + e.getMessage()));
         } finally {
             try {
                 context.close();
@@ -129,18 +138,72 @@ class PolyglotRuleFunction implements RuleFunction {
         return source;
     }
 
+    /**
+     * Convert a script's result array into the {@code message} strings only, dropping any per-result
+     * {@code path}. Retained as a thin shim over {@link #extractViolations(Value)} for callers (and
+     * tests) that only care about messages.
+     */
     static List<String> extractMessages(Value result) {
-        List<String> messages = new ArrayList<>();
+        return extractViolations(result).stream().map(Violation::message).toList();
+    }
+
+    /**
+     * Convert a script's result array into {@link Violation}s, capturing both the {@code message}
+     * and the optional {@code path} each result object carries (issue #32, Layer 1).
+     *
+     * <p>The {@code path} may be a string already in dot/bracket notation, or an array of segments
+     * (e.g. {@code ["consumes", 0, "namespace"]}) as the Naftiko functions emit; in the latter case
+     * it is normalised to a relative path ({@code consumes[0].namespace}). Items without a
+     * {@code message} are skipped.
+     */
+    static List<Violation> extractViolations(Value result) {
+        List<Violation> violations = new ArrayList<>();
         if (result == null || result.isNull() || !result.hasArrayElements()) {
-            return messages;
+            return violations;
         }
         long size = result.getArraySize();
         for (long i = 0; i < size; i++) {
             Value item = result.getArrayElement(i);
             if (item.hasMember("message")) {
-                messages.add(item.getMember("message").asString());
+                String message = item.getMember("message").asString();
+                String path = extractPath(item.hasMember("path") ? item.getMember("path") : null);
+                violations.add(Violation.at(message, path));
             }
         }
-        return messages;
+        return violations;
+    }
+
+    /**
+     * Normalise a result object's {@code path} member to a relative dot/bracket path, or
+     * {@code null} when absent. Array paths are joined segment by segment: string segments are
+     * appended after a {@code '.'}, numeric segments as {@code [index]}. Segments that are neither
+     * a number nor a string (a malformed path the Naftiko functions never emit) are skipped.
+     */
+    static String extractPath(Value path) {
+        if (path == null || path.isNull()) {
+            return null;
+        }
+        if (path.isString()) {
+            String s = path.asString();
+            return s.isEmpty() ? null : s;
+        }
+        if (!path.hasArrayElements()) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder();
+        long size = path.getArraySize();
+        for (long i = 0; i < size; i++) {
+            Value segment = path.getArrayElement(i);
+            if (segment.isNumber()) {
+                sb.append('[').append(segment.asLong()).append(']');
+            } else if (segment.isString()) {
+                if (sb.length() > 0) {
+                    sb.append('.');
+                }
+                sb.append(segment.asString());
+            }
+            // Other segment types are skipped rather than throwing on asString().
+        }
+        return sb.length() == 0 ? null : sb.toString();
     }
 }

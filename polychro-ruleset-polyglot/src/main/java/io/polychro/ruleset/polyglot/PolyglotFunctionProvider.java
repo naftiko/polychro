@@ -48,8 +48,21 @@ public class PolyglotFunctionProvider implements FunctionProvider {
         if (functionsDir == null || functionNames.isEmpty()) {
             return List.of();
         }
+        return functions(functionsDir, functionNames);
+    }
+
+    @Override
+    public List<RuleFunction> functions(Path functionsDir, List<String> functionNames) {
+        // Prefer the ruleset-supplied context (the no-arg ServiceLoader instance has no state of its
+        // own); fall back to any directory this provider was pre-configured with via forDirectory.
+        Path dir = functionsDir != null ? functionsDir : this.functionsDir;
+        List<String> names = functionNames != null && !functionNames.isEmpty()
+                ? functionNames : this.functionNames;
+        if (dir == null || names.isEmpty()) {
+            return List.of();
+        }
         PolyglotFunctionLoader loader = new PolyglotFunctionLoader();
-        Map<String, PolyglotRuleFunction> loaded = loader.loadFunctions(functionsDir, functionNames);
+        Map<String, PolyglotRuleFunction> loaded = loader.loadFunctions(dir, names);
         return new ArrayList<>(loaded.values());
     }
 
