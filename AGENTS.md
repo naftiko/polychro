@@ -180,22 +180,11 @@ continuing, to verify global coherence and catch contradictions introduced by th
 
 ## PR Review Skill
 
-To review a pull request, use the `pr-review` skill from the ikanos repo:
-
-```
-../framework/.agents/skills/pr-review/
-```
-
-> **Note:** the ikanos repo was renamed from `framework` to `ikanos` on GitHub, but the local
-> folder rename is pending — use `../framework/` until further notice.
-
-Run the appropriate context script at the start of every review:
-- Windows: `.\.agents\skills\pr-review\pr-context.ps1 -Pr <number>`
-- Linux/macOS: `bash .agents/skills/pr-review/pr-context.sh <number>`
-
-Follow `SKILL.md` in that directory for the full step-by-step workflow.
-
-> **TODO:** migrate to a shared Ikanos skill server so this dependency on a sibling repo is removed.
+The `pr-review` skill is served by the **`agents-shared` capability** in the
+[`code-standards`](https://github.com/naftiko/code-standards) golden repo
+(issue [naftiko/shipyard#23](https://github.com/naftiko/shipyard/issues/23)).
+See `.github/instructions/agents-shared.instructions.md` for trigger keywords,
+the sync procedure, and prerequisites.
 
 ---
 
@@ -203,9 +192,9 @@ Follow `SKILL.md` in that directory for the full step-by-step workflow.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow. Key rules:
 
-- **Open an Issue before starting work** — for every change (feat, fix, chore, doc). Propose
-  opening a GitHub issue and wait for confirmation. The user may explicitly waive the issue step;
-  only then proceed without one.
+- **Ensure a tracking issue exists** before starting work — it may live in another repo
+  (e.g. `naftiko/shipyard`) as long as it traces the change. Propose opening one if none
+  exists and wait for confirmation. The user may explicitly waive this; only then proceed.
 - **All GitHub interactions must be in English** — issues, PR titles/bodies, inline review
   comments, and commit messages.
 - Branch from `main`: `feat/`, `fix/`, or `chore/` prefix.
