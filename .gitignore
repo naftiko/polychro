@@ -32,3 +32,6 @@ __pycache__/
 /polychro-python/*.egg-info/
 /polychro-node/node_modules/
 /polychro-node/dist/
+
+# Synced agent skills (fetched on demand from the agents-shared capability — never commit)
+.agents/skills/
