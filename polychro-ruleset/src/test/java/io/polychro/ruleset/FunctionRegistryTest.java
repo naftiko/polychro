@@ -51,6 +51,7 @@ class FunctionRegistryTest {
     }
 
     @Test
+    @SuppressWarnings("deprecation") // intentionally exercises the deprecated functions() default
     void functionProviderDefaultsToNoFunctions() {
         // A provider that implements neither method relies on the deprecated default functions()
         // (and the context-aware default delegating to it), contributing nothing.

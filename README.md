@@ -1,7 +1,6 @@
 <img src="https://naftiko.github.io/docs/images/logos/logo_polychro_horizontal.png" width="300">
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
-
 [![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/farah-t-trigui/7c4f0187bd2f5df1122abe46daa78a97/raw/polychro-coverage.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
 [![Bugs](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/farah-t-trigui/7c4f0187bd2f5df1122abe46daa78a97/raw/polychro-bugs.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
 [![Trivy](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/farah-t-trigui/7c4f0187bd2f5df1122abe46daa78a97/raw/polychro-trivy.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
@@ -11,7 +10,7 @@ Welcome to **Polychro**, the polyglot, deterministic linting engine for the AI e
 
 > Polychro comes from the Greek *πολύχρωμος* — **many-colored**, for the many formats and many languages it lints.
 
-<img src="https://naftiko.github.io/docs/images/technology/architecture_linting.png" width="700">
+<img src="https://naftiko.github.io/docs/images/technology/architecture_linting.png" width="800">
 
 ## What Polychro is
 
