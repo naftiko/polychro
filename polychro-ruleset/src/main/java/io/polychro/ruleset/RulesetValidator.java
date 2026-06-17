@@ -39,8 +39,29 @@ class RulesetValidator implements Validator {
     private final OverrideResolver overrideResolver;
 
     RulesetValidator(Ruleset ruleset, boolean includeNonRecommended) {
+        this(ruleset, null, includeNonRecommended);
+    }
+
+    /**
+     * Constructs a validator that resolves {@code functionsDir} relative to {@code baseDir}.
+     *
+     * <p>When the ruleset is loaded from a file, {@code baseDir} must be the ruleset file's
+     * parent directory so that a relative {@code functionsDir} (e.g. {@code ./functions}) is
+     * resolved against that directory rather than the process CWD (issue #44).
+     * Pass {@code null} for {@code baseDir} when the ruleset comes from inline content — the
+     * CWD-relative fallback is preserved in that case.
+     *
+     * @param ruleset              the composed ruleset to evaluate
+     * @param baseDir              the ruleset file's parent directory, or {@code null} for CWD
+     * @param includeNonRecommended whether to enable non-recommended rules
+     */
+    RulesetValidator(Ruleset ruleset, Path baseDir, boolean includeNonRecommended) {
         this.ruleset = ruleset;
-        Path functionsDir = ruleset.functionsDir() != null ? Path.of(ruleset.functionsDir()) : null;
+        Path functionsDir = null;
+        if (ruleset.functionsDir() != null) {
+            Path raw = Path.of(ruleset.functionsDir());
+            functionsDir = (baseDir != null) ? baseDir.resolve(raw).normalize() : raw;
+        }
         FunctionRegistry functions = FunctionRegistry.forRuleset(functionsDir, ruleset.functions());
         this.executor = new RuleExecutor(new JsonPathEvaluator(), functions);
         this.includeNonRecommended = includeNonRecommended;

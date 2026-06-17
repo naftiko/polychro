@@ -65,9 +65,18 @@ public class RulesetValidatorFactory implements ValidatorFactory {
 
     @Override
     public Validator create(ValidatorConfig config) {
-        Ruleset ruleset = loadRuleset(config);
         boolean includeNonRecommended = config.get("includeNonRecommended", Boolean.class)
                 .orElse(false);
+
+        var pathOpt = config.get("rulesetPath", String.class);
+        if (pathOpt.isPresent()) {
+            Path rulesetPath = Path.of(pathOpt.get());
+            Path baseDir = rulesetPath.toAbsolutePath().getParent();
+            Ruleset ruleset = loadRuleset(config);
+            return new RulesetValidator(ruleset, baseDir, includeNonRecommended);
+        }
+
+        Ruleset ruleset = loadRuleset(config);
         return new RulesetValidator(ruleset, includeNonRecommended);
     }
 

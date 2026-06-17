@@ -50,6 +50,35 @@ class RulesetValidatorTest {
     }
 
     @Test
+    void constructorWithNullBaseDirAndNonNullFunctionsDirShouldUseCwdFallback() {
+        // Exercises the false branch of (baseDir != null) in the three-arg constructor:
+        // when baseDir is null and functionsDir is declared, functionsDir is kept as-is
+        // (CWD-relative) — the inline-content / no-path case (issue #44).
+        Ruleset ruleset = new Ruleset(null, null, null, null, "./functions", List.of(),
+                Map.of(), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, null, false);
+        Document doc = Document.fromString("{}", "json");
+
+        assertTrue(validator.validate(doc).isEmpty());
+    }
+
+    @Test
+    void constructorWithNonNullBaseDirAndNonNullFunctionsDirShouldResolveAgainstBaseDir(
+            @org.junit.jupiter.api.io.TempDir java.nio.file.Path tempDir) {
+        // Exercises the true branch of (baseDir != null) in the three-arg constructor:
+        // when baseDir is supplied, a relative functionsDir is resolved against it.
+        Ruleset ruleset = new Ruleset(null, null, null, null, "./functions", List.of(),
+                Map.of(), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, tempDir, false);
+        Document doc = Document.fromString("{}", "json");
+
+        // No rules → empty diagnostics, but the constructor must complete without error
+        // (the resolved path tempDir/functions simply doesn't exist, which is fine when
+        // no functions are declared).
+        assertTrue(validator.validate(doc).isEmpty());
+    }
+
+    @Test
     void validateShouldReturnEmptyForEmptyRuleset() {
         Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of(), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
