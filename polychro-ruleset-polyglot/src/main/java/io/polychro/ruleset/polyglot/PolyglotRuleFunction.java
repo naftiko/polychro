@@ -111,9 +111,11 @@ class PolyglotRuleFunction implements RuleFunction {
     }
 
     Value loadFunction(Context context) {
-        // Wrap ES module export default in a way GraalVM can execute
-        String wrappedSource = wrapSource(sourceCode, languageId);
         try {
+            // Wrap ES module export default in a way GraalVM can execute.
+            // wrapSource may throw IllegalArgumentException for malformed sources —
+            // treat that as a load failure so evaluate() returns empty, not an error Violation.
+            String wrappedSource = wrapSource(sourceCode, languageId);
             Source source = Source.newBuilder(languageId, wrappedSource, functionName + ".wrapped")
                     .buildLiteral();
             Value result = context.eval(source);
@@ -130,9 +132,18 @@ class PolyglotRuleFunction implements RuleFunction {
 
     static String wrapSource(String source, String languageId) {
         if ("js".equals(languageId)) {
-            // Strip "export default" and wrap in IIFE that returns the function
-            String stripped = source.replaceFirst("(?s)export\\s+default\\s+", "");
-            return "(function() { return " + stripped + " })()";
+            // Validate that the source contains `export default` — every JS rule function
+            // must use this convention. Failing early with a clear message is preferable
+            // to relying on a ReferenceError for __polychroFn at eval time.
+            if (!source.matches("(?s).*export\\s+default\\s+.*")) {
+                throw new IllegalArgumentException(
+                        "JS rule function source must contain 'export default' — missing in provided source");
+            }
+            // Bind the default export to a variable so that a leading JSDoc block comment
+            // stays attached to the assignment expression instead of being followed by a
+            // bare `return` — which would trigger ASI and make `return;` return undefined.
+            String bound = source.replaceFirst("(?s)export\\s+default\\s+", "var __polychroFn = ");
+            return "(function() { " + bound + "\n return __polychroFn; })()";
         }
         // Python and Groovy: source is executed directly, function name extracted differently
         return source;
