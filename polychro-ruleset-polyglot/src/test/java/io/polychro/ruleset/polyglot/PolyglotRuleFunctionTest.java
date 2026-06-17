@@ -190,6 +190,19 @@ class PolyglotRuleFunctionTest {
     }
 
     @Test
+    void wrapSourceShouldThrowWhenJsSourceLacksExportDefault() {
+        // Validates the explicit guard added in response to review #53:
+        // a JS source without `export default` must fail with a clear message
+        // rather than producing a ReferenceError for __polychroFn at eval time.
+        String source = "function foo(x) { return []; }";
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> PolyglotRuleFunction.wrapSource(source, "js"));
+        assertTrue(ex.getMessage().contains("export default"),
+                "exception message must mention the missing 'export default' keyword");
+    }
+
+    @Test
     void extractMessagesShouldHandleNullValue() {
         List<String> messages = PolyglotRuleFunction.extractMessages(null);
         assertTrue(messages.isEmpty());
@@ -212,7 +225,8 @@ class PolyglotRuleFunctionTest {
 
     @Test
     void evaluateShouldReturnEmptyWhenScriptIsNotExecutable() throws Exception {
-        // A script that evaluates to a non-callable value (number, not a function)
+        // A script without `export default` causes wrapSource to throw IllegalArgumentException,
+        // caught by loadFunction → evaluate returns empty without propagating.
         String source = "42";
         PolyglotRuleFunction fn = new PolyglotRuleFunction("not-executable", source, "js", engine);
         JsonNode input = JSON.readTree("{}");
@@ -246,5 +260,75 @@ class PolyglotRuleFunctionTest {
         List<String> results = fn.evaluate(input, Map.of());
         assertEquals(1, results.size());
         assertEquals("valid", results.get(0));
+    }
+
+    @Test
+    void wrapSourceShouldBindDefaultExportToVariableWhenLeadingJsDocPresent() {
+        // Verifies that wrapSource uses variable binding (not bare return) so that
+        // a leading multi-line JSDoc comment does not trigger ASI (issue #52).
+        String source = """
+                /**
+                 * Returns violations when the value is missing.
+                 *
+                 * @param {*} targetVal - the node being validated
+                 * @returns {Array}
+                 */
+                export default function foo(targetVal) {
+                  return [];
+                }
+                """;
+        String wrapped = PolyglotRuleFunction.wrapSource(source, "js");
+        assertTrue(wrapped.contains("var __polychroFn ="),
+                "wrapSource must use variable binding to survive a leading JSDoc comment");
+        assertTrue(wrapped.contains("return __polychroFn;"),
+                "wrapSource must return the bound variable at the end of the IIFE");
+        assertFalse(wrapped.contains("export default"),
+                "wrapSource must strip the export default keyword");
+    }
+
+    @Test
+    void evaluateShouldLoadAndExecuteFunctionWithLeadingJsDoc() throws Exception {
+        // Regression test for issue #52: a JSDoc block before `export default` must not
+        // cause ASI to turn `return` into `return;`, silently dropping the function.
+        String source = """
+                /**
+                 * Validates that the target value has a non-empty name field.
+                 *
+                 * @param {object} targetVal - the node under validation
+                 * @returns {Array<{message: string}>} list of violations
+                 */
+                export default function namedCheck(targetVal) {
+                  if (!targetVal || !targetVal.name) {
+                    return [{ message: "name is required" }];
+                  }
+                  return [];
+                }
+                """;
+        PolyglotRuleFunction fn = new PolyglotRuleFunction("named-check", source, "js", engine);
+
+        JsonNode invalid = JSON.readTree("{}");
+        List<String> violations = fn.evaluate(invalid, Map.of());
+        assertEquals(1, violations.size(), "function with leading JSDoc must fire and return violations");
+        assertEquals("name is required", violations.get(0));
+
+        JsonNode valid = JSON.readTree("{\"name\": \"ok\"}");
+        List<String> noViolations = fn.evaluate(valid, Map.of());
+        assertTrue(noViolations.isEmpty(), "function with leading JSDoc must return empty list for valid input");
+    }
+
+    @Test
+    void loadFunctionShouldReturnNullAndWarnWhenDefaultExportIsNotExecutable() throws Exception {
+        // Covers the !canExecute() branch of loadFunction:
+        // a script whose default export is a plain value (not a function) wraps to
+        // `var __polychroFn = 42; return __polychroFn;` — the IIFE returns 42,
+        // canExecute() is false, and the full evaluate pipeline must return empty.
+        // Uses evaluate() to avoid duplicating the sandbox builder (review #53 comment).
+        String source = "export default 42;";
+        PolyglotRuleFunction fn = new PolyglotRuleFunction("non-fn-export", source, "js", engine);
+        JsonNode input = JSON.readTree("{}");
+
+        List<String> results = fn.evaluate(input, Map.of());
+        assertTrue(results.isEmpty(),
+                "evaluate must return empty when the default export is not a function");
     }
 }
