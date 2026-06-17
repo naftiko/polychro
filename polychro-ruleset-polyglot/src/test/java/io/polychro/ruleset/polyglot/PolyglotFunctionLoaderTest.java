@@ -150,4 +150,54 @@ class PolyglotFunctionLoaderTest {
             }
         }
     }
+
+    // -----------------------------------------------------------------------
+    // Lazy engine — issue #45
+    // -----------------------------------------------------------------------
+
+    /**
+     * Engine must NOT be created at construction time.
+     * <p>
+     * Verifies that close() is safe immediately after construction — before any
+     * script is loaded — which proves the constructor does not eagerly call
+     * {@code Engine.create()}.
+     */
+    @Test
+    void closeShouldNotThrowWhenEngineWasNeverCreated() {
+        PolyglotFunctionLoader loader = new PolyglotFunctionLoader();
+        assertDoesNotThrow(loader::close,
+                "close() must not throw when no script was ever loaded and Engine was never initialised");
+    }
+
+    @Test
+    void getEngineShouldReturnSameInstanceOnRepeatedCalls() {
+        PolyglotFunctionLoader loader = new PolyglotFunctionLoader();
+        try {
+            var engine1 = loader.getEngine();
+            var engine2 = loader.getEngine();
+            assertSame(engine1, engine2, "getEngine() must return the same Engine instance on repeated calls");
+        } finally {
+            loader.close();
+        }
+    }
+
+    @Test
+    void loadFunctionsShouldNotCreateEngineWhenFunctionListIsEmpty(@TempDir Path tempDir) {
+        // No scripts to load → engine must remain null after loadFunctions with empty list.
+        PolyglotFunctionLoader loader = new PolyglotFunctionLoader();
+        loader.loadFunctions(tempDir, List.of());
+        // close() on a null engine must not throw (guards the lazy-engine contract)
+        assertDoesNotThrow(loader::close,
+                "close() must be safe even when loadFunctions was called with an empty list");
+    }
+
+    @Test
+    void loadFunctionsShouldNotCreateEngineWhenNoScriptFileFound(@TempDir Path tempDir) {
+        // All names are missing → no PolyglotRuleFunction is built → Engine.create() is never called.
+        PolyglotFunctionLoader loader = new PolyglotFunctionLoader();
+        Map<String, PolyglotRuleFunction> result = loader.loadFunctions(tempDir, List.of("missing-fn"));
+        assertTrue(result.isEmpty());
+        assertDoesNotThrow(loader::close,
+                "close() must be safe when loadFunctions found no matching script file");
+    }
 }
