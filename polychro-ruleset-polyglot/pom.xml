@@ -29,6 +29,17 @@
             <artifactId>js</artifactId>
             <type>pom</type>
         </dependency>
+        <!--
+          Truffle JS runtime jar — without this, Engine.create() throws
+          "No language and polyglot implementation was found on the module-path"
+          in both the JVM shaded jar and the native image.
+          See: https://github.com/naftiko/polychro/issues/45
+        -->
+        <dependency>
+            <groupId>org.graalvm.js</groupId>
+            <artifactId>js-community</artifactId>
+            <type>pom</type>
+        </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>

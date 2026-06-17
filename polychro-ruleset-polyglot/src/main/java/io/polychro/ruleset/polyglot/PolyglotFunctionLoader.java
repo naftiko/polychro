@@ -34,10 +34,31 @@ class PolyglotFunctionLoader {
 
     private static final Logger LOG = LoggerFactory.getLogger(PolyglotFunctionLoader.class);
 
-    private final Engine engine;
+    /**
+     * Lazily initialised GraalVM Engine.
+     * <p>
+     * {@code Engine.create()} is deferred until the first script is actually loaded so that
+     * a ruleset declaring {@code functions:} but whose custom rules never fire (and thus
+     * {@link #loadFunctions} is never called with non-empty names) does not crash in
+     * environments where no Truffle language is on the module-path (e.g. a misconfigured
+     * native image). See: <a href="https://github.com/naftiko/polychro/issues/45">issue #45</a>.
+     */
+    private Engine engine;
 
     PolyglotFunctionLoader() {
-        this.engine = Engine.create();
+        // Engine is created lazily on first use — see getEngine().
+    }
+
+    /**
+     * Returns the shared {@link Engine}, creating it on first call.
+     * 
+     * <p>Package-private to allow direct testing from {@code PolyglotFunctionLoaderTest}.
+     */
+    Engine getEngine() {
+        if (engine == null) {
+            engine = Engine.create();
+        }
+        return engine;
     }
 
     /**
@@ -63,7 +84,7 @@ class PolyglotFunctionLoader {
                     LOG.warn("Empty script file for function '{}': {}", name, scriptFile);
                     continue;
                 }
-                PolyglotRuleFunction function = new PolyglotRuleFunction(name, source, languageId, engine);
+                PolyglotRuleFunction function = new PolyglotRuleFunction(name, source, languageId, getEngine());
                 functions.put(name, function);
             } catch (IOException e) {
                 LOG.warn("Failed to read script file for function '{}': {}", name, e.getMessage());
@@ -98,6 +119,8 @@ class PolyglotFunctionLoader {
     }
 
     void close() {
-        engine.close();
+        if (engine != null) {
+            engine.close();
+        }
     }
 }

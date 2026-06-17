@@ -282,6 +282,15 @@
                                         <buildArg>-H:+ReportExceptionStackTraces</buildArg>
                                         <buildArg>--enable-url-protocols=https</buildArg>
                                         <!--
+                                          Embed the GraalJS language runtime so polyglot functions
+                                          declared in rulesets (functions: [...]) are executed.
+                                          Without this flag, Engine.create() fails at runtime with:
+                                          "No language and polyglot implementation was found on the
+                                          module-path."
+                                          See: https://github.com/naftiko/polychro/issues/45
+                                        -->
+                                        <buildArg>--language:js</buildArg>
+                                        <!--
                                           Our reflect-config.json is excluded from the shaded jar
                                           by the META-INF/native-image/** filter above (to avoid
                                           third-party config conflicts). Pass it explicitly here.
