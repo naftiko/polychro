@@ -29,6 +29,23 @@
             <groupId>io.polychro</groupId>
             <artifactId>polychro-capability</artifactId>
             <version>${project.version}</version>
+            <exclusions>
+                <!--
+                  Apache Groovy is pulled transitively via polychro-capability -> ikanos-engine
+                  but is NOT used by the polychro-cli code path. Groovy 4.x uses invokedynamic
+                  (Indy) SwitchPoints whose IndyInterface.invalidateSwitchPoints calls
+                  MethodHandleNatives.setCallSiteTargetNormal, a method deleted by GraalVM SVM.
+                  Leaving it on the native-image classpath fails the build with:
+                    "Unsupported method ...setCallSiteTargetNormal(CallSite, MethodHandle)
+                     is reachable" (via org.codehaus.groovy.vmplugin.v8.IndyInterface).
+                  Excluding it here keeps the native build green. The JVM jar is unaffected
+                  because the CLI never executes Groovy.
+                -->
+                <exclusion>
+                    <groupId>org.apache.groovy</groupId>
+                    <artifactId>groovy</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!--
@@ -184,87 +201,38 @@
             <id>native</id>
             <build>
                 <plugins>
-                    <!-- Create a CLI fat jar for native-image compilation -->
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-shade-plugin</artifactId>
-                        <version>3.5.1</version>
-                        <executions>
-                            <execution>
-                                <id>cli-native</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>shade</goal>
-                                </goals>
-                                <configuration>
-                                    <outputFile>${project.build.directory}/polychro-cli-shaded.jar</outputFile>
-                                    <transformers>
-                                        <transformer
-                                            implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                            <mainClass>io.polychro.cli.PolychroCli</mainClass>
-                                        </transformer>
-                                        <transformer
-                                            implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
-                                    </transformers>
-                                    <artifactSet>
-                                        <excludes>
-                                            <!-- GraalVM SDK builder classes must NOT be in the application classpath -->
-                                            <exclude>org.graalvm.sdk:nativeimage</exclude>
-                                            <exclude>org.graalvm.sdk:word</exclude>
-                                            <exclude>org.graalvm.sdk:collections</exclude>
-                                            <exclude>org.graalvm.sdk:nativebridge</exclude>
-                                            <exclude>org.graalvm.sdk:jniutils</exclude>
-                                            <!-- GraalVM Truffle builder JARs contain libgraal/SVM classes reserved for the native builder -->
-                                            <exclude>org.graalvm.truffle:truffle-compiler</exclude>
-                                            <exclude>org.graalvm.truffle:truffle-enterprise</exclude>
-                                            <!--
-                                              Groovy 4.x uses invokedynamic (Indy) SwitchPoints which call
-                                              MethodHandleNatives.setCallSiteTargetNormal — a method deleted
-                                              by GraalVM SVM. Groovy is pulled transitively by ikanos-engine
-                                              but is not needed at native-image build time for the CLI.
-                                            -->
-                                            <exclude>org.apache.groovy:groovy</exclude>
-                                        </excludes>
-                                    </artifactSet>
-                                    <filters>
-                                        <!--
-                                          Exclude signature files and native-image configs from
-                                          all third-party deps to avoid conflicts in the fat jar.
+                    <!--
+                      Native build strategy (GraalVM JDK 21+, "Truffle unchained").
 
-                                          IMPORTANT — coupling between this filter and the native-image plugin:
-                                          The <exclude>META-INF/native-image/**</exclude> line below strips
-                                          ALL native-image config files from the shaded jar, including
-                                          polychro-cli's own reflect-config.json and resource-config.json.
-                                          Those files are therefore passed to GraalVM explicitly via
-                                          -H:ReflectionConfigurationFiles and -H:ResourceConfigurationFiles
-                                          build args below, pointing to ${project.build.outputDirectory}.
+                      We deliberately do NOT build a shaded uber jar here. GraalVM's official
+                      guidance is explicit: uber jars are NOT supported for native-image because
+                      they break Java module descriptors, and the Truffle runtime jars
+                      (truffle-runtime) declare a ForceOnModulePath attribute in their
+                      META-INF/native-image/.../native-image.properties, which REQUIRES the
+                      language jars (GraalJS + Truffle) to be on the module path. A fat jar has no
+                      module descriptor, so native-image fails with:
+                        "Failed to process ForceOnModulePath attribute: No module descriptor was
+                         found in class-path entry: .../polychro-cli-shaded.jar".
 
-                                          If ${project.build.outputDirectory} is ever overridden (e.g. by a
-                                          parent POM profile), the config files will silently vanish from the
-                                          native image with no compile error. To make this coupling explicit,
-                                          the build args below must always reference the same effective
-                                          output directory that Maven compiles classes into.
-                                          See: https://github.com/naftiko/polychro/issues/TODO-shade-filter-refactor
-                                        -->
-                                        <filter>
-                                            <artifact>*:*</artifact>
-                                            <excludes>
-                                                <exclude>META-INF/*.SF</exclude>
-                                                <exclude>META-INF/*.DSA</exclude>
-                                                <exclude>META-INF/*.RSA</exclude>
-                                                <exclude>META-INF/native-image/**</exclude>
-                                            </excludes>
-                                        </filter>
-                                    </filters>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
+                      Instead, the native-maven-plugin (with extensions=true) feeds native-image
+                      the project's full runtime classpath as individual jars. native-image then
+                      AUTO-UPGRADES the polyglot modules (org.graalvm.polyglot, GraalJS, Truffle)
+                      to the module path, so the JS language registers correctly. No language:js
+                      build flag is needed (it is not even a valid native-image option on JDK 21;
+                      the language is discovered from the js-community dependency).
 
+                      Each jar's own META-INF/native-image config files (reflection, resources)
+                      are read automatically, including polychro-cli's own reflect-config.json and
+                      resource-config.json, so no ReflectionConfigurationFiles /
+                      ResourceConfigurationFiles build args are required.
+
+                      See: https://www.graalvm.org/latest/reference-manual/embed-languages/#build-native-executables-from-polyglot-applications
+                    -->
                     <plugin>
                         <groupId>org.graalvm.buildtools</groupId>
                         <artifactId>native-maven-plugin</artifactId>
                         <version>0.10.3</version>
+                        <extensions>true</extensions>
                         <executions>
                             <execution>
                                 <id>build-cli-native</id>
@@ -275,28 +243,10 @@
                                 <configuration>
                                     <mainClass>io.polychro.cli.PolychroCli</mainClass>
                                     <imageName>polychro-cli</imageName>
-                                    <classpath>
-                                        <param>${project.build.directory}/polychro-cli-shaded.jar</param>
-                                    </classpath>
                                     <buildArgs>
+                                        <buildArg>--no-fallback</buildArg>
                                         <buildArg>-H:+ReportExceptionStackTraces</buildArg>
                                         <buildArg>--enable-url-protocols=https</buildArg>
-                                        <!--
-                                          Embed the GraalJS language runtime so polyglot functions
-                                          declared in rulesets (functions: [...]) are executed.
-                                          Without this flag, Engine.create() fails at runtime with:
-                                          "No language and polyglot implementation was found on the
-                                          module-path."
-                                          See: https://github.com/naftiko/polychro/issues/45
-                                        -->
-                                        <buildArg>--language:js</buildArg>
-                                        <!--
-                                          Our reflect-config.json is excluded from the shaded jar
-                                          by the META-INF/native-image/** filter above (to avoid
-                                          third-party config conflicts). Pass it explicitly here.
-                                        -->
-                                        <buildArg>-H:ReflectionConfigurationFiles=${project.build.outputDirectory}/META-INF/native-image/io.polychro/polychro-cli/reflect-config.json</buildArg>
-                                        <buildArg>-H:ResourceConfigurationFiles=${project.build.outputDirectory}/META-INF/native-image/io.polychro/polychro-cli/resource-config.json</buildArg>
                                     </buildArgs>
                                 </configuration>
                             </execution>
