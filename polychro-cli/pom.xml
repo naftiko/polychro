@@ -31,15 +31,21 @@
             <version>${project.version}</version>
             <exclusions>
                 <!--
-                  Apache Groovy is pulled transitively via polychro-capability -> ikanos-engine
-                  but is NOT used by the polychro-cli code path. Groovy 4.x uses invokedynamic
-                  (Indy) SwitchPoints whose IndyInterface.invalidateSwitchPoints calls
-                  MethodHandleNatives.setCallSiteTargetNormal, a method deleted by GraalVM SVM.
+                  We exclude the transitively-pulled org.apache.groovy:groovy here (it comes
+                  via polychro-capability -> ikanos-engine and is NOT used by the polychro-cli
+                  code path) because Groovy 4.x uses invokedynamic (Indy) SwitchPoints whose
+                  IndyInterface.invalidateSwitchPoints calls
+                  MethodHandleNatives.setCallSiteTargetNormal, a method GraalVM SVM has removed.
                   Leaving it on the native-image classpath fails the build with:
                     "Unsupported method ...setCallSiteTargetNormal(CallSite, MethodHandle)
                      is reachable" (via org.codehaus.groovy.vmplugin.v8.IndyInterface).
-                  Excluding it here keeps the native build green. The JVM jar is unaffected
-                  because the CLI never executes Groovy.
+                  Excluding it keeps the native build green; the JVM jar is unaffected because
+                  the CLI never executes Apache Groovy.
+
+                  This does NOT affect future support for the GraalVM polyglot Groovy language
+                  plugin: that would be added as a direct dependency to polychro-ruleset-polyglot
+                  (e.g. org.graalvm.polyglot:groovy-community) alongside js-community, and this
+                  PR's module-path strategy actually makes that easier, not harder.
                 -->
                 <exclusion>
                     <groupId>org.apache.groovy</groupId>
