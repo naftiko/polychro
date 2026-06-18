@@ -23,7 +23,7 @@ jobs:
             artifact_name: polychro-cli-linux-arm64
 
           # macOS Apple Silicon (ARM64)
-          - os: macos-latest  # macos-14+ uses Mx runners
+          - os: macos-15  # pinned: macos-latest → macOS 26 since 2026-06-15, hangs with GraalVM native-image (actions/runner-images#14167)
             artifact_name: polychro-cli-macos-arm64
 
           # Windows AMD64
@@ -111,7 +111,7 @@ jobs:
             artifact_name: polychro-cli-linux-amd64
           - os: ubuntu-24.04-arm
             artifact_name: polychro-cli-linux-arm64
-          - os: macos-latest
+          - os: macos-15  # pinned: macos-latest → macOS 26 since 2026-06-15 (actions/runner-images#14167)
             artifact_name: polychro-cli-macos-arm64
           - os: windows-latest
             artifact_name: polychro-cli-windows-amd64.exe
