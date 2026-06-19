@@ -51,6 +51,24 @@
                     <groupId>org.apache.groovy</groupId>
                     <artifactId>groovy</artifactId>
                 </exclusion>
+                <!--
+                  We exclude the transitively-pulled GraalPy (Truffle Python) stack here. It comes
+                  via polychro-capability -> ikanos-engine -> org.graalvm.polyglot:python and is
+                  NOT used by polychro-cli: the only polyglot language Polychro runs is JS (via
+                  polychro-ruleset-polyglot -> org.graalvm.js:js-community). GraalPy drags in
+                  python-language (~88 MB), python-resources (~62 MB) plus the full Truffle/LLVM/
+                  BouncyCastle closure, inflating the native-image analysis to ~343k reachable
+                  methods. On the memory-constrained GitHub macos-latest runner (7 GB RAM) the
+                  build then spends ~79% of its time in GC and is aborted by the deadlock watchdog
+                  (exit status 30), so the macOS binary is never produced (naftiko/polychro#58).
+                  Excluding the org.graalvm.polyglot:python root is enough: python-community,
+                  python-language, python-resources, profiler-tool, llvm-api and the BouncyCastle
+                  jars all derive from it. JS is unaffected. Guarded by GraalPyExclusionTest.
+                -->
+                <exclusion>
+                    <groupId>org.graalvm.polyglot</groupId>
+                    <artifactId>python</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
 
