@@ -203,9 +203,12 @@ jobs:
             | grep -o '"token":"[^"]*"' | cut -d'"' -f4 > /tmp/sonar_token.txt
 
       - name: SonarQube Scan
+        env:
+          MAVEN_USERNAME: ${{ github.actor }}
+          MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          SONAR_TOKEN=$(cat /tmp/sonar_token.txt | tr -d '[:space:]')
-
+          SONAR_TOKEN=$(tr -d '[:space:]' < /tmp/sonar_token.txt)
+          
           docker run --rm \
             --network="host" \
             -v "${{ github.workspace }}:/usr/src" \
