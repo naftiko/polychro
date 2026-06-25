@@ -1,0 +1,39 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://naftiko.io/polychro/tutorial/track-1/openapi-schema.json",
+    "title": "Minimal OpenAPI 3.x structural schema (Track 1)",
+    "description": "A deliberately small JSON Schema for the Track 1 Users API contract. It is NOT the full OpenAPI Specification schema — it checks just enough structure to demonstrate Polychro's schema-model stage.",
+    "type": "object",
+    "required": [
+        "openapi",
+        "info",
+        "paths"
+    ],
+    "properties": {
+        "openapi": {
+            "type": "string",
+            "pattern": "^3\\."
+        },
+        "info": {
+            "type": "object",
+            "required": [
+                "title",
+                "version"
+            ],
+            "properties": {
+                "title": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                }
+            }
+        },
+        "paths": {
+            "type": "object"
+        }
+    }
+}
