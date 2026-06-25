@@ -1,0 +1,13 @@
+# .polychro.yml — Polychro project config for Track 1, Step 4.
+#
+# An empty `validators:` list means "auto-discover", and because a `json-schema`
+# config block is present, Polychro implicitly runs the schema-model stage with
+# this schema. (Well-formedness still runs first, as always.)
+#
+# `schemaPath` is resolved relative to the directory you run `polychro` from.
+# Run from examples/tutorial/track-1-yaml/ so the relative path resolves.
+validators: []
+
+config:
+  json-schema:
+    schemaPath: openapi-schema.json

@@ -1,0 +1,85 @@
+# openapi-ruleset.yml — a HOME-MADE Polychro ruleset for OpenAPI 3.x contracts.
+#
+# Polychro's built-in rulesets (polychro:governance, ai-safety, security) are
+# CAPABILITY-centric: they match an Ikanos capability document ($.capability,
+# $.info of a capability, $.consumes, ...). They do NOT understand OpenAPI's
+# $.paths, operationId, or responses. So to lint an OpenAPI contract you write
+# your own ruleset — exactly like this one.
+#
+# This file grows across Track 1: Step 3 adds the path-summary rule, Step 5 adds
+# operation-id-present and operation-responses-present, and Step 6 wires the
+# custom polyglot function `operation-id-unique` (functions/operation-id-unique.js).
+#
+# The schema mirrors the built-in polychro-rulesets/.../governance.yml:
+#   - top-level `aliases:` map JSONPath expressions to #names reused in `given:`
+#   - top-level `rules:` map of ruleName -> { message, description, severity,
+#     given, then: { field?, function, functionOptions? } }
+#   - polyglot wiring uses top-level `functionsDir:` + `functions:` (Step 6).
+#
+# JSONPath note: the engine uses Jayway JsonPath, so `given:` selectors must be
+# value selectors (e.g. "$.paths[*].get"). Spectral's key selector ("$.paths~")
+# is NOT supported, so path-key rules are expressed differently here.
+
+extends: []
+
+aliases:
+  Paths: "$.paths[*]"
+
+# Step 6 — custom polyglot function wiring. The function file lives in ./functions
+# relative to this ruleset; the name (no .js) is listed under `functions:`.
+functionsDir: functions
+functions:
+  - operation-id-unique
+
+rules:
+
+  # ─── Step 3 ───────────────────────────────────────────────────────────────
+
+  path-summary-present:
+    message: "Each path item must declare a `summary`."
+    description: "A path-level summary documents the resource the path addresses."
+    severity: warn
+    given: "#Paths"
+    then:
+      field: "summary"
+      function: truthy
+
+  # ─── Step 5 ───────────────────────────────────────────────────────────────
+
+  operation-id-present:
+    message: "Each operation must declare an `operationId`."
+    description: "operationId is the stable identifier API consumers and code generators key on."
+    severity: error
+    given:
+      - "$.paths[*].get"
+      - "$.paths[*].post"
+      - "$.paths[*].put"
+      - "$.paths[*].delete"
+      - "$.paths[*].patch"
+    then:
+      field: "operationId"
+      function: truthy
+
+  operation-responses-present:
+    message: "Each operation must declare a `responses` object."
+    description: "An operation without responses describes no outcome and cannot be consumed."
+    severity: error
+    given:
+      - "$.paths[*].get"
+      - "$.paths[*].post"
+      - "$.paths[*].put"
+      - "$.paths[*].delete"
+      - "$.paths[*].patch"
+    then:
+      field: "responses"
+      function: defined
+
+  # ─── Step 6 (custom polyglot rule) ──────────────────────────────────────────
+
+  operation-id-unique:
+    message: "Every `operationId` must be unique across the whole contract."
+    description: "Duplicate operationIds break client code generation and routing."
+    severity: error
+    given: "$"
+    then:
+      function: operation-id-unique
