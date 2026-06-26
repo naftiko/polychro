@@ -1,34 +1,36 @@
 openapi: 3.0.3
 info:
-  title: Users API
+  title: Modern Maritime Registry API
   version: 1.0.0
-  description: A tiny users service used as the red thread of Polychro Track 1.
+  description: A tiny slice of the Modern Maritime Registry, used as the red thread of Polychro Track 1.
 paths:
-  /users:
-    summary: Collection of users.
+  /ships:
+    summary: Collection of registered ships.
     get:
-      operationId: getUser
-      summary: List all users.
+      operationId: get-ship
+      summary: List all registered ships.
       responses:
         "200":
-          description: A list of users.
-    post:
-      operationId: createUser
-      summary: Create a new user.
-      responses:
-        "201":
-          description: The created user.
-  /users/{id}:
-    summary: A single user by id.
+          description: A list of ships.
+  /ships/{imo_number}:
+    summary: A single ship by IMO number.
     get:
-      operationId: getUser
-      summary: Get one user by id.
+      operationId: get-ship
+      summary: Get one ship by IMO number.
       parameters:
-        - name: id
+        - name: imo_number
           in: path
           required: true
           schema:
             type: string
       responses:
         "200":
-          description: The requested user.
+          description: The requested ship.
+  /crew:
+    summary: Collection of crew members.
+    get:
+      operationId: list-crew
+      summary: List all crew members.
+      responses:
+        "200":
+          description: A list of crew members.
