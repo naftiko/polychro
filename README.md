@@ -12,7 +12,56 @@ Welcome to **Polychro**, the polyglot, deterministic linting engine for the AI e
 
 <img src="https://naftiko.github.io/docs/images/technology/architecture_linting.png" width="800">
 
-## What Polychro is
+## Polychro in one sentence
+
+**Polychro reads a specification — YAML, JSON, XML, Markdown, or HTML — and tells you what's wrong with it in a single, fast pass: structural mistakes, schema violations, broken conventions, and security anti-patterns.** One binary, one config, one diagnostic format — fast enough to sit inside an AI agent's generate-validate-retry loop.
+
+That's the whole idea. What it means for *you* depends on what you're trying to ship.
+
+## Who are you?
+
+Polychro looks like a different tool depending on where you sit. Find yourself below.
+
+### :robot: You're building AI agents or tools
+
+> *Your agent generates specs (capabilities, MCP manifests, configs, docs) and you need a deterministic guardrail that catches mistakes before they reach production — without slowing the loop.*
+
+**What Polychro can do for you:**
+
+- **Validate in the same turn the agent generates.** Sub-second, in-process — no 2–5 s subprocess startup — so it fits inside a tight generate-validate-retry loop.
+- **Call it over MCP.** `polychro serve` exposes linting as **MCP** tools, so an agent can lint its own output with a tool call.
+- **Get LLM-native output.** The `--format agent` mode emits diagnostics shaped for a model to read and act on.
+- **Embed it in the JVM.** Drop `polychro-core` on the classpath and lint in-process — no Node.js runtime, no shell-out.
+
+→ Start with the **[MCP Server guide](https://shipyard.naftiko.io/docs/1.0.0-alpha3/polychro/guide/mcp-server/)**.
+
+### :shield: You run CI or a platform
+
+> *You're a platform or DevOps engineer who needs to gate specs in CI and enforce governance across many repos — without bolting together a pile of linters.*
+
+**What Polychro can do for you:**
+
+- **Gate any spec in CI.** The **GitHub Action** lints on every PR and emits **SARIF**, so findings show up inline in the GitHub UI.
+- **Collapse the toolchain.** One binary replaces a Docker meta-linter, a separate rule engine, and several config files — one config, one diagnostic format.
+- **Run anywhere.** A GraalVM-native binary for Linux, macOS, and Windows with sub-second cold start — no JVM, no Node.js, no Docker dependency.
+- **Enforce governance, not just schema.** Built-in `governance`, `ai-safety`, and `security` rulesets catch the runtime traps schema validation misses (port conflicts, dangling refs, secret exposure).
+
+→ Start with the **[GitHub Action guide](https://shipyard.naftiko.io/docs/1.0.0-alpha3/polychro/guide/github-action/)**.
+
+### :triangular_ruler: You author specs or rules
+
+> *You write OpenAPI, AsyncAPI, capabilities, or your own spec format — and you want consistent, custom validation that goes beyond what a schema can express.*
+
+**What Polychro can do for you:**
+
+- **Reuse your Spectral rules.** Polychro speaks the **Spectral ruleset format** natively (`given`/`then`), so existing rule investment carries over unchanged.
+- **Lint more than OpenAPI.** Arbitrary YAML, JSON, XML, Markdown, and HTML are first-class — capabilities, CRDs, instruction files, even HTML emails.
+- **Write rules in your language.** Custom rule functions in sandboxed **JavaScript**, **Python**, or **Groovy** — or native Java via the `RuleFunction` SPI for the fastest path.
+- **Add whole validators.** The `ServiceLoader` SPI lets you drop in a custom validator with zero framework coupling.
+
+→ Start with the **[Rulesets guide](https://shipyard.naftiko.io/docs/1.0.0-alpha3/polychro/guide/rulesets/)**.
+
+## Under the hood
 
 Polychro is the **spec-validation engine**. It reads a specification — **YAML**, **JSON**, **XML**, **Markdown**, or **HTML** — and runs it through a composable pipeline of validators (**well-formedness → schema-model → ruleset → format-aware**) with **sub-second latency and no subprocess required**. One config, one diagnostic format, one binary.
 
