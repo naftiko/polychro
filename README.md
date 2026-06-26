@@ -16,11 +16,11 @@ Polychro reads a specification — YAML, JSON, XML, Markdown, or HTML — and te
 
 ## What that means for *you*
 
-- :robot: **You're building AI agents or tools** — give the agent a deterministic guardrail that lints its own output in the same turn, sub-second and in-process, or over MCP. → [MCP Server guide](guide/mcp-server.md)
-- :shield: **You run CI or a platform** — gate any spec on every PR with structured SARIF, and collapse a pile of linters into one binary, one config. → [GitHub Action guide](guide/github-action.md)
-- :triangular_ruler: **You author specs or rules** — reuse your Spectral rules, lint more than OpenAPI, and write custom rule functions in JavaScript, Python, Groovy, or Java. → [Rulesets guide](guide/rulesets.md)
+- :robot: **You're building AI agents or tools** — give the agent a deterministic guardrail that lints its own output in the same turn, sub-second and in-process, or over MCP. → [MCP Server guide](https://shipyard.naftiko.io/polychro/1.0.0-alpha4/guide/mcp-server/)
+- :shield: **You run CI or a platform** — gate any spec on every PR with structured SARIF, and collapse a pile of linters into one binary, one config. → [GitHub Action guide](https://shipyard.naftiko.io/polychro/1.0.0-alpha4/guide/github-action/)
+- :triangular_ruler: **You author specs or rules** — reuse your Spectral rules, lint more than OpenAPI, and write custom rule functions in JavaScript, Python, Groovy, or Java. → [Rulesets guide](https://shipyard.naftiko.io/polychro/1.0.0-alpha4/guide/rulesets/)
 
-See **[Getting Started](getting-started.md)** for the fastest path to your first lint.
+See **[Getting Started](https://shipyard.naftiko.io/polychro/1.0.0-alpha4/getting-started/)** for the fastest path to your first lint.
 
 ---
 
@@ -40,7 +40,7 @@ See **[Getting Started](getting-started.md)** for the fastest path to your first
 | **Unified Diagnostics** | All validators produce the same `Diagnostic` format — one pipeline, one output |
 | **Embeddable Java API** | In-process linting for JVM applications — no subprocess, no Node.js |
 
-For the full feature list see [Features](features.md).
+For the full feature list see [Features](https://shipyard.naftiko.io/polychro/1.0.0-alpha4/features/).
 
 ---
 
@@ -54,11 +54,11 @@ For the full feature list see [Features](features.md).
 
 ## Continue reading
 
-- [Getting Started](getting-started.md) — install Polychro and run your first lint
-- [Features](features.md) — the full capability list
-- [Architecture](architecture.md) — how the validators compose into one pipeline
-- [Tutorial](tutorial.md) — an end-to-end linting workflow
-- [Comparison](comparison.md) — how Polychro compares to meta-linters and Spectral
-- [Roadmap](roadmap.md) — what's coming in upcoming alphas
+- [Getting Started](https://shipyard.naftiko.io/polychro/1.0.0-alpha4/getting-started/) — install Polychro and run your first lint
+- [Features](https://shipyard.naftiko.io/polychro/1.0.0-alpha4/features/) — the full capability list
+- [Architecture](https://shipyard.naftiko.io/polychro/1.0.0-alpha4/architecture/) — how the validators compose into one pipeline
+- [Tutorial](https://shipyard.naftiko.io/polychro/1.0.0-alpha4/tutorial/) — an end-to-end linting workflow
+- [Comparison](https://shipyard.naftiko.io/polychro/1.0.0-alpha4/comparison/) — how Polychro compares to meta-linters and Spectral
+- [Roadmap](https://shipyard.naftiko.io/polychro/1.0.0-alpha4/roadmap/) — what's coming in upcoming alphas
 
 <img src="https://naftiko.github.io/docs/images/navi/navi_hello.svg" width="50">
