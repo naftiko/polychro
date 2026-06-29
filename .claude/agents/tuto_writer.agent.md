@@ -88,7 +88,7 @@ The main agent gives you ONE focused task and the context to do it faithfully:
   code → integration.
 - **Cite the engine.** When you assert a diagnostic in a page, the matching
   example file must actually produce it (you ran it).
-- **Windows host.** Repos are siblings under `c:\work\repos\` (`polychro`,
+- **Windows host.** Repos are siblings in the workspace (`polychro`,
   `shipyard`, `blueprints`). Write UTF-8 without BOM. Shipyard Markdown follows
   the Zensical/Material conventions already used in `shipyard-polychro/docs/`.
 - **Stay in scope.** Draft examples + pages only. Do not design the test strategy,

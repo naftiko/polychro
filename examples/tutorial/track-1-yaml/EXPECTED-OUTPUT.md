@@ -39,6 +39,8 @@ parse failure / validator-config error).
 | 6 | `polychro lint --ruleset openapi-ruleset.yml step-6-openapi.yml` | 2 | `operation-id-unique` / ERROR / "Every `operationId` must be unique across the whole contract." (at `$.paths./ships/{imo_number}.get.operationId`; the ruleset's `message` overrides the function's own, as predicted) **+** `non-string-key` / WARN / "Non-string YAML key: 200". GraalVM/Truffle warnings are printed on stderr when the polyglot function runs. |
 | 7 | `polychro lint --format agent step-7-openapi.yml` | 1 | AgentFormatter JSON with one warning: `{"diagnostics":[{"severity":"warning","rule":"non-string-key","message":"Non-string YAML key: 200"}],"summary":{"errors":0,"warnings":1,"info":0},"tokens":55}`. Intended: clean (exit 0), but the `non-string-key` false positive applies here too. |
 
+> **Step 7 fixture:** `step-7-openapi.yml` is byte-identical to `step-1-openapi.yml` — the teaching point of Step 7 is the `--format agent` flag, not a new defect in the contract.
+
 ## Engine facts confirmed by running (beta1, 2026-06-26)
 
 - **Exit codes** behave exactly as `LintCommand#computeExitCode` reads: WARN-only → `1`,
