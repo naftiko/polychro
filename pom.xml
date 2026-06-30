@@ -63,7 +63,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>21</maven.compiler.release>
-        <revision>1.0.0-beta1</revision>
+        <revision>1.0.0-beta2-SNAPSHOT</revision>
 
         <!-- Dependency versions (aligned with Naftiko Framework) -->
         <jackson.version>2.20.2</jackson.version>
