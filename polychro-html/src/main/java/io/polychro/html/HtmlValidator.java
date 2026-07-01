@@ -55,10 +55,13 @@ class HtmlValidator implements Validator {
 
     @Override
     public List<Diagnostic> validate(Document doc) {
-        if (doc == null || !doc.root().isTextual()) {
+        if (doc == null) {
             return Collections.emptyList();
         }
-        String content = doc.root().asText();
+        String content = extractRawContent(doc);
+        if (content == null) {
+            return Collections.emptyList();
+        }
         HtmlParseResult parsed = parserFacade.parse(content, profile.parserMode());
         Document projected = projector.project(parsed, doc.sourcePath());
 
@@ -70,5 +73,23 @@ class HtmlValidator implements Validator {
 
         Collections.sort(diagnostics);
         return diagnostics;
+    }
+
+    /**
+     * Recover the raw HTML source. A {@link io.polychro.spi.DocumentEnricher}-produced document
+     * (issue #37) carries a structured, non-textual root but preserves the raw HTML under the
+     * {@code "raw.content"} metadata key; prefer that so this parser-based validator keeps working
+     * once HTML documents are enriched. Otherwise fall back to the pre-existing raw {@code TextNode}
+     * behavior, returning {@code null} for any root that is neither enriched nor textual.
+     */
+    String extractRawContent(Document doc) {
+        Object rawContent = doc.metadata().get("raw.content");
+        if (rawContent instanceof String raw) {
+            return raw;
+        }
+        if (doc.root() != null && doc.root().isTextual()) {
+            return doc.root().asText();
+        }
+        return null;
     }
 }

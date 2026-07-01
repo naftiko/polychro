@@ -125,6 +125,14 @@ class MarkdownValidator implements Validator {
     }
 
     String extractRawContent(Document doc) {
+        // A DocumentEnricher-produced document (issues #36/#37) carries a structured, non-textual
+        // root but preserves the raw markdown under the "raw.content" metadata key. Prefer that
+        // over the root so this line-based validator keeps working once markdown documents are
+        // enriched; fall back to the pre-existing raw TextNode behavior otherwise.
+        Object rawContent = doc.metadata().get("raw.content");
+        if (rawContent instanceof String raw) {
+            return raw;
+        }
         if (doc.root() == null) {
             return null;
         }
