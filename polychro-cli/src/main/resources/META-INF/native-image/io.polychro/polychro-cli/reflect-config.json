@@ -66,6 +66,12 @@
     "allDeclaredConstructors": true
   },
   {
+    "name": "io.polychro.markdown.MarkdownDocumentEnricher",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true,
+    "allDeclaredConstructors": true
+  },
+  {
     "name": "io.polychro.checkov.CheckovValidatorFactory",
     "allDeclaredFields": true,
     "allDeclaredMethods": true,
@@ -79,6 +85,12 @@
   },
   {
     "name": "io.polychro.html.HtmlValidatorFactory",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true,
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "io.polychro.html.HtmlDocumentEnricher",
     "allDeclaredFields": true,
     "allDeclaredMethods": true,
     "allDeclaredConstructors": true
