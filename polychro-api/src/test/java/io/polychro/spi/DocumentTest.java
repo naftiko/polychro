@@ -448,4 +448,28 @@ class DocumentTest {
 
         assertEquals("yaml", doc.format());
     }
+
+    // --- DocumentEnricher (ServiceLoader) ---
+
+    @Test
+    void fromStringShouldDelegateToRegisteredEnricherWhenContentMatches() {
+        Document doc = Document.fromString(StubMarkdownEnricher.MARKER + "\n# Hello\n", "markdown");
+
+        assertEquals("markdown", doc.format());
+        assertTrue(doc.root().isObject());
+        assertEquals("projected", doc.root().get("stub").asText());
+        assertEquals(new SourceRange(0, 0, 0, 5), doc.sourceMap().resolve("$.stub"));
+        assertEquals(StubMarkdownEnricher.MARKER + "\n# Hello\n", doc.metadata().get("raw.content"));
+    }
+
+    @Test
+    void fromStringShouldFallBackToTextNodeWhenEnricherDeclinesContent() {
+        // No marker prefix: StubMarkdownEnricher.enrich(...) returns null, so fromString must
+        // keep degrading gracefully to the pre-existing raw TextNode / SourceMap.NONE behavior.
+        Document doc = Document.fromString("# Hello\n", "markdown");
+
+        assertTrue(doc.root().isTextual());
+        assertEquals("# Hello\n", doc.root().asText());
+        assertEquals(SourceMap.NONE, doc.sourceMap());
+    }
 }
