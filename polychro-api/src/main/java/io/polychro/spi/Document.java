@@ -27,6 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Map;
+import java.util.ServiceLoader;
 
 /**
  * An in-memory representation of a document to be validated.
@@ -180,6 +181,19 @@ public record Document(JsonNode root, String format, String sourcePath, SourceMa
         if (effectiveFormat == null) {
             effectiveFormat = detectFormat(content);
         }
+
+        // markdown/html have no structured JsonNode grammar polychro-api can parse itself; a
+        // format module (polychro-markdown, polychro-html) may register a DocumentEnricher via
+        // ServiceLoader to project real structure + a real SourceMap (issues #36/#37). Absent
+        // such a registration, fall back to the pre-existing TextNode / SourceMap.NONE behavior —
+        // a pure addition, never a breaking change for polychro-api-only consumers.
+        if ("markdown".equals(effectiveFormat) || "html".equals(effectiveFormat)) {
+            Document enriched = enrich(effectiveFormat, content, sourcePath);
+            if (enriched != null) {
+                return enriched;
+            }
+        }
+
         JsonNode root = switch (effectiveFormat) {
             case "markdown", "html" -> TextNode.valueOf(content);
             default -> parseStructured(content, effectiveFormat);
@@ -249,6 +263,24 @@ public record Document(JsonNode root, String format, String sourcePath, SourceMa
         }
         if (lowerSourcePath.endsWith(".xhtml")) {
             return "html";
+        }
+        return null;
+    }
+
+    /**
+     * Look up a {@link DocumentEnricher} registered for {@code format} via {@link ServiceLoader}
+     * and delegate to it. Returns {@code null} (never throws) when no enricher is registered for
+     * the format, or when the registered enricher declines the content — both cases fall back to
+     * the raw-text representation in {@link #fromString(String, String, String)}.
+     */
+    private static Document enrich(String format, String content, String sourcePath) {
+        for (DocumentEnricher enricher : ServiceLoader.load(DocumentEnricher.class)) {
+            if (format.equals(enricher.format())) {
+                Document enriched = enricher.enrich(content, sourcePath);
+                if (enriched != null) {
+                    return enriched;
+                }
+            }
         }
         return null;
     }
