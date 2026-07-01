@@ -70,27 +70,37 @@ class LintCommandTest {
     }
 
     @Test
-    void loadDocumentShouldPreserveMarkdownAsText() throws Exception {
+    void loadDocumentShouldProjectMarkdownStructureWhenEnricherIsOnClasspath() throws Exception {
+        // polychro-cli has polychro-markdown as a compile dependency, so
+        // MarkdownDocumentEnricher IS registered via ServiceLoader and always projects
+        // real structure (issues #36/#37) — Document.fromString only falls back to a raw
+        // TextNode when no enricher is registered for the format, which is never the case
+        // here. Asserting isTextual()/asText() (the pre-enricher behavior) is therefore
+        // stale; assert the projected $.document.blocks shape instead.
         Path file = createFile("notes.md", "# Heading\n");
 
         Document doc = LintCommand.loadDocument(file, new java.io.PrintWriter(java.io.Writer.nullWriter()));
 
         assertNotNull(doc);
         assertEquals("markdown", doc.format());
-        assertTrue(doc.root().isTextual());
-        assertEquals("# Heading\n", doc.root().asText());
+        assertFalse(doc.root().isTextual());
+        assertTrue(doc.root().at("/document/blocks").isArray());
+        assertEquals("heading", doc.root().at("/document/blocks/0/type").asText());
     }
 
     @Test
-    void loadDocumentShouldPreserveHtmlAsText() throws Exception {
+    void loadDocumentShouldProjectHtmlStructureWhenEnricherIsOnClasspath() throws Exception {
+        // Same reasoning as above for polychro-html's HtmlDocumentEnricher, projecting
+        // into $.document.nodes.
         Path file = createFile("index.html", "<html><body>Hello</body></html>");
 
         Document doc = LintCommand.loadDocument(file, new java.io.PrintWriter(java.io.Writer.nullWriter()));
 
         assertNotNull(doc);
         assertEquals("html", doc.format());
-        assertTrue(doc.root().isTextual());
-        assertEquals("<html><body>Hello</body></html>", doc.root().asText());
+        assertFalse(doc.root().isTextual());
+        assertTrue(doc.root().at("/document/nodes").isArray());
+        assertEquals("html", doc.root().at("/document/nodes/0/tag").asText());
     }
 
     @Test
