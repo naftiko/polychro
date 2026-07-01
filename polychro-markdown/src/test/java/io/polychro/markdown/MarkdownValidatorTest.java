@@ -142,4 +142,21 @@ class MarkdownValidatorTest {
         assertEquals(1, result.size());
         assertEquals("no-content", result.getFirst().code());
     }
+
+    @Test
+    void validateShouldReadRawContentFromMetadataWhenRootIsStructured() {
+        // A DocumentEnricher-produced document has a structured (non-textual) root but
+        // preserves the raw markdown under the "raw.content" metadata key. The validator
+        // must recover the raw content from metadata rather than falling back to
+        // "no-content" as it does for a bare structured root.
+        String content = "# Title\n\n[link](#nonexistent)\n";
+        JsonNode structuredRoot = new ObjectMapper().createObjectNode().put("stub", "projected");
+        Document enriched = new Document(structuredRoot, "markdown", "test.md", null,
+                java.util.Map.of("raw.content", content));
+
+        List<Diagnostic> result = validator.validate(enriched);
+
+        assertTrue(result.stream().anyMatch(d -> d.code().equals("broken-internal-link")),
+                "Expected broken-internal-link from raw.content metadata but got: " + result);
+    }
 }
