@@ -165,3 +165,56 @@ jobs:
             echo "FAIL: native runtime regression"
             exit 1
           fi
+
+      - name: Smoke test — Markdown ruleset projection (DocumentEnricher regression guard)
+        shell: bash
+        run: |
+          BIN="./bin/${{ matrix.artifact_name }}"
+
+          # polychro-markdown registers MarkdownDocumentEnricher via ServiceLoader so
+          # Document.fromString can project markdown into $.document.blocks[*] (issue #36/#37).
+          # GraalVM native-image does NOT auto-discover this SPI: it needs an explicit
+          # reflect-config.json entry for the class and a resource-config.json pattern for
+          # META-INF/services/io.polychro.spi.DocumentEnricher. If that registration regresses,
+          # ServiceLoader silently returns no providers (no exception raised), the document
+          # falls back to a raw TextNode, and the rule below would find zero matches instead
+          # of firing — a false "no issues" pass that the exception-only checks above cannot
+          # catch. This step proves the projected structure is actually there by asserting a
+          # deliberate rule violation fires against it.
+          printf '# Title\n\nSome paragraph.\n' > doc.md
+          printf 'rules:\n  first-block-must-be-paragraph:\n    message: "First block must be a paragraph"\n    severity: error\n    given: "$.document.blocks[0]"\n    then:\n      field: "type"\n      function: pattern\n      functionOptions:\n        match: "^paragraph$"\n' > markdown-ruleset.yml
+
+          set +e
+          OUT=$("$BIN" lint doc.md -r markdown-ruleset.yml 2>&1)
+          STATUS=$?
+          set -e
+
+          echo "$OUT"
+
+          if [ "$STATUS" -ne 2 ] || ! echo "$OUT" | grep -q "First block must be a paragraph"; then
+            echo "FAIL: markdown DocumentEnricher regression — expected a violation on projected \$.document.blocks[0], got exit=$STATUS"
+            exit 1
+          fi
+
+      - name: Smoke test — HTML ruleset projection (DocumentEnricher regression guard)
+        shell: bash
+        run: |
+          BIN="./bin/${{ matrix.artifact_name }}"
+
+          # Same guard as above for polychro-html's HtmlDocumentEnricher, projecting into
+          # $.document.nodes[*]. A full HTML document parses in "document" mode, so nodes[0]
+          # is the <html> element itself — asserting it is NOT "body" deliberately fires.
+          printf '<html><body><p>hi</p></body></html>\n' > doc.html
+          printf 'rules:\n  first-node-must-be-body:\n    message: "First top-level node must be body"\n    severity: error\n    given: "$.document.nodes[0]"\n    then:\n      field: "tag"\n      function: pattern\n      functionOptions:\n        match: "^body$"\n' > html-ruleset.yml
+
+          set +e
+          OUT=$("$BIN" lint doc.html -r html-ruleset.yml 2>&1)
+          STATUS=$?
+          set -e
+
+          echo "$OUT"
+
+          if [ "$STATUS" -ne 2 ] || ! echo "$OUT" | grep -q "First top-level node must be body"; then
+            echo "FAIL: html DocumentEnricher regression — expected a violation on projected \$.document.nodes[0], got exit=$STATUS"
+            exit 1
+          fi

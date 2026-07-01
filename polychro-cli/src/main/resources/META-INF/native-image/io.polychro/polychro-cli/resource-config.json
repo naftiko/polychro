@@ -5,6 +5,9 @@
         "pattern": "META-INF/services/io.polychro.spi.ValidatorFactory"
       },
       {
+        "pattern": "META-INF/services/io.polychro.spi.DocumentEnricher"
+      },
+      {
         "pattern": "META-INF/services/io.polychro.ruleset.FunctionProvider"
       },
       {
