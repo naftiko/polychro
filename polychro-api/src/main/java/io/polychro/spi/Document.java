@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.ServiceLoader;
@@ -155,8 +156,10 @@ public record Document(JsonNode root, String format, String sourcePath, SourceMa
      * finally from the leading bytes of the content.
      *
      * <p>The resulting {@link Document#root() root} is a structured Jackson tree
-     * for {@code yaml}/{@code json}/{@code xml}, or a {@code TextNode} preserving
-     * the raw content for {@code markdown}/{@code html}.
+     * for {@code yaml}/{@code json}/{@code xml}. For {@code markdown}/{@code html}, the root is
+     * a structured, enriched tree when a {@link DocumentEnricher} is registered for the format
+     * on the classpath (e.g. {@code polychro-markdown} / {@code polychro-html}); otherwise it
+     * falls back to a {@code TextNode} preserving the raw content.
      *
      * @param content    the document content as a string (must not be {@code null} or blank)
      * @param format     the format hint: {@code "yaml"}, {@code "json"}, {@code "xml"},
@@ -268,20 +271,33 @@ public record Document(JsonNode root, String format, String sourcePath, SourceMa
     }
 
     /**
-     * Look up a {@link DocumentEnricher} registered for {@code format} via {@link ServiceLoader}
+     * Enrichers discovered once at class-load time, keyed by format. Mirrors the
+     * {@link #JSON_MAPPER}/{@link #YAML_MAPPER}/{@link #XML_MAPPER} pattern: a single
+     * {@link ServiceLoader} scan at startup rather than one per {@link #fromString} call.
+     * At most one enricher per format is expected; if multiple register for the same format
+     * the first one discovered wins (consistent with the iteration order of ServiceLoader).
+     */
+    private static final Map<String, DocumentEnricher> ENRICHERS = buildEnrichers();
+
+    private static Map<String, DocumentEnricher> buildEnrichers() {
+        Map<String, DocumentEnricher> map = new HashMap<>();
+        for (DocumentEnricher enricher : ServiceLoader.load(DocumentEnricher.class)) {
+            map.putIfAbsent(enricher.format(), enricher);
+        }
+        return map;
+    }
+
+    /**
+     * Look up a {@link DocumentEnricher} registered for {@code format} via {@link #ENRICHERS}
      * and delegate to it. Returns {@code null} (never throws) when no enricher is registered for
      * the format, or when the registered enricher declines the content — both cases fall back to
      * the raw-text representation in {@link #fromString(String, String, String)}.
      */
     private static Document enrich(String format, String content, String sourcePath) {
-        for (DocumentEnricher enricher : ServiceLoader.load(DocumentEnricher.class)) {
-            if (format.equals(enricher.format())) {
-                Document enriched = enricher.enrich(content, sourcePath);
-                if (enriched != null) {
-                    return enriched;
-                }
-            }
+        DocumentEnricher enricher = ENRICHERS.get(format);
+        if (enricher == null) {
+            return null;
         }
-        return null;
+        return enricher.enrich(content, sourcePath);
     }
 }
