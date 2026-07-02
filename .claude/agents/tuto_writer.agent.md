@@ -5,7 +5,7 @@ description: >-
   tutorial pages for a Polychro tutorial track, along one growing red-thread
   example, modeled on the Ikanos tutorial format (sequential steps, each with a
   "Run it" block and a "What you learned" callout). Its reason to be a Polychro
-  agent (not a transversal code-standards skill) is its CONTEXT: it knows the
+  agent (not a transversal skill) is its CONTEXT: it knows the
   Polychro pipeline, the real built-in rulesets / validators / CLI, and it never
   writes a diagnostic, severity, code, or CLI output it has not verified against
   the engine. Use it to draft or extend a tutorial track's examples and Shipyard
