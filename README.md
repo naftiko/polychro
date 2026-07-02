@@ -1,10 +1,11 @@
 <img src="https://naftiko.github.io/docs/images/logos/logo_polychro_horizontal.png" width="300">
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
-[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/farah-t-trigui/7c4f0187bd2f5df1122abe46daa78a97/raw/polychro-coverage.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
-[![Bugs](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/farah-t-trigui/7c4f0187bd2f5df1122abe46daa78a97/raw/polychro-bugs.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
-[![Trivy](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/farah-t-trigui/7c4f0187bd2f5df1122abe46daa78a97/raw/polychro-trivy.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
-[![Gitleaks](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/farah-t-trigui/7c4f0187bd2f5df1122abe46daa78a97/raw/polychro-gitleaks.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/naftiko/polychro/main/.github/badges/polychro-coverage.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
+[![Quality Gate](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/naftiko/polychro/main/.github/badges/polychro-quality-gate.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
+[![Bugs](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/naftiko/polychro/main/.github/badges/polychro-bugs.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
+[![Trivy](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/naftiko/polychro/main/.github/badges/polychro-trivy.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
+[![Gitleaks](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/naftiko/polychro/main/.github/badges/polychro-gitleaks.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
 
 **Polychro** is the open source AI linter for spec-driven development.
 
