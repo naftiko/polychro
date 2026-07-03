@@ -1,9 +1,9 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
-[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/naftiko/polychro/feat/removing-gist-logic/.github/badges/polychro-coverage.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
-[![Quality Gate](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/naftiko/polychro/feat/removing-gist-logic/.github/badges/polychro-quality-gate.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
-[![Bugs](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/naftiko/polychro/feat/removing-gist-logic/.github/badges/polychro-bugs.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
-[![Trivy](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/naftiko/polychro/feat/removing-gist-logic/.github/badges/polychro-trivy.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
-[![Gitleaks](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/naftiko/polychro/feat/removing-gist-logic/.github/badges/polychro-gitleaks.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/naftiko/polychro/badges/main/polychro-coverage.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
+[![Quality Gate](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/naftiko/polychro/badges/main/polychro-quality-gate.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
+[![Bugs](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/naftiko/polychro/badges/main/polychro-bugs.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
+[![Trivy](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/naftiko/polychro/badges/main/polychro-trivy.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
+[![Gitleaks](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/naftiko/polychro/badges/main/polychro-gitleaks.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
 
 **Polychro** is the open source AI linter for spec-driven development. **It lets your coding agent lint as you build, not hand it off to the one gating your CI pipeline** — in-process, multi-format, and agent-native, rebuilt for the flood of AI-generated specs that legacy OpenAPI-in-CI linters were never built to see. It shifts linting all the way left — out of the CI gate and into the coding agent's inner loop, catching a bad spec at agent speed, before it ever reaches a pull request.
 
