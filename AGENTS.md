@@ -139,7 +139,7 @@ Every Java source file must begin with this exact header:
 ## Code Style
 
 **Java** — follows Google Style. Configure VS Code with `Language Support for Java by Red Hat` and
-apply settings from [naftiko/naftiko-golden-repo — java](https://github.com/naftiko/naftiko-golden-repo/tree/main/java).
+apply settings from [naftiko/golden-repo-naftiko — java](https://github.com/naftiko/golden-repo-naftiko/tree/main/java).
 
 **Method visibility** — prefer package-private (no modifier) over `private` for methods that
 implement non-trivial logic. This allows direct unit testing from the same package without
@@ -181,7 +181,7 @@ continuing, to verify global coherence and catch contradictions introduced by th
 ## PR Review Skill
 
 The `pr-review` skill is served by the **`agents-shared` capability** in the
-[`naftiko-golden-repo`](https://github.com/naftiko/naftiko-golden-repo) golden repo
+[`golden-repo-naftiko`](https://github.com/naftiko/golden-repo-naftiko) golden repo
 (issue [naftiko/shipyard#23](https://github.com/naftiko/shipyard/issues/23)).
 See `.github/instructions/agents-shared.instructions.md` for trigger keywords,
 the sync procedure, and prerequisites.

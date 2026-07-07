@@ -6,7 +6,7 @@ name: "agents-shared skill discovery"
 
 The canonical `pr-review` skill (and, over time, other transversal skills) is **not**
 committed to this repository. It is versioned once in the
-[`naftiko-golden-repo`](https://github.com/naftiko/naftiko-golden-repo) golden repo and served
+[`golden-repo-naftiko`](https://github.com/naftiko/golden-repo-naftiko) golden repo and served
 read-only by the `agents-shared` Ikanos capability (Skill Server, `type: skill`).
 
 ## How to use the skill
@@ -35,7 +35,7 @@ read-only by the `agents-shared` Ikanos capability (Skill Server, `type: skill`)
 
 ## If the Skill Server is not running
 
-The capability runs from a local checkout of `naftiko-golden-repo` via `ikanos serve` — see
+The capability runs from a local checkout of `golden-repo-naftiko` via `ikanos serve` — see
 `agents-shared/README.md` in that repo for setup (including the absolute `location:`
 rewrite) and for a `gh api` fallback that needs no server. Ask the user to start the
 server or fetch the skill via the fallback; do not copy the skill into version control.
@@ -43,4 +43,4 @@ server or fetch the skill via the fallback; do not copy the skill into version c
 ## Rules
 
 - The synced copy under `.agents/skills/` is **git-ignored** — never commit it.
-- Never edit the synced copy; improvements go to `naftiko-golden-repo` (issue-first).
+- Never edit the synced copy; improvements go to `golden-repo-naftiko` (issue-first).
