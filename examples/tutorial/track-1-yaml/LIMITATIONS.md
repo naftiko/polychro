@@ -35,7 +35,7 @@ Step 5 actually fires `operation-id-present` (a `truthy` check on a missing
 `operationId`), not a casing rule.
 
 The engine **does** ship a `casing` function (`CasingFunction.java`), but it is not
-wired into the tutorial ruleset. Materializing the blueprint's casing promise is a
+wired into the tutorial ruleset. Materializing the design doc's casing promise is a
 **content evolution** (add a `casing` rule on response fields), intentionally **not**
 done during this domain realignment to avoid changing each step's diagnostic type.
 
