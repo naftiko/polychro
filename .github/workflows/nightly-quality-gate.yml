@@ -148,7 +148,7 @@ jobs:
       - name: Publish JaCoCo summary
         if: always()
         run: |
-          CSV="polychro-coverage/target/site/jacoco-aggregate/jacoco.csv"
+          CSV="modules/polychro-coverage/target/site/jacoco-aggregate/jacoco.csv"
           {
             echo ""
             echo "## JaCoCo Coverage"
@@ -176,7 +176,7 @@ jobs:
         if: always()
         with:
           name: jacoco-report
-          path: "polychro-coverage/target/site/jacoco-aggregate/"
+          path: "modules/coverage/target/site/jacoco-aggregate/"
           retention-days: 14
 
       - name: Start SonarQube
@@ -220,7 +220,7 @@ jobs:
               -Dsonar.token="$SONAR_TOKEN" \
               -Dsonar.host.url=http://localhost:9000 \
               -Dsonar.projectKey=io.naftiko:polychro \
-              -Dsonar.coverage.jacoco.xmlReportPaths=polychro-coverage/target/site/jacoco-aggregate/jacoco.xml
+              -Dsonar.coverage.jacoco.xmlReportPaths=modules/polychro-coverage/target/site/jacoco-aggregate/jacoco.xml
 
       - name: Export + Publish SonarQube summary
         if: always()
@@ -410,7 +410,7 @@ jobs:
           source /tmp/trivy_metrics.env 2>/dev/null || true
           source /tmp/gitleaks_metrics.env 2>/dev/null || true
 
-          CSV="polychro-coverage/target/site/jacoco-aggregate/jacoco.csv"
+          CSV="modules/polychro-coverage/target/site/jacoco-aggregate/jacoco.csv"
 
           if [ -f "$CSV" ]; then
             MISSED=$(tail -n +2 "$CSV" | awk -F',' '{sum+=$8} END {print sum+0}')
@@ -443,7 +443,7 @@ jobs:
           source /tmp/gitleaks_metrics.env 2>/dev/null || true
 
           # Load JaCoCo coverage
-          CSV="polychro-coverage/target/site/jacoco-aggregate/jacoco.csv"
+          CSV="modules/polychro-coverage/target/site/jacoco-aggregate/jacoco.csv"
           if [ -f "$CSV" ]; then
             MISSED=$(tail -n +2 "$CSV" | awk -F',' '{sum+=$8} END {print sum+0}')
             COVERED=$(tail -n +2 "$CSV" | awk -F',' '{sum+=$9} END {print sum+0}')

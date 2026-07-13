@@ -42,22 +42,22 @@
     </scm>    
 
     <modules>
-        <module>polychro-api</module>
-        <module>polychro-wellformedness</module>
-        <module>polychro-json-schema</module>
-        <module>polychro-json-structure</module>
-        <module>polychro-ruleset</module>
-        <module>polychro-ruleset-polyglot</module>
-        <module>polychro-rulesets</module>
-        <module>polychro-core</module>
-        <module>polychro-capability</module>
-        <module>polychro-cli</module>
-        <module>polychro-github-action</module>
-        <module>polychro-markdown</module>
-        <module>polychro-format-common</module>
-        <module>polychro-html</module>
-        <module>polychro-checkov</module>
-        <module>polychro-coverage</module>
+        <module>modules/polychro-api</module>
+        <module>modules/polychro-wellformedness</module>
+        <module>modules/polychro-json-schema</module>
+        <module>modules/polychro-json-structure</module>
+        <module>modules/polychro-ruleset</module>
+        <module>modules/polychro-ruleset-polyglot</module>
+        <module>modules/polychro-rulesets</module>
+        <module>modules/polychro-core</module>
+        <module>modules/polychro-capability</module>
+        <module>modules/polychro-cli</module>
+        <module>modules/polychro-github-action</module>
+        <module>modules/polychro-markdown</module>
+        <module>modules/polychro-format-common</module>
+        <module>modules/polychro-html</module>
+        <module>modules/polychro-checkov</module>
+        <module>modules/polychro-coverage</module>
     </modules>
 
     <properties>
