@@ -4,35 +4,38 @@
 /.vscode
 dependency-reduced-pom.xml
 /.github/node_modules
-/polychro-api/target
-/polychro-json-schema/target
-/polychro-json-structure/target
-/polychro-wellformedness/target
-/polychro-ruleset/target
-/polychro-ruleset-polyglot/target
-/polychro-rulesets/target
-/polychro-core/target
-/polychro-cli/target
-/polychro-markdown/target
-/polychro-checkov/target
-/polychro-github-action/target
-/polychro-html/target
+/modules/polychro-api/target
+/modules/polychro-json-schema/target
+/modules/polychro-json-structure/target
+/modules/polychro-wellformedness/target
+/modules/polychro-ruleset/target
+/modules/polychro-ruleset-polyglot/target
+/modules/polychro-rulesets/target
+/modules/polychro-core/target
+/modules/polychro-cli/target
+/modules/polychro-markdown/target
+/modules/polychro-checkov/target
+/modules/polychro-github-action/target
+/modules/polychro-html/target
 build-output.txt
-/polychro-capability/target
-/polychro-format-common/target
-/polychro-coverage/target
+/modules/polychro-capability/target
+/modules/polychro-format-common/target
+/modules/polychro-coverage/target
 
 # flatten-maven-plugin output
 .flattened-pom.xml
 
+# ─── IDE ───────────────────────────────────────────────────────────────────────
+/.idea/
+
 # SDK directories (non-Maven)
 __pycache__/
 *.pyc
-/polychro-python/.pytest_cache/
-/polychro-python/dist/
-/polychro-python/*.egg-info/
-/polychro-node/node_modules/
-/polychro-node/dist/
+/modules/polychro-python/.pytest_cache/
+/modules/polychro-python/dist/
+/modules/polychro-python/*.egg-info/
+/modules/polychro-node/node_modules/
+/modules/polychro-node/dist/
 
 # Synced agent skills (fetched on demand from the agents-shared capability — never commit)
 .agents/skills/

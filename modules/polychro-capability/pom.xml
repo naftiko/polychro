@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.polychro</groupId>
+        <artifactId>polychro-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>polychro-capability</artifactId>
+    <name>Polychro Capability</name>
+    <description>Naftiko Capability exposing Polychro linting as an MCP server adapter</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.polychro</groupId>
+            <artifactId>polychro-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.polychro</groupId>
+            <artifactId>polychro-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.ikanos</groupId>
+            <artifactId>ikanos-engine</artifactId>
+            <version>1.0.0-beta3-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>io.ikanos</groupId>
+            <artifactId>ikanos-spec</artifactId>
+            <version>1.0.0-beta3-SNAPSHOT</version>
+        </dependency>
+        <!-- Workaround for naftiko/framework#433: ikanos-engine declares GraalVM polyglot
+             as pom-type dependencies (BOMs), which do not transitively pull the runtime jar.
+             Remove once the upstream pom fixes the dependency type. -->
+        <dependency>
+            <groupId>org.graalvm.polyglot</groupId>
+            <artifactId>polyglot</artifactId>
+            <version>${graalvm.polyglot.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-nop</artifactId>
+            <version>${slf4j.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Test -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Workaround for naftiko/framework#433: the framework's shade plugin does not fully
+             inline restlet classes, causing NoClassDefFoundError at test time.
+             org.restlet:org.restlet:2.7.0-m2 is available from Maven Central (no extra
+             repository needed). Remove this dependency once the upstream issue is fixed. -->
+        <dependency>
+            <groupId>org.restlet</groupId>
+            <artifactId>org.restlet</artifactId>
+            <version>2.7.0-m2</version>
+        </dependency>
+
+        <!-- Workaround for naftiko/framework#433: same shading issue with the MCP SDK. -->
+        <dependency>
+            <groupId>io.modelcontextprotocol.sdk</groupId>
+            <artifactId>mcp-core</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>check</id>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>1.00</minimum>
+                                        </limit>
+                                        <limit>
+                                            <counter>BRANCH</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>1.00</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                            <excludes>
+                                <exclude>io/polychro/capability/PolychroCapability.class</exclude>
+                                <exclude>io/polychro/capability/PolychroCapability$Builder.class</exclude>
+                            </excludes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <repositories>
+        <!-- GitHub Packages: SNAPSHOT releases of io.ikanos:ikanos-engine and io.ikanos:ikanos-spec
+             are published here. The server-id 'github-naftiko' must match setup-java's server-id
+             in ci.yml. -->
+        <repository>
+            <id>github-naftiko</id>
+            <name>Naftiko GitHub Packages</name>
+            <url>https://maven.pkg.github.com/naftiko/ikanos</url>
+            <releases><enabled>false</enabled></releases>
+            <snapshots><enabled>true</enabled></snapshots>
+        </repository>
+    </repositories>
+
+</project>

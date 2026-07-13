@@ -48,10 +48,10 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: polychro-go/go.mod
+          go-version-file: modules/polychro-go/go.mod
 
       - name: Run tests
-        working-directory: polychro-go
+        working-directory: modules/polychro-go
         run: go test ./...
 
   test-node:
@@ -67,14 +67,14 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-          cache-dependency-path: polychro-node/package-lock.json
+          cache-dependency-path: modules/polychro-node/package-lock.json
 
       - name: Install dependencies
-        working-directory: polychro-node
+        working-directory: modules/polychro-node
         run: npm ci
 
       - name: Run tests
-        working-directory: polychro-node
+        working-directory: modules/polychro-node
         run: npm test
 
   test-python:
@@ -91,9 +91,9 @@ jobs:
           python-version: '3.12'
 
       - name: Install package and test dependencies
-        working-directory: polychro-python
+        working-directory: modules/polychro-python
         run: pip install . pytest
 
       - name: Run tests
-        working-directory: polychro-python
+        working-directory: modules/polychro-python
         run: pytest

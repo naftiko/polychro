@@ -64,7 +64,7 @@ jobs:
 
       - name: Build with Maven (Unix)
         if: runner.os != 'Windows'
-        run: mvn -B clean package -Pnative -pl polychro-cli -am -Dtest="io.polychro.cli.**" -Dsurefire.failIfNoSpecifiedTests=false
+        run: mvn -B clean package -Pnative -pl modules/polychro-cli -am -Dtest="io.polychro.cli.**" -Dsurefire.failIfNoSpecifiedTests=false
         env:
           MAVEN_USERNAME: ${{ github.actor }}
           MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
@@ -72,31 +72,31 @@ jobs:
       - name: Build with Maven (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: mvn -B clean package -Pnative -pl polychro-cli -am "-Dtest=io.polychro.cli.**" "-Dsurefire.failIfNoSpecifiedTests=false"
+        run: mvn -B clean package -Pnative -pl modules\polychro-cli -am "-Dtest=io.polychro.cli.**" "-Dsurefire.failIfNoSpecifiedTests=false"
         env:
           MAVEN_USERNAME: ${{ github.actor }}
           MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Rename artifact (Unix)
         if: runner.os != 'Windows'
-        run: mv polychro-cli/target/polychro-cli polychro-cli/target/${{ matrix.artifact_name }}
+        run: mv modules/polychro-cli/target/polychro-cli modules/polychro-cli/target/${{ matrix.artifact_name }}
 
       - name: Rename artifact (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: Move-Item polychro-cli\target\polychro-cli.exe polychro-cli\target\${{ matrix.artifact_name }}
+        run: Move-Item modules\polychro-cli\target\polychro-cli.exe modules\polychro-cli\target\${{ matrix.artifact_name }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
-          path: polychro-cli/target/${{ matrix.artifact_name }}
+          path: modules/polychro-cli/target/${{ matrix.artifact_name }}
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')  # Only create release when a new tag is pushed (not when action is manually triggered).
         uses: softprops/action-gh-release@v1
         with:
-          files: polychro-cli/target/${{ matrix.artifact_name }}
+          files: modules/polychro-cli/target/${{ matrix.artifact_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   test-binary:
