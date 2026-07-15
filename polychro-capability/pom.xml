@@ -28,12 +28,12 @@
         <dependency>
             <groupId>io.ikanos</groupId>
             <artifactId>ikanos-engine</artifactId>
-            <version>1.0.0-beta2</version>
+            <version>1.0.0-beta3-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>io.ikanos</groupId>
             <artifactId>ikanos-spec</artifactId>
-            <version>1.0.0-beta2</version>
+            <version>1.0.0-beta3-SNAPSHOT</version>
         </dependency>
         <!-- Workaround for naftiko/framework#433: ikanos-engine declares GraalVM polyglot
              as pom-type dependencies (BOMs), which do not transitively pull the runtime jar.
