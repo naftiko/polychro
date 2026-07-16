@@ -73,14 +73,14 @@
         <dependency>
             <groupId>org.restlet</groupId>
             <artifactId>org.restlet</artifactId>
-            <version>2.7.0-m2</version>
+            <version>2.7.0-m3</version>
         </dependency>
 
         <!-- Workaround for naftiko/framework#433: same shading issue with the MCP SDK. -->
         <dependency>
             <groupId>io.modelcontextprotocol.sdk</groupId>
             <artifactId>mcp-core</artifactId>
-            <version>1.0.0</version>
+            <version>2.0.0</version>
         </dependency>
     </dependencies>
 
