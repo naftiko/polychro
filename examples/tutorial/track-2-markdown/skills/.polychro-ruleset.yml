@@ -1,0 +1,8 @@
+validators:
+  - markdown
+  - ruleset
+config:
+  markdown:
+    format: skill
+  ruleset:
+    rulesetPath: skill-ruleset.yml
