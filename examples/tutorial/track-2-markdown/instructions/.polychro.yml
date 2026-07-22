@@ -1,0 +1,5 @@
+validators:
+  - markdown
+config:
+  markdown:
+    format: instructions
