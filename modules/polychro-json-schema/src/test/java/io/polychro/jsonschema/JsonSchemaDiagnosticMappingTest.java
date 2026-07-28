@@ -20,6 +20,7 @@ import com.networknt.schema.SpecVersion;
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Document;
 import io.polychro.spi.Severity;
+import io.polychro.spi.SourceRange;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -109,6 +110,34 @@ class JsonSchemaDiagnosticMappingTest {
 
         assertFalse(result.isEmpty());
         assertNull(result.get(0).range());
+    }
+
+    @Test
+    void toDiagnosticShouldResolveRangeFromDocumentSourceMap() {
+        String schemaJson = """
+                {
+                  "type": "object",
+                  "properties": {
+                    "count": { "type": "integer" }
+                  }
+                }
+                """;
+        JsonSchemaValidator v = buildValidator(schemaJson);
+        String content = """
+                {
+                  "count": "not-an-int"
+                }
+                """;
+        Document doc = Document.fromString(content, "json");
+
+        List<Diagnostic> result = v.validate(doc);
+
+        assertFalse(result.isEmpty());
+        Diagnostic d = result.get(0);
+        assertEquals("$.count", d.path());
+        SourceRange range = d.range();
+        assertNotNull(range, "range should be resolved from the document's SourceMap instead of null");
+        assertEquals(1, range.startLine());
     }
 
     @Test

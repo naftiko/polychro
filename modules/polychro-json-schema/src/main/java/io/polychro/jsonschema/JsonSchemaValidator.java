@@ -22,6 +22,7 @@ import com.networknt.schema.ValidationMessage;
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Document;
 import io.polychro.spi.Severity;
+import io.polychro.spi.SourceRange;
 import io.polychro.spi.Validator;
 
 import java.util.ArrayList;
@@ -61,17 +62,18 @@ class JsonSchemaValidator implements Validator {
 
         List<Diagnostic> diagnostics = new ArrayList<>(messages.size());
         for (ValidationMessage msg : messages) {
-            diagnostics.add(toDiagnostic(msg));
+            diagnostics.add(toDiagnostic(msg, doc));
         }
         Collections.sort(diagnostics);
         return diagnostics;
     }
 
-    Diagnostic toDiagnostic(ValidationMessage msg) {
+    Diagnostic toDiagnostic(ValidationMessage msg, Document doc) {
         String path = msg.getPath();
         String code = msg.getType();
         String message = msg.getMessage();
-        return new Diagnostic(Severity.ERROR, code, message, path, null);
+        SourceRange range = doc.sourceMap().resolve(path);
+        return new Diagnostic(Severity.ERROR, code, message, path, range);
     }
 
     static SpecVersion.VersionFlag detectDraft(JsonNode root) {
