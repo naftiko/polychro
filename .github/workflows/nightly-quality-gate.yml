@@ -204,22 +204,16 @@ jobs:
             | grep -o '"token":"[^"]*"' | cut -d'"' -f4 > /tmp/sonar_token.txt
 
       - name: SonarQube Scan
-        env:
-          MAVEN_USERNAME: ${{ github.actor }}
-          MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: |
           SONAR_TOKEN=$(tr -d '[:space:]' < /tmp/sonar_token.txt)
-          
           docker run --rm \
             --network="host" \
+            -e SONAR_TOKEN="$SONAR_TOKEN" \
             -v "${{ github.workspace }}:/usr/src" \
-            -v "$HOME/.m2:/root/.m2" \
-            -w /usr/src \
-            maven:3.9.11-eclipse-temurin-21 \
-            mvn -B sonar:sonar \
-              -Dsonar.token="$SONAR_TOKEN" \
+            sonarsource/sonar-scanner-cli \
               -Dsonar.host.url=http://localhost:9000 \
               -Dsonar.projectKey=io.naftiko:polychro \
+              -Dsonar.java.binaries="modules/*/target/classes" \
               -Dsonar.coverage.jacoco.xmlReportPaths=modules/polychro-coverage/target/site/jacoco-aggregate/jacoco.xml
 
       - name: Export + Publish SonarQube summary
