@@ -8,8 +8,95 @@ on:
   workflow_dispatch:
 
 jobs:
+  scan-dependencies:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+          server-id: github-naftiko
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+
+      - name: Resolve dependencies
+        # Populates the local .m2 repo so the SBOM reflects actual resolved
+        # transitive versions, not just what's declared in pom.xml.
+        run: mvn -B dependency:go-offline
+        env:
+          MAVEN_USERNAME: ${{ github.actor }}
+          MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate SBOM (CycloneDX)
+        # Scanning the resolved SBOM instead of raw fs avoids Trivy's static
+        # pom.xml parser, which silently fails to resolve versions declared
+        # via BOM imports or properties
+        run: mvn -B org.cyclonedx:cyclonedx-maven-plugin:2.9.2:makeAggregateBom -DoutputFormat=json -DoutputName=bom
+
+      - name: Upload SBOM
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: target/bom.json
+
+      - name: Scan SBOM for vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: "sbom"
+          scan-ref: "target/bom.json"
+          format: "json"
+          output: "trivy-sbom-results.json"
+          severity: "MEDIUM,HIGH,CRITICAL"
+          exit-code: "0"
+
+      - name: Publish Trivy summary
+        if: always()
+        run: |
+          echo "## Trivy SBOM Scan" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ ! -f trivy-sbom-results.json ]; then
+            echo "> No report found." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          CRITICAL=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' trivy-sbom-results.json)
+          HIGH=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH")] | length' trivy-sbom-results.json)
+          MEDIUM=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="MEDIUM")] | length' trivy-sbom-results.json)
+
+          [ "$CRITICAL" -gt 0 ] && STATUS="❌ ${CRITICAL} critical issue(s) — blocking publish" \
+            || { [ "$HIGH" -gt 0 ] && STATUS="❌ ${HIGH} high issue(s) — blocking publish" || STATUS="✅ No critical or high issues"; }
+
+          echo "**${STATUS}**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Critical | ${CRITICAL} |" >> $GITHUB_STEP_SUMMARY
+          echo "| High     | ${HIGH} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Medium   | ${MEDIUM} |" >> $GITHUB_STEP_SUMMARY
+
+          # Enforces the actual gate here, since exit-code is disabled on the Trivy step above
+          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
+            exit 1
+          fi
+
+      - name: Upload scan report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-sbom-report
+          path: trivy-sbom-results.json
+
   github-snapshot:
     if: github.ref == 'refs/heads/main' && github.event_name != 'workflow_dispatch'
+    needs: scan-dependencies
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -39,7 +126,10 @@ jobs:
 
   maven-central:
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    needs: scan-dependencies
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -48,6 +138,13 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
+
+      - name: Download SBOM
+        # Reuses the exact SBOM scan-dependencies generated and Trivy already
+        uses: actions/download-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: target
 
       - name: Configure Maven Central
         run: bash ./scripts/builder.sh config_maven_central
@@ -75,6 +172,13 @@ jobs:
 
       #- name: List repo content
       #  run: find local-repo -type f
+      - name: Attach SBOM to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: target/bom.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Cleanup
         if: always()
@@ -84,6 +188,7 @@ jobs:
 
   github-release:
     if: startsWith(github.ref, 'refs/tags/v')
+    needs: scan-dependencies
     runs-on: ubuntu-latest
     permissions:
       contents: read

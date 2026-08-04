@@ -74,6 +74,9 @@
         <picocli.version>4.7.6</picocli.version>
         <graalvm.polyglot.version>24.2.1</graalvm.polyglot.version>
         <jsoup.version>1.18.3</jsoup.version>
+        <bouncycastle.version>1.81.1</bouncycastle.version>
+        <jetty.version>12.0.33</jetty.version>
+        <json-smart.version>2.5.2</json-smart.version>
 
         <!-- Test dependency versions -->
         <junit.version>5.12.2</junit.version>
@@ -188,6 +191,38 @@
                 <artifactId>picocli</artifactId>
                 <version>${picocli.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk18on</artifactId>
+                <version>${bouncycastle.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcpkix-jdk18on</artifactId>
+                <version>${bouncycastle.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcutil-jdk18on</artifactId>
+                <version>${bouncycastle.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-bom</artifactId>
+                <version>${jetty.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>net.minidev</groupId>
+                <artifactId>json-smart</artifactId>
+                <version>${json-smart.version}</version>
+            </dependency>            
         </dependencies>
     </dependencyManagement>
 
