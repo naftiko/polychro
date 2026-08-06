@@ -90,8 +90,9 @@ jobs:
           - os: ubuntu-24.04-arm
             artifact_name: polychro-cli-linux-arm64
 
-          # macOS Apple Silicon (ARM64)
-          - os: macos-latest  # macos-14+ uses Mx runners
+          # macOS Apple Silicon (ARM64) — larger runner (5-core M2 Pro) to cut
+          # native-image build time; requires GitHub Team/Enterprise Cloud plan.
+          - os: macos-15-xlarge
             artifact_name: polychro-cli-macos-arm64
 
           # Windows AMD64
@@ -105,6 +106,20 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Detect core count
+        id: cores
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            COUNT=$(sysctl -n hw.ncpu)
+          elif [[ "$RUNNER_OS" == "Linux" ]]; then
+            COUNT=$(nproc)
+          else
+            COUNT="${NUMBER_OF_PROCESSORS}"
+          fi
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "Detected $COUNT cores"
 
       - name: Set up Maven credentials for GitHub Packages
         uses: actions/setup-java@v4
@@ -125,6 +140,7 @@ jobs:
           distribution: 'graalvm'
           github-token: ${{ secrets.GITHUB_TOKEN }}
           native-image-job-reports: 'true'
+          cache: 'maven'
 
       - name: Setup MSVC (Windows)
         if: runner.os == 'Windows'
@@ -136,6 +152,7 @@ jobs:
         env:
           MAVEN_USERNAME: ${{ github.actor }}
           MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          NATIVE_IMAGE_OPTIONS: "-H:NumberOfThreads=${{ steps.cores.outputs.count }}"
 
       - name: Build with Maven (Windows)
         if: runner.os == 'Windows'
@@ -144,6 +161,7 @@ jobs:
         env:
           MAVEN_USERNAME: ${{ github.actor }}
           MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          NATIVE_IMAGE_OPTIONS: "-H:NumberOfThreads=${{ steps.cores.outputs.count }}"
 
       - name: Rename artifact (Unix)
         if: runner.os != 'Windows'
@@ -183,6 +201,7 @@ jobs:
             modules/polychro-cli/target/${{ matrix.artifact_name }}.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   test-binary:
     name: Smoke test on ${{ matrix.os }}
     needs: build-native
@@ -195,7 +214,7 @@ jobs:
             artifact_name: polychro-cli-linux-amd64
           - os: ubuntu-24.04-arm
             artifact_name: polychro-cli-linux-arm64
-          - os: macos-latest
+          - os: macos-15-xlarge
             artifact_name: polychro-cli-macos-arm64
           - os: windows-latest
             artifact_name: polychro-cli-windows-amd64.exe
@@ -232,7 +251,7 @@ jobs:
           BIN="./bin/${{ matrix.artifact_name }}"
           "$BIN" --help
           "$BIN" lint --help
-          
+
       - name: Smoke test — JSON Schema lint (regression guard)
         shell: bash
         run: |
