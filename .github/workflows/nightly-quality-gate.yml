@@ -521,6 +521,8 @@ jobs:
 
   smoke-tests:
     uses: ./.github/workflows/publish-cli-bin.yml
+    with:
+      use_macos_xlarge: false
 
 
   nightly-report:
