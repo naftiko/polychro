@@ -1,0 +1,13 @@
+functionsDir: functions
+functions:
+  - min-length
+
+rules:
+  description-min-length:
+    message: "info.description must be at least the configured length"
+    severity: error
+    given: "$.info.description"
+    then:
+      function: min-length
+      functionOptions:
+        min: 50

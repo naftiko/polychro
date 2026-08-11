@@ -1,0 +1,47 @@
+# Capability with MCP-specific violations
+naftiko: 1.0.0-alpha3
+info:
+  name: mcp-violations
+  version: 1.0.0
+  description: "MCP capability with multiple convention violations."
+
+capability:
+  consumes:
+    - namespace: internal-api
+      type: http
+      description: "Internal API for data processing"
+      baseUri: https://api.internal.io
+      resources:
+        - name: process
+          path: /process
+          operations:
+            - name: run-process
+              method: POST
+
+  exposes:
+    - namespace: MyMcp
+      type: mcp
+      resources:
+        - path: /tools
+          operations:
+            - name: runProcess
+              description: "Short"
+              steps:
+                - name: execute
+                  call: internal-api/process/run-process
+              inputParameters:
+                - name: data
+                  type: integer
+              outputParameters:
+                - name: result
+                  mapping: execute.output
+                  type: integer
+            - name: this-is-an-extremely-long-tool-name-that-exceeds-the-sixty-four-character-limit-for-mcp-clients
+              description: "A tool with an excessively long name that will be truncated by some MCP clients."
+              steps:
+                - name: execute
+                  call: internal-api/process/run-process
+              outputParameters:
+                - name: output
+                  mapping: execute.output
+                  type: string

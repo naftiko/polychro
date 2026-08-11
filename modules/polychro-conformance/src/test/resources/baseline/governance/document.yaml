@@ -1,0 +1,25 @@
+# Capability with governance violations: missing descriptions, trailing slash, no tags
+naftiko: 1.0.0-alpha3
+info:
+  name: broken-governance
+  version: 1.0.0
+  description: "Short."
+
+capability:
+  consumes:
+    - namespace: my-api
+      type: http
+      baseUri: https://api.example.com/
+
+  exposes:
+    - namespace: MyRest
+      type: rest
+      port: 8080
+      resources:
+        - path: /items
+          operations:
+            - name: get-item
+              method: GET
+              steps:
+                - name: fetch
+                  call: my-api/items/get

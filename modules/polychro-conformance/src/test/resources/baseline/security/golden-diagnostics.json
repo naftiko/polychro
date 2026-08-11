@@ -1,0 +1,37 @@
+[ {
+  "ruleId" : "authentication-scheme-not-basic",
+  "path" : "capability.consumes.0.authentication.type",
+  "severity" : "warn"
+}, {
+  "ruleId" : "external-ref-for-secrets",
+  "path" : "capability.consumes.0.authentication.token",
+  "severity" : "error"
+}, {
+  "ruleId" : "no-credentials-in-base-uri",
+  "path" : "capability.consumes.0.baseUri",
+  "severity" : "error"
+}, {
+  "ruleId" : "no-eval-in-descriptions",
+  "path" : "info.description",
+  "severity" : "error"
+}, {
+  "ruleId" : "no-example-uris",
+  "path" : "capability.consumes.0.baseUri",
+  "severity" : "warn"
+}, {
+  "ruleId" : "no-hardcoded-secrets",
+  "path" : "capability.consumes.0.authentication.token",
+  "severity" : "error"
+}, {
+  "ruleId" : "no-http-base-uri",
+  "path" : "capability.consumes.0.baseUri",
+  "severity" : "warn"
+}, {
+  "ruleId" : "no-script-tags",
+  "path" : "capability.exposes.0.description",
+  "severity" : "error"
+}, {
+  "ruleId" : "no-sensitive-data-in-descriptions",
+  "path" : "info.description",
+  "severity" : "warn"
+} ]

@@ -1,0 +1,9 @@
+{
+  "name": "polychro-conformance-harness",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pinned Spectral CLI used as the reference linter for the Polychro/Spectral conformance harness (naftiko/polychro#81). Not published — installed module-locally by frontend-maven-plugin into target/spectral-harness so no globally installed Node/npx is required.",
+  "devDependencies": {
+    "@stoplight/spectral-cli": "6.14.2"
+  }
+}

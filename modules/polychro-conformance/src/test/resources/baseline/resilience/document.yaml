@@ -1,0 +1,54 @@
+# Capability with resilience violations: no timeout, no retry, unbounded arrays, unconstrained strings
+naftiko: 1.0.0-alpha3
+info:
+  name: resilience-violations
+  version: 1.0.0
+  description: "A capability missing operational resilience configurations."
+  tags:
+    - test
+
+capability:
+  consumes:
+    - namespace: slow-api
+      type: http
+      description: "An external API with no timeout or retry configured"
+      baseUri: https://api.slow-service.io
+      resources:
+        - name: data
+          path: /data
+          operations:
+            - name: fetch-data
+              method: GET
+              outputParameters:
+                - name: items
+                  mapping: items
+                  type: array
+
+  aggregates:
+    - name: data-operations
+      functions:
+        - name: fetch-all
+          description: "Fetch all data without semantics declared"
+
+  exposes:
+    - namespace: my-rest
+      type: rest
+      port: 8080
+      description: "REST expose without error responses or rate limiting"
+      resources:
+        - path: /data
+          description: "Data resource"
+          operations:
+            - name: get-data
+              method: GET
+              description: "Fetch data from slow API"
+              steps:
+                - name: fetch
+                  call: slow-api/data/fetch-data
+              inputParameters:
+                - name: query
+                  type: string
+              outputParameters:
+                - name: results
+                  mapping: fetch.items
+                  type: array

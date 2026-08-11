@@ -32,6 +32,7 @@ results as SARIF, JSON, text, or LLM-native (agent) output.
 | `polychro-go` | Go SDK (thin binary wrapper) |
 | `polychro-node` | Node.js / TypeScript SDK (thin binary wrapper) |
 | `polychro-python` | Python SDK (thin binary wrapper) |
+| `polychro-conformance` | Polychro/Spectral conformance harness — test-only, not published, opt-in via `-Pconformance` |
 
 ---
 
@@ -68,6 +69,30 @@ mvn -B clean verify
 ```bash
 java -version    # must be 21+
 mvn -version     # must be 3.9+
+```
+
+### Conformance harness (`polychro-conformance`)
+
+Opt-in only — activated with the `-Pconformance` profile:
+
+```bash
+mvn -Pconformance -pl modules/polychro-conformance -am verify
+```
+
+Two system properties control it:
+
+- `-Dpolychro.conformance.skipNodeBootstrap=true` — skips the Node/Spectral bootstrap, for an
+  offline or restricted machine. `ConformanceHarnessTest` then self-skips via
+  `SpectralRunner.assumeAvailable()` instead of failing.
+- `-Dpolychro.conformance.updateGoldenFiles=true` — the only supported way to author or refresh a
+  golden file (see `GoldenFileAssertions`). Never hand-edit a golden JSON fixture directly.
+
+```bash
+# Offline / no local Node+Spectral toolchain
+mvn -Pconformance -pl modules/polychro-conformance -am verify -Dpolychro.conformance.skipNodeBootstrap=true
+
+# Refresh golden fixtures after an intentional output change
+mvn -Pconformance -pl modules/polychro-conformance -am verify -Dpolychro.conformance.updateGoldenFiles=true
 ```
 
 ### Polyglot SDKs
