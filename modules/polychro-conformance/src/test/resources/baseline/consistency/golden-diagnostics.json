@@ -1,0 +1,25 @@
+[ {
+  "ruleId" : "naming-convention-kebab",
+  "path" : "capability.consumes.0.namespace",
+  "severity" : "warn"
+}, {
+  "ruleId" : "naming-convention-kebab",
+  "path" : "capability.exposes.0.namespace",
+  "severity" : "warn"
+}, {
+  "ruleId" : "naming-convention-kebab",
+  "path" : "capability.exposes.0.resources.0.operations.0.name",
+  "severity" : "warn"
+}, {
+  "ruleId" : "naming-convention-kebab",
+  "path" : "capability.exposes.0.resources.0.operations.0.steps.0.name",
+  "severity" : "warn"
+}, {
+  "ruleId" : "resource-path-leading-slash",
+  "path" : "capability.consumes.0.resources.0.path",
+  "severity" : "warn"
+}, {
+  "ruleId" : "resource-path-no-query",
+  "path" : "capability.consumes.0.resources.0.path",
+  "severity" : "warn"
+} ]

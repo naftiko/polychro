@@ -1,0 +1,33 @@
+[ {
+  "ruleId" : "array-output-unbounded",
+  "path" : "capability.exposes.0.resources.0.operations.0.outputParameters.0.maxItems",
+  "severity" : "info"
+}, {
+  "ruleId" : "consumer-retry-policy-present",
+  "path" : "capability.consumes.0.retry",
+  "severity" : "info"
+}, {
+  "ruleId" : "consumer-timeout-declared",
+  "path" : "capability.consumes.0.timeout",
+  "severity" : "info"
+}, {
+  "ruleId" : "expose-429-response-defined",
+  "path" : "capability.exposes.0.errorResponses",
+  "severity" : "info"
+}, {
+  "ruleId" : "expose-error-response-defined",
+  "path" : "capability.exposes.0.errorResponses",
+  "severity" : "info"
+}, {
+  "ruleId" : "rate-limit-headers-documented",
+  "path" : "capability.exposes.0.rateLimitHeaders",
+  "severity" : "info"
+}, {
+  "ruleId" : "semantics-declared-on-write-operations",
+  "path" : "capability.aggregates.0.functions.0.semantics",
+  "severity" : "info"
+}, {
+  "ruleId" : "string-input-unconstrained",
+  "path" : "capability.exposes.0.resources.0.operations.0.inputParameters.0.pattern",
+  "severity" : "info"
+} ]

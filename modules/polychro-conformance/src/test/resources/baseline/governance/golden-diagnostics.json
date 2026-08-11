@@ -1,0 +1,33 @@
+[ {
+  "ruleId" : "capability-description-min-length",
+  "path" : "info.description",
+  "severity" : "info"
+}, {
+  "ruleId" : "capability-tags-present",
+  "path" : "info.tags",
+  "severity" : "info"
+}, {
+  "ruleId" : "consumer-base-uri-no-trailing-slash",
+  "path" : "capability.consumes.0.baseUri",
+  "severity" : "warn"
+}, {
+  "ruleId" : "consumer-base-uri-not-example",
+  "path" : "capability.consumes.0.baseUri",
+  "severity" : "warn"
+}, {
+  "ruleId" : "consumer-description-present",
+  "path" : "capability.consumes.0.description",
+  "severity" : "warn"
+}, {
+  "ruleId" : "expose-description-present",
+  "path" : "capability.exposes.0.description",
+  "severity" : "warn"
+}, {
+  "ruleId" : "expose-namespace-kebab-case",
+  "path" : "capability.exposes.0.namespace",
+  "severity" : "warn"
+}, {
+  "ruleId" : "operation-description-present",
+  "path" : "capability.exposes.0.resources.0.operations.0.description",
+  "severity" : "warn"
+} ]

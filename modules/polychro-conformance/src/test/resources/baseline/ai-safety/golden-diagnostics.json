@@ -1,0 +1,25 @@
+[ {
+  "ruleId" : "capability-description-min-length",
+  "path" : "info.description",
+  "severity" : "info"
+}, {
+  "ruleId" : "capability-description-present",
+  "path" : "info.description",
+  "severity" : "warn"
+}, {
+  "ruleId" : "capability-tags-present",
+  "path" : "info.tags",
+  "severity" : "info"
+}, {
+  "ruleId" : "empty-description",
+  "path" : "info.description",
+  "severity" : "warn"
+}, {
+  "ruleId" : "no-trailing-slash",
+  "path" : "capability.consumes.0.baseUri",
+  "severity" : "error"
+}, {
+  "ruleId" : "url-input-without-review",
+  "path" : "capability.exposes.0.resources.0.operations.0.inputParameters.0.name",
+  "severity" : "info"
+} ]

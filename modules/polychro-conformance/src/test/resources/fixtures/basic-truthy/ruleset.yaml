@@ -1,0 +1,7 @@
+rules:
+  info-title-truthy:
+    message: "info.title must be present"
+    severity: error
+    given: "$.info.title"
+    then:
+      function: truthy

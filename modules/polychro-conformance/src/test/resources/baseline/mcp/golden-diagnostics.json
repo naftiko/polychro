@@ -1,0 +1,29 @@
+[ {
+  "ruleId" : "mcp-input-parameter-description",
+  "path" : "capability.exposes.0.resources.0.operations.0.inputParameters.0.description",
+  "severity" : "warn"
+}, {
+  "ruleId" : "mcp-input-parameter-type-valid",
+  "path" : "capability.exposes.0.resources.0.operations.0.inputParameters.0.type",
+  "severity" : "error"
+}, {
+  "ruleId" : "mcp-namespace-kebab-case",
+  "path" : "capability.exposes.0.namespace",
+  "severity" : "warn"
+}, {
+  "ruleId" : "mcp-operation-name-kebab-case",
+  "path" : "capability.exposes.0.resources.0.operations.0.name",
+  "severity" : "warn"
+}, {
+  "ruleId" : "mcp-output-no-integer",
+  "path" : "capability.exposes.0.resources.0.operations.0.outputParameters.0.type",
+  "severity" : "error"
+}, {
+  "ruleId" : "mcp-tool-description-min-quality",
+  "path" : "capability.exposes.0.resources.0.operations.0.description",
+  "severity" : "warn"
+}, {
+  "ruleId" : "mcp-tool-name-length",
+  "path" : "capability.exposes.0.resources.0.operations.1.name",
+  "severity" : "warn"
+} ]

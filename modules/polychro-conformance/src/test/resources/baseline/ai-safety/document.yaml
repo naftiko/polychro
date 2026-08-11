@@ -1,0 +1,57 @@
+# Capability with ai-safety violations: duplicate names, url-named parameters
+naftiko: 1.0.0-alpha3
+info:
+  name: ai-safety-violations
+  version: 1.0.0
+  description: ""
+
+capability:
+  consumes:
+    - namespace: api-one
+      type: http
+      description: "First API consumer"
+      baseUri: https://api.first.io/
+      resources:
+        - name: data
+          path: /data
+          operations:
+            - name: fetch
+              method: GET
+              outputParameters:
+                - name: result
+                  mapping: result
+                  type: string
+    - namespace: api-two
+      type: http
+      description: "Second API consumer"
+      baseUri: https://api.second.io
+      resources:
+        - name: data
+          path: /data
+          operations:
+            - name: fetch
+              method: GET
+              outputParameters:
+                - name: result
+                  mapping: result
+                  type: string
+
+  exposes:
+    - namespace: my-mcp
+      type: mcp
+      description: "MCP expose with safety issues"
+      resources:
+        - path: /tools
+          operations:
+            - name: proxy-call
+              description: "A tool that takes a URL parameter — potential SSRF"
+              steps:
+                - name: do-fetch
+                  call: api-one/data/fetch
+              inputParameters:
+                - name: callback
+                  type: string
+              outputParameters:
+                - name: data
+                  mapping: do-fetch.result
+                  type: string
