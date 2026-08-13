@@ -287,4 +287,59 @@ class LinterConfigTest {
                 configDir.resolve("custom-rules.yml").toAbsolutePath().normalize().toString(),
                 resolvedRulesetPath);
     }
+
+    @Test
+    void loadFromPathShouldSkipBlankPathConfigValue() throws Exception {
+        // Covers the `stringValue.isBlank()` branch of resolveRelativePaths: a blank
+        // schemaPath must be left untouched (skipped via `continue`) rather than resolved
+        // into a directory path, which would be nonsensical.
+        String yaml = """
+                validators: []
+                config:
+                  json-schema:
+                    schemaPath: ""
+                """;
+        Path configFile = tempDir.resolve(".polychro.yml");
+        Files.writeString(configFile, yaml);
+
+        LinterConfig config = LinterConfig.load(configFile);
+
+        assertEquals("", config.validatorConfigs().get("json-schema").get("schemaPath"));
+    }
+
+    @Test
+    void loadFromPathShouldResolveMultiplePathKeysWithinTheSameValidatorConfigBlock() throws Exception {
+        // Covers the `resolvedProps == null` branch of resolveRelativePaths for its FALSE
+        // case: once the first matching path key has allocated the copy-on-write map, a
+        // second matching key (checkov's customCheckDir alongside checkovPath) in the same
+        // validator config block must reuse it rather than re-allocating or being skipped.
+        Path configDir = tempDir.resolve("files");
+        Files.createDirectories(configDir);
+        Path customCheckDir = configDir.resolve("custom-checks");
+        Files.createDirectories(customCheckDir);
+        Path checkovBinDir = configDir.resolve("bin");
+        Files.createDirectories(checkovBinDir);
+        Path checkovBin = checkovBinDir.resolve("checkov");
+        Files.writeString(checkovBin, "#!/bin/sh\n");
+
+        String yaml = """
+                validators: []
+                config:
+                  checkov:
+                    checkovPath: bin/checkov
+                    customCheckDir: custom-checks
+                """;
+        Path configFile = configDir.resolve(".polychro.yml");
+        Files.writeString(configFile, yaml);
+
+        LinterConfig config = LinterConfig.load(configFile);
+
+        Map<String, Object> checkovConfig = config.validatorConfigs().get("checkov");
+        assertEquals(
+                checkovBin.toAbsolutePath().normalize().toString(),
+                checkovConfig.get("checkovPath"));
+        assertEquals(
+                customCheckDir.toAbsolutePath().normalize().toString(),
+                checkovConfig.get("customCheckDir"));
+    }
 }
