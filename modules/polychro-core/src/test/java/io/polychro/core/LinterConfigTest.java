@@ -342,4 +342,33 @@ class LinterConfigTest {
                 customCheckDir.toAbsolutePath().normalize().toString(),
                 checkovConfig.get("customCheckDir"));
     }
+
+    // Direct unit tests for the package-private resolveRelativePaths(Map, Path) helper —
+    // made package-private (was private) per AGENTS.md's Method Visibility convention
+    // (PR #126 review) so this non-trivial logic (multiple branches, copy-on-write map
+    // allocation) can be exercised directly instead of only indirectly through load(Path).
+
+    @Test
+    void resolveRelativePathsShouldRewriteRelativePathThatExistsNextToConfigDir() throws Exception {
+        Path configDir = tempDir.resolve("files");
+        Files.createDirectories(configDir);
+        Files.writeString(configDir.resolve("schema.json"), "{}");
+
+        Map<String, Object> resolved = LinterConfig.resolveRelativePaths(
+                Map.of("schemaPath", "schema.json"), configDir);
+
+        assertEquals(
+                configDir.resolve("schema.json").toAbsolutePath().normalize().toString(),
+                resolved.get("schemaPath"));
+    }
+
+    @Test
+    void resolveRelativePathsShouldReturnSameInstanceWhenNoKeyMatches() {
+        Map<String, Object> props = Map.of("unrelatedKey", "value");
+
+        Map<String, Object> resolved = LinterConfig.resolveRelativePaths(props, tempDir);
+
+        assertSame(props, resolved, "no PATH_CONFIG_KEYS entry present — the original map "
+                + "must be returned unchanged, not a copy");
+    }
 }
