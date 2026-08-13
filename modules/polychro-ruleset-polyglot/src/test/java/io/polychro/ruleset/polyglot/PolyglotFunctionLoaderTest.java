@@ -13,6 +13,7 @@
  */
 package io.polychro.ruleset.polyglot;
 
+import io.polychro.ruleset.Function;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -101,22 +102,22 @@ class PolyglotFunctionLoaderTest {
 
     @Test
     void detectLanguageShouldReturnJsForJsFile() {
-        assertEquals("js", PolyglotFunctionLoader.detectLanguage(Path.of("func.js")));
+        assertEquals("js", PolyglotFunctionLoader.detectLanguage("func.js"));
     }
 
     @Test
     void detectLanguageShouldReturnPythonForPyFile() {
-        assertEquals("python", PolyglotFunctionLoader.detectLanguage(Path.of("func.py")));
+        assertEquals("python", PolyglotFunctionLoader.detectLanguage("func.py"));
     }
 
     @Test
     void detectLanguageShouldReturnGroovyForGroovyFile() {
-        assertEquals("groovy", PolyglotFunctionLoader.detectLanguage(Path.of("func.groovy")));
+        assertEquals("groovy", PolyglotFunctionLoader.detectLanguage("func.groovy"));
     }
 
     @Test
     void detectLanguageShouldReturnNullForUnsupported() {
-        assertNull(PolyglotFunctionLoader.detectLanguage(Path.of("func.rb")));
+        assertNull(PolyglotFunctionLoader.detectLanguage("func.rb"));
     }
 
     @Test
@@ -199,5 +200,17 @@ class PolyglotFunctionLoaderTest {
         assertTrue(result.isEmpty());
         assertDoesNotThrow(loader::close,
                 "close() must be safe when loadFunctions found no matching script file");
+    }
+
+    // Full functions context
+
+    @Test
+    void loadFunctionsShouldSkipInvalidFunctions() {
+        List<Function> functions = List.of(new Function("script1.rs", "script1", ""),
+                new Function("script2.py", "script2", ""));
+
+        PolyglotFunctionLoader loader = new PolyglotFunctionLoader();
+        Map<String, PolyglotRuleFunction> result = loader.loadFunctions(functions);
+        assertTrue(result.isEmpty());
     }
 }

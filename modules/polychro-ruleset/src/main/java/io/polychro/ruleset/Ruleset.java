@@ -19,26 +19,24 @@ import java.util.Map;
 /**
  * A parsed Spectral-format ruleset.
  *
- * @param extendsRefs     list of base ruleset paths to inherit from
- * @param aliases         global alias map (alias name → JSONPath expression)
- * @param overrides       list of file-scoped rule overrides
- * @param formats         list of document format identifiers this ruleset applies to
- * @param functionsDir    directory path for custom function files
- * @param functions       list of custom function names declared
- * @param rules           rule definitions keyed by rule name
- * @param documentationUrl base URL for rule documentation
+ * @param extendsRefs           list of base ruleset paths to inherit from
+ * @param aliases               global alias map (alias name → JSONPath expression)
+ * @param overrides             list of file-scoped rule overrides
+ * @param formats               list of document format identifiers this ruleset applies to
+ * @param functions             list of the custom functions'
+ * @param rules                 rule definitions keyed by rule name
+ * @param documentationUrl      base URL for rule documentation
  */
-record Ruleset(
+public record Ruleset(
         List<String> extendsRefs,
         Map<String, String> aliases,
         List<RulesetOverride> overrides,
         List<String> formats,
-        String functionsDir,
-        List<String> functions,
+        List<Function> functions,
         Map<String, Rule> rules,
         String documentationUrl
 ) {
-    Ruleset {
+    public Ruleset {
         extendsRefs = extendsRefs != null ? List.copyOf(extendsRefs) : List.of();
         aliases = aliases != null ? Map.copyOf(aliases) : Map.of();
         overrides = overrides != null ? List.copyOf(overrides) : List.of();

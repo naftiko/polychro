@@ -116,4 +116,12 @@ class PolyglotFunctionProviderTest {
         PolyglotFunctionProvider provider = new PolyglotFunctionProvider();
         assertTrue(provider.functions(FUNCTIONS_DIR, List.of()).isEmpty());
     }
+
+    // Full functions context
+
+    @Test
+    void fullFunctionsShouldReturnEmptyOnEmptyInput() {
+        PolyglotFunctionProvider provider = new PolyglotFunctionProvider();
+        assertTrue(provider.functions(List.of()).isEmpty());
+    }
 }

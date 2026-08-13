@@ -13,6 +13,7 @@
  */
 package io.polychro.rulesets;
 
+import io.polychro.ruleset.Ruleset;
 import io.polychro.ruleset.RulesetValidatorFactory;
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Document;
@@ -35,9 +36,9 @@ class SecurityRulesetTest {
 
     @BeforeAll
     static void setUp() {
-        String content = RulesetCatalog.load("security");
+        Ruleset ruleset = RulesetCatalog.loadAsRuleset("security");
         validator = new RulesetValidatorFactory().create(
-                new ValidatorConfig(Map.of("rulesetContent", content)));
+                new ValidatorConfig(Map.of("ruleset", ruleset)));
     }
 
     @Test

@@ -14,6 +14,9 @@
         "pattern": "rulesets/.*\\.yml"
       },
       {
+        "pattern": "rulesets/functions/.*\\.(js|py|groovy)"
+      },
+      {
         "pattern": "version\\.properties"
       },
       {

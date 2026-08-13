@@ -30,7 +30,7 @@ class RulesetMergingTest {
 
     @Test
     void sameNameRuleInChildShouldReplaceParent() {
-        Ruleset parent = new Ruleset(List.of(), Map.of(), List.of(), List.of(), null, List.of(),
+        Ruleset parent = new Ruleset(List.of(), Map.of(), List.of(), List.of(), List.of(),
                 Map.of("shared-rule", new Rule("shared-rule", "Parent message", null, "warn", true,
                         null, null, List.of("$.info"), List.of(new RuleAction(null, "truthy", Map.of())))),
                 null);
@@ -85,7 +85,7 @@ class RulesetMergingTest {
     @Test
     void composeNoBaseDirShouldUseCurrentDir() {
         // Ruleset with no extends should pass through compose(Ruleset) unchanged
-        Ruleset simple = new Ruleset(List.of(), Map.of(), List.of(), List.of(), null, List.of(),
+        Ruleset simple = new Ruleset(List.of(), Map.of(), List.of(), List.of(), List.of(),
                 Map.of("rule", new Rule("rule", "msg", null, "warn", true,
                         null, null, List.of("$"), List.of(new RuleAction(null, "truthy", Map.of())))),
                 null);
@@ -99,7 +99,7 @@ class RulesetMergingTest {
         Rule offWithGiven = new Rule("parent-name-truthy", null, null, "off", true,
                 null, null, List.of("$.info.name"), List.of(new RuleAction(null, "truthy", Map.of())));
         Ruleset childWithOff = new Ruleset(List.of("parent-ruleset.yml"), Map.of(), List.of(),
-                List.of(), null, List.of(), Map.of("parent-name-truthy", offWithGiven), null);
+                List.of(), List.of(), Map.of("parent-name-truthy", offWithGiven), null);
         Ruleset composed = composer.compose(childWithOff, EXTENDS_DIR, null);
 
         // Should use the child rule as-is (not bare disable)
@@ -114,7 +114,7 @@ class RulesetMergingTest {
         Rule offWithThen = new Rule("parent-name-truthy", null, null, "off", true,
                 null, null, List.of(), List.of(new RuleAction(null, "truthy", Map.of())));
         Ruleset childWithOff = new Ruleset(List.of("parent-ruleset.yml"), Map.of(), List.of(),
-                List.of(), null, List.of(), Map.of("parent-name-truthy", offWithThen), null);
+                List.of(), List.of(), Map.of("parent-name-truthy", offWithThen), null);
         Ruleset composed = composer.compose(childWithOff, EXTENDS_DIR, null);
 
         // Should use the child rule as-is (not bare disable)

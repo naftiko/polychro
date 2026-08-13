@@ -1,0 +1,5 @@
+[ {
+  "ruleId" : "agents-required-sections",
+  "path" : "document.blocks",
+  "severity" : "warn"
+} ]

@@ -13,6 +13,8 @@
  */
 package io.polychro.rulesets;
 
+import io.polychro.ruleset.Rule;
+import io.polychro.ruleset.Ruleset;
 import io.polychro.ruleset.RulesetValidatorFactory;
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Document;
@@ -70,10 +72,10 @@ class AiSafetyRulesetTest {
         // This rule requires a custom function (uniqueOperationNames) for cross-object
         // graph traversal. Until the function is implemented, the rule is declared but
         // does not fire. This test verifies the rule definition is present in the ruleset.
-        String content = RulesetCatalog.load("ai-safety");
-        assertTrue(content.contains("duplicate-operation-name"),
-                "Expected duplicate-operation-name rule to be declared in ai-safety ruleset");
-        assertTrue(content.contains("uniqueOperationNames"),
+        Ruleset ruleset = RulesetCatalog.loadAsRuleset("ai-safety");
+        Rule rule = ruleset.rules().get("duplicate-operation-name");
+        assertNotNull(rule, "Expected duplicate-operation-name rule to be declared in ai-safety ruleset");
+        assertEquals("uniqueOperationNames", rule.then().getFirst().functionName(),
                 "Expected uniqueOperationNames custom function reference");
     }
 

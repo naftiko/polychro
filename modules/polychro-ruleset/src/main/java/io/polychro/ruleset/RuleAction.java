@@ -22,12 +22,12 @@ import java.util.Map;
  * @param functionName    name of the function to invoke
  * @param functionOptions options passed to the function
  */
-record RuleAction(
+public record RuleAction(
         String field,
         String functionName,
         Map<String, Object> functionOptions
 ) {
-    RuleAction {
+    public RuleAction {
         functionOptions = functionOptions != null ? Map.copyOf(functionOptions) : Map.of();
     }
 }

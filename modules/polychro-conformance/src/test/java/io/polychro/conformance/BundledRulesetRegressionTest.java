@@ -13,9 +13,14 @@
  */
 package io.polychro.conformance;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.polychro.conformance.golden.GoldenFileAssertions;
 import io.polychro.conformance.model.NormalizedDiagnostic;
 import io.polychro.conformance.runner.PolychroRunner;
+import io.polychro.ruleset.Function;
+import io.polychro.ruleset.Ruleset;
 import io.polychro.rulesets.RulesetCatalog;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DynamicTest;
@@ -23,6 +28,7 @@ import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -31,7 +37,7 @@ import java.util.stream.Stream;
 /**
  * Polychro-only regression baseline for the bundled Ikanos rulesets shipped in
  * {@code polychro-rulesets} ({@code governance}, {@code ai-safety}, {@code security},
- * {@code mcp}, {@code consistency}, {@code resilience}).
+ * {@code mcp}, {@code consistency}, {@code resilience}, {@code agents}).
  *
  * <p>Unlike {@link ConformanceHarnessTest}, this class does <strong>not</strong> involve
  * Spectral: these rulesets are Ikanos-capability-centric ({@code $.capability.consumes},
@@ -46,10 +52,10 @@ import java.util.stream.Stream;
  *
  * <p>One {@link DynamicTest} is generated per {@link RulesetCatalog#available() available}
  * bundled ruleset name, each reading its fixture document from
- * {@code src/test/resources/baseline/<name>/document.yaml} and its golden diagnostics from
- * {@code src/test/resources/baseline/<name>/golden-diagnostics.json}. Adding a bundled ruleset to
- * {@code polychro-rulesets} therefore only requires adding its baseline fixture directory here —
- * no new Java method.
+ * {@code src/test/resources/baseline/<name>/<name>.<ext>} (see {@link #resolveDocumentPath})
+ * and its golden diagnostics from {@code src/test/resources/baseline/<name>/golden-diagnostics.json}.
+ * Adding a bundled ruleset to {@code polychro-rulesets} therefore only requires adding its
+ * baseline fixture directory here — no new Java method.
  *
  * <p>Rulesets are loaded via {@link PolychroRunner#run(Path, Path)} (a real ruleset file on
  * disk) rather than an inline-content overload: {@code ai-safety.yml} declares
@@ -71,6 +77,11 @@ class BundledRulesetRegressionTest {
     static Path rulesetsDir;
 
     /**
+     * Candidate document file extensions, tried in order, for a bundled ruleset's fixture.
+     */
+    private static final List<String> DOCUMENT_FILE_EXTENSIONS = List.of("yaml", "md");
+
+    /**
      * Materializes every bundled ruleset into one shared directory (see class Javadoc) once for
      * the whole test class, so {@code extends} references between bundled rulesets (e.g.
      * {@code ai-safety.yml} → {@code governance.yml}) resolve as sibling files.
@@ -81,8 +92,21 @@ class BundledRulesetRegressionTest {
      */
     @BeforeAll
     static void extractCatalogToTempDir() throws IOException {
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         for (String name : RulesetCatalog.available()) {
-            Files.writeString(rulesetsDir.resolve(name + ".yml"), RulesetCatalog.load(name));
+            String rulesetContent = RulesetCatalog.load(name);
+            Files.writeString(rulesetsDir.resolve(name + ".yml"), rulesetContent);
+
+            JsonNode functionsDirectoryNode = mapper.readTree(rulesetContent).get("functionsDir");
+            if (functionsDirectoryNode != null) {
+                String functionsDirectory = functionsDirectoryNode.asText(".");
+                Files.createDirectories(rulesetsDir.resolve(functionsDirectory));
+                Ruleset ruleset = RulesetCatalog.loadAsRuleset(name);
+                for (Function function : ruleset.functions()) {
+                    Files.writeString(rulesetsDir.resolve(functionsDirectory).resolve(function.filename()),
+                            function.sourceCode());
+                }
+            }
         }
     }
 
@@ -98,7 +122,7 @@ class BundledRulesetRegressionTest {
 
     private void assertMatchesBaselineGolden(String rulesetName) {
         Path fixtureDir = BASELINE.resolve(rulesetName);
-        Path documentPath = fixtureDir.resolve("document.yaml");
+        Path documentPath = resolveDocumentPath(fixtureDir);
         Path goldenFile = fixtureDir.resolve("golden-diagnostics.json");
         Path rulesetPath = rulesetsDir.resolve(rulesetName + ".yml");
 
@@ -109,5 +133,22 @@ class BundledRulesetRegressionTest {
         List<NormalizedDiagnostic> diagnostics = PolychroRunner.run(documentPath, rulesetPath, true);
 
         GoldenFileAssertions.assertMatchesGolden(diagnostics, goldenFile);
+    }
+
+    /**
+     * Resolves the fixture document for a bundled ruleset, trying each of
+     * {@link #rulesetsDir} in order.
+     */
+    private static Path resolveDocumentPath(Path fixtureDir) {
+        for (String fileExtension : DOCUMENT_FILE_EXTENSIONS) {
+            Path candidate = fixtureDir.resolve(fixtureDir.getFileName() + "." + fileExtension);
+            if (Files.isRegularFile(candidate)) {
+                return candidate;
+            }
+        }
+
+        throw new IllegalStateException(
+                "No fixture document with name %s and extension in (%s) found under %s".formatted(fixtureDir.getFileName(),
+                        String.join(", ", DOCUMENT_FILE_EXTENSIONS), fixtureDir));
     }
 }

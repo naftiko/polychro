@@ -231,7 +231,7 @@ class RuleExecutorTest {
         // A custom function reports a violation pinned to a relative path ("name"); the executor
         // must combine it with the matched path and resolve a SourceRange from the document's
         // source map (issue #32, Layer 1).
-        FunctionRegistry registry = FunctionRegistry.forRuleset(null, List.of());
+        FunctionRegistry registry = FunctionRegistry.forRuleset(List.of());
         RuleExecutor pathExecutor = new RuleExecutor(new JsonPathEvaluator(), registry);
         Rule rule = new Rule("path-rule", null, null, "warn", true, null, null,
                 List.of("$.info"),

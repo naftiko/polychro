@@ -1,0 +1,77 @@
+# polychro:agents — Lints agent-facing Markdown assets: AGENTS.md, SKILL.md, and .instructions.md / .prompt.md files.
+extends: []
+
+functionsDir: functions
+functions:
+  - required-sections
+  - required-fields
+  - instructions-applyto-presence
+  - instructions-applyto-not-blank
+
+overrides:
+  - files:
+      - "**/AGENTS.md"
+      - "**/agents.md"
+    rules:
+      agents-required-sections:
+        description: "Checks for this ruleset's default recommended sections (Build & Test, Code Style, Contribution Workflow) — not a requirement of the official AGENTS.md standard, which has no required headings. Override via functionOptions.sections to match your project's own conventions."
+        severity: warn
+        recommended: true
+        formats:
+          - markdown
+        given: "$.document.blocks"
+        then:
+          function: required-sections
+          functionOptions:
+            sections:
+              - "Build & Test"
+              - "Code Style"
+              - "Contribution Workflow"
+
+  - files:
+      - "**/SKILL.md"
+      - "**/skill.md"
+    rules:
+      skill-required-frontmatter:
+        description: "SKILL.md frontmatter must satisfy the Agent Skills spec (https://code.claude.com/docs/en/skills): `name` — required, max 64 chars, lowercase letters/numbers/hyphens only, must not start or end with a hyphen; `description` — required, non-empty, max 1024 chars."
+        severity: error
+        recommended: true
+        formats:
+          - markdown
+        given: "$.document.frontmatter"
+        then:
+          function: required-fields
+          functionOptions:
+            fields:
+              - name: name
+                required: true
+                maxLength: 64
+                pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
+                patternDescription: "lowercase letters, numbers, and hyphens only; must not start or end with a hyphen"
+              - name: description
+                required: true
+                maxLength: 1024
+
+  - files:
+      - "**/*.instructions.md"
+      - "**/*.prompt.md"
+    rules:
+      instructions-applyto-presence:
+        description: "When frontmatter is present, it should declare an 'applyTo' pattern so tooling knows which files the instructions apply to."
+        severity: warn
+        recommended: true
+        formats:
+          - markdown
+        given: "$.document.frontmatter"
+        then:
+          function: instructions-applyto-presence
+
+      instructions-applyto-not-blank:
+        description: "When 'applyTo' is present, it must not be an empty/blank string."
+        severity: error
+        recommended: true
+        formats:
+          - markdown
+        given: "$.document.frontmatter"
+        then:
+          function: instructions-applyto-not-blank
