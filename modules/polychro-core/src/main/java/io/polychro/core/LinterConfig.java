@@ -89,8 +89,12 @@ public class LinterConfig {
     public static LinterConfig load(Path path) {
         try (InputStream is = Files.newInputStream(path)) {
             LinterConfig config = load(is);
+            // path was just opened successfully as a regular file, so its absolute, normalized
+            // form always has a parent directory (the only path with no parent is the
+            // filesystem root itself, which cannot be opened as a readable file). No null-check
+            // is needed here.
             Path configDir = path.toAbsolutePath().normalize().getParent();
-            return configDir != null ? resolveRelativePaths(config, configDir) : config;
+            return resolveRelativePaths(config, configDir);
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to load config: " + path, e);
         }

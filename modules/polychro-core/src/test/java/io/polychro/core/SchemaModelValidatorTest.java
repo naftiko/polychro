@@ -27,6 +27,9 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SchemaModelValidatorTest {
 
@@ -194,6 +197,100 @@ class SchemaModelValidatorTest {
         assertEquals("json-schema", validator.selectValidatorName(new Document(root, null)));
     }
 
+    // Regression tests for SchemaModelValidator#create silently skipping an auto-discovered
+    // (not explicitly configured) json-schema/json-structure factory instead of letting its
+    // IllegalArgumentException crash the whole schema-model stage (see LIMITATIONS.md §6 /
+    // the .polychro.yml `config: json-schema: ...` case with no `json-structure` block).
+
+    @Test
+    void createShouldSilentlySkipAutoDiscoveredJsonStructureFactoryThatFailsWithoutConfig() {
+        RequiresSchemaPathFactory jsonSchemaFactory =
+                new RequiresSchemaPathFactory(SchemaModelValidator.JSON_SCHEMA_NAME);
+        RequiresSchemaPathFactory jsonStructureFactory =
+                new RequiresSchemaPathFactory(SchemaModelValidator.JSON_STRUCTURE_NAME);
+        Map<String, ValidatorFactory> factories = Map.of(
+                SchemaModelValidator.JSON_SCHEMA_NAME, jsonSchemaFactory,
+                SchemaModelValidator.JSON_STRUCTURE_NAME, jsonStructureFactory);
+        LinterConfig config = new LinterConfig(
+                List.of(),
+                Map.of(SchemaModelValidator.JSON_SCHEMA_NAME, Map.of("schemaPath", "schema.json")),
+                false,
+                "json-schema");
+
+        SchemaModelValidator validator = SchemaModelValidator.create(factories, config);
+
+        assertNotNull(validator, "json-schema is explicitly configured, so the validator must be built");
+        ObjectNode root = MAPPER.createObjectNode();
+        root.put("name", "test");
+        List<Diagnostic> diagnostics = validator.validate(new Document(root, null));
+        assertEquals(SchemaModelValidator.JSON_SCHEMA_NAME, diagnostics.get(0).code(),
+                "the auto-discovered json-structure factory has no config and must fail its own "
+                        + "create() — it should be silently dropped rather than crashing, leaving "
+                        + "the explicitly-configured json-schema validator as the only one in use");
+    }
+
+    @Test
+    void createShouldSilentlySkipAutoDiscoveredJsonSchemaFactoryThatFailsWithoutConfig() {
+        RequiresSchemaPathFactory jsonSchemaFactory =
+                new RequiresSchemaPathFactory(SchemaModelValidator.JSON_SCHEMA_NAME);
+        RequiresSchemaPathFactory jsonStructureFactory =
+                new RequiresSchemaPathFactory(SchemaModelValidator.JSON_STRUCTURE_NAME);
+        Map<String, ValidatorFactory> factories = Map.of(
+                SchemaModelValidator.JSON_SCHEMA_NAME, jsonSchemaFactory,
+                SchemaModelValidator.JSON_STRUCTURE_NAME, jsonStructureFactory);
+        LinterConfig config = new LinterConfig(
+                List.of(),
+                Map.of(SchemaModelValidator.JSON_STRUCTURE_NAME, Map.of("schemaPath", "schema.json")),
+                false,
+                "json-structure");
+
+        SchemaModelValidator validator = SchemaModelValidator.create(factories, config);
+
+        assertNotNull(validator, "json-structure is explicitly configured, so the validator must be built");
+        ObjectNode root = MAPPER.createObjectNode();
+        root.put("name", "test");
+        List<Diagnostic> diagnostics = validator.validate(new Document(root, null));
+        assertEquals(SchemaModelValidator.JSON_STRUCTURE_NAME, diagnostics.get(0).code(),
+                "the auto-discovered json-schema factory has no config and must fail its own "
+                        + "create() — it should be silently dropped rather than crashing, leaving "
+                        + "the explicitly-configured json-structure validator as the only one in use");
+    }
+
+    @Test
+    void createShouldReturnNullWhenBothFactoriesAreAutoDiscoveredAndFailWithoutConfig() {
+        Map<String, ValidatorFactory> factories = Map.of(
+                SchemaModelValidator.JSON_SCHEMA_NAME,
+                new RequiresSchemaPathFactory(SchemaModelValidator.JSON_SCHEMA_NAME),
+                SchemaModelValidator.JSON_STRUCTURE_NAME,
+                new RequiresSchemaPathFactory(SchemaModelValidator.JSON_STRUCTURE_NAME));
+        LinterConfig config = new LinterConfig(List.of(), Map.of(), false, "json-schema");
+
+        SchemaModelValidator validator = SchemaModelValidator.create(factories, config);
+
+        assertNull(validator,
+                "both factories are auto-discovered, unconfigured, and fail their own create() — "
+                        + "the schema-model stage must be dropped entirely rather than returning a "
+                        + "validator wrapping nothing");
+    }
+
+    @Test
+    void createShouldPropagateExceptionWhenExplicitlyConfiguredFactoryFailsToCreate() {
+        // Mirrors Linter.Builder#createValidator: a factory the user explicitly configured
+        // (present in validatorConfigs, even with an invalid/incomplete config) must still
+        // surface its IllegalArgumentException loudly — only auto-discovered, unconfigured
+        // factories are silently skipped.
+        Map<String, ValidatorFactory> factories = Map.of(
+                SchemaModelValidator.JSON_SCHEMA_NAME,
+                new RequiresSchemaPathFactory(SchemaModelValidator.JSON_SCHEMA_NAME));
+        LinterConfig config = new LinterConfig(
+                List.of(),
+                Map.of(SchemaModelValidator.JSON_SCHEMA_NAME, Map.of("unrelatedKey", "value")),
+                false,
+                "json-schema");
+
+        assertThrows(IllegalArgumentException.class, () -> SchemaModelValidator.create(factories, config));
+    }
+
     private static class RecordingFactory implements ValidatorFactory {
 
         private final String name;
@@ -219,6 +316,45 @@ class SchemaModelValidatorTest {
                 public List<Diagnostic> validate(Document doc) {
                     return List.of(new Diagnostic(Severity.INFO, RecordingFactory.this.name,
                             RecordingFactory.this.name, null, null));
+                }
+            };
+        }
+    }
+
+    /**
+     * Mimics real schema-model {@link ValidatorFactory} implementations (e.g.
+     * {@code JsonSchemaValidatorFactory}, {@code JsonStructureValidatorFactory}) that require
+     * a {@code schemaPath} configuration key and throw {@link IllegalArgumentException} when
+     * it is absent.
+     */
+    private static class RequiresSchemaPathFactory implements ValidatorFactory {
+
+        private final String name;
+
+        private RequiresSchemaPathFactory(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public Validator create(ValidatorConfig config) {
+            if (config.get("schemaPath", String.class).isEmpty()) {
+                throw new IllegalArgumentException(name + " requires 'schemaPath'");
+            }
+            return new Validator() {
+                @Override
+                public String name() {
+                    return RequiresSchemaPathFactory.this.name;
+                }
+
+                @Override
+                public List<Diagnostic> validate(Document doc) {
+                    return List.of(new Diagnostic(Severity.INFO, RequiresSchemaPathFactory.this.name,
+                            RequiresSchemaPathFactory.this.name, null, null));
                 }
             };
         }
