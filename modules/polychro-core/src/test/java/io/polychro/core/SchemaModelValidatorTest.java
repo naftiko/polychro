@@ -291,6 +291,33 @@ class SchemaModelValidatorTest {
         assertThrows(IllegalArgumentException.class, () -> SchemaModelValidator.create(factories, config));
     }
 
+    @Test
+    void createShouldInvokeFactoryCreateExactlyOncePerFactory() {
+        // Regression test for PR #126 review: create() used to probe each factory with a
+        // discardable canCreate() call, then re-create via the constructor on success —
+        // invoking factory.create() twice for every successfully-configured factory. For a
+        // factory with I/O or schema-compilation side effects, that doubled the cost on every
+        // linter startup. Assert the fix: each factory's create() is invoked exactly once.
+        CountingFactory jsonSchemaFactory = new CountingFactory(SchemaModelValidator.JSON_SCHEMA_NAME);
+        CountingFactory jsonStructureFactory = new CountingFactory(SchemaModelValidator.JSON_STRUCTURE_NAME);
+        Map<String, ValidatorFactory> factories = Map.of(
+                SchemaModelValidator.JSON_SCHEMA_NAME, jsonSchemaFactory,
+                SchemaModelValidator.JSON_STRUCTURE_NAME, jsonStructureFactory);
+        LinterConfig config = new LinterConfig(
+                List.of(),
+                Map.of(
+                        SchemaModelValidator.JSON_SCHEMA_NAME, Map.of("schemaPath", "schema.json"),
+                        SchemaModelValidator.JSON_STRUCTURE_NAME, Map.of("schemaPath", "schema.json")),
+                false,
+                "json-schema");
+
+        SchemaModelValidator validator = SchemaModelValidator.create(factories, config);
+
+        assertNotNull(validator);
+        assertEquals(1, jsonSchemaFactory.createCallCount);
+        assertEquals(1, jsonStructureFactory.createCallCount);
+    }
+
     private static class RecordingFactory implements ValidatorFactory {
 
         private final String name;
@@ -355,6 +382,44 @@ class SchemaModelValidatorTest {
                 public List<Diagnostic> validate(Document doc) {
                     return List.of(new Diagnostic(Severity.INFO, RequiresSchemaPathFactory.this.name,
                             RequiresSchemaPathFactory.this.name, null, null));
+                }
+            };
+        }
+    }
+
+    /**
+     * Counts how many times {@link #create} is invoked, used to assert the fix for the PR #126
+     * review finding that {@code SchemaModelValidator#create} used to invoke a factory's
+     * {@code create()} twice (once to probe, once to build) for every successfully-configured
+     * factory.
+     */
+    private static class CountingFactory implements ValidatorFactory {
+
+        private final String name;
+        int createCallCount;
+
+        private CountingFactory(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public Validator create(ValidatorConfig config) {
+            createCallCount++;
+            return new Validator() {
+                @Override
+                public String name() {
+                    return CountingFactory.this.name;
+                }
+
+                @Override
+                public List<Diagnostic> validate(Document doc) {
+                    return List.of(new Diagnostic(Severity.INFO, CountingFactory.this.name,
+                            CountingFactory.this.name, null, null));
                 }
             };
         }

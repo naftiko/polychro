@@ -38,13 +38,22 @@ class SchemaModelValidator implements Validator {
             ValidatorFactory jsonStructureFactory,
             ValidatorConfig jsonStructureConfig,
             String defaultSchemaValidator) {
+        this(
+                jsonSchemaFactory != null ? jsonSchemaFactory.create(jsonSchemaConfig) : null,
+                jsonStructureFactory != null ? jsonStructureFactory.create(jsonStructureConfig) : null,
+                defaultSchemaValidator);
+    }
+
+    /**
+     * Build directly from already-created {@link Validator} instances, used by
+     * {@link #create(Map, LinterConfig)} so that each factory's {@code create()} is invoked
+     * at most once — see {@link #buildValidator}.
+     */
+    private SchemaModelValidator(
+            Validator jsonSchemaValidator, Validator jsonStructureValidator, String defaultSchemaValidator) {
+        this.jsonSchemaValidator = jsonSchemaValidator;
+        this.jsonStructureValidator = jsonStructureValidator;
         this.defaultSchemaValidator = defaultSchemaValidator;
-        this.jsonSchemaValidator = jsonSchemaFactory != null
-                ? jsonSchemaFactory.create(jsonSchemaConfig)
-                : null;
-        this.jsonStructureValidator = jsonStructureFactory != null
-                ? jsonStructureFactory.create(jsonStructureConfig)
-                : null;
     }
 
     @Override
@@ -123,31 +132,43 @@ class SchemaModelValidator implements Validator {
         // autoDiscovered-and-not-explicitly-configured "silent skip" semantics already applied
         // to every other validator factory in Linter.Builder#createValidator (see issue #20):
         // only silently drop a factory when the user did not explicitly configure it.
-        if (jsonSchemaFactory != null && !jsonSchemaExplicit && !canCreate(jsonSchemaFactory, jsonSchemaConfig)) {
-            jsonSchemaFactory = null;
-        }
-        if (jsonStructureFactory != null && !jsonStructureExplicit
-                && !canCreate(jsonStructureFactory, jsonStructureConfig)) {
-            jsonStructureFactory = null;
-        }
-        if (jsonSchemaFactory == null && jsonStructureFactory == null) {
+        Validator jsonSchemaValidator = buildValidator(jsonSchemaFactory, jsonSchemaConfig, jsonSchemaExplicit);
+        Validator jsonStructureValidator =
+                buildValidator(jsonStructureFactory, jsonStructureConfig, jsonStructureExplicit);
+        if (jsonSchemaValidator == null && jsonStructureValidator == null) {
             return null;
         }
 
-        return new SchemaModelValidator(
-                jsonSchemaFactory,
-                jsonSchemaConfig,
-                jsonStructureFactory,
-                jsonStructureConfig,
-                config.defaultSchemaValidator());
+        return new SchemaModelValidator(jsonSchemaValidator, jsonStructureValidator, config.defaultSchemaValidator());
     }
 
-    private static boolean canCreate(ValidatorFactory factory, ValidatorConfig config) {
+    /**
+     * Build the {@link Validator} for a single schema-model factory, invoking
+     * {@link ValidatorFactory#create} at most once — see the "canCreate probing twice" issue in
+     * PR #126 review: probing with a discardable call and re-creating on success doubled the
+     * cost of any factory with I/O or compilation side effects on every linter startup.
+     * <p>
+     * Returns {@code null} when {@code factory} is {@code null} (not discovered). When the
+     * factory was not explicitly configured by the user and {@code create()} throws
+     * {@link IllegalArgumentException} (missing required config), the failure is swallowed and
+     * {@code null} is returned — mirroring the auto-discovered "silent skip" semantics in
+     * {@link Linter.Builder#createValidator} (issue #20). When the factory WAS explicitly
+     * configured, any {@link IllegalArgumentException} propagates so misconfiguration is loud.
+     */
+    private static Validator buildValidator(ValidatorFactory factory, ValidatorConfig config, boolean explicit) {
+        if (factory == null) {
+            return null;
+        }
+        if (explicit) {
+            // Explicitly configured by the user — let IllegalArgumentException propagate so
+            // misconfiguration is loud (mirrors Linter.Builder#createValidator, issue #20).
+            return factory.create(config);
+        }
         try {
-            factory.create(config);
-            return true;
+            return factory.create(config);
         } catch (IllegalArgumentException e) {
-            return false;
+            // Auto-discovered, not explicitly configured — silently drop it (issue #20).
+            return null;
         }
     }
 }

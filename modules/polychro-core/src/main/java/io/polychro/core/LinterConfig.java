@@ -120,7 +120,7 @@ public class LinterConfig {
                 config.validators(), resolvedConfigs, config.failFast(), config.defaultSchemaValidator());
     }
 
-    private static Map<String, Object> resolveRelativePaths(Map<String, Object> props, Path configDir) {
+    static Map<String, Object> resolveRelativePaths(Map<String, Object> props, Path configDir) {
         Map<String, Object> resolvedProps = null;
         for (String key : PATH_CONFIG_KEYS) {
             Object value = props.get(key);
