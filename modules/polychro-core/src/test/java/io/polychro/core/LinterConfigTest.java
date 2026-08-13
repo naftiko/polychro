@@ -180,4 +180,111 @@ class LinterConfigTest {
         LinterConfig config = LinterConfig.parse(nullNode);
         assertTrue(config.validators().isEmpty());
     }
+
+    // Regression tests for the bug reported against `polychro lint --config <dir>/.polychro.yml
+    // <dir>/file.yml` executed from *outside* <dir>: schemaPath (and the other well-known
+    // path-valued config keys) must resolve relative to the .polychro.yml file's own directory,
+    // not the process's current working directory.
+
+    @Test
+    void loadFromPathShouldResolveSchemaPathRelativeToConfigFileDirectory() throws Exception {
+        Path configDir = tempDir.resolve("files");
+        Files.createDirectories(configDir);
+        Files.writeString(configDir.resolve("openapi-schema.json"), "{\"type\": \"object\"}");
+
+        String yaml = """
+                validators: []
+                config:
+                  json-schema:
+                    schemaPath: openapi-schema.json
+                """;
+        Path configFile = configDir.resolve(".polychro.yml");
+        Files.writeString(configFile, yaml);
+
+        LinterConfig config = LinterConfig.load(configFile);
+
+        String resolvedSchemaPath = (String) config.validatorConfigs().get("json-schema").get("schemaPath");
+        assertEquals(
+                configDir.resolve("openapi-schema.json").toAbsolutePath().normalize().toString(),
+                resolvedSchemaPath,
+                "schemaPath must be resolved against the config file's directory, "
+                        + "not the process CWD");
+    }
+
+    @Test
+    void loadFromPathShouldLeaveSchemaPathUnresolvedWhenFileDoesNotExistNextToConfig() throws Exception {
+        // No openapi-schema.json is created next to the config file — the classpath-resource
+        // fallback in JsonSchemaValidatorFactory must remain reachable, so the raw value must
+        // be preserved unchanged rather than rewritten to a non-existent absolute path.
+        String yaml = """
+                validators: []
+                config:
+                  json-schema:
+                    schemaPath: schemas/person-schema.json
+                """;
+        Path configFile = tempDir.resolve(".polychro.yml");
+        Files.writeString(configFile, yaml);
+
+        LinterConfig config = LinterConfig.load(configFile);
+
+        assertEquals(
+                "schemas/person-schema.json",
+                config.validatorConfigs().get("json-schema").get("schemaPath"));
+    }
+
+    @Test
+    void loadFromPathShouldNotRewriteAbsoluteSchemaPath() throws Exception {
+        Path schemaFile = tempDir.resolve("schema.json");
+        Files.writeString(schemaFile, "{\"type\": \"object\"}");
+
+        String yaml = """
+                validators: []
+                config:
+                  json-schema:
+                    schemaPath: %s
+                """.formatted(schemaFile.toString());
+        Path configDir = tempDir.resolve("nested");
+        Files.createDirectories(configDir);
+        Path configFile = configDir.resolve(".polychro.yml");
+        Files.writeString(configFile, yaml);
+
+        LinterConfig config = LinterConfig.load(configFile);
+
+        assertEquals(
+                schemaFile.toString(),
+                config.validatorConfigs().get("json-schema").get("schemaPath"));
+    }
+
+    @Test
+    void loadFromPathShouldResolveRulesetPathRelativeToConfigFileDirectory() throws Exception {
+        Path configDir = tempDir.resolve("files");
+        Files.createDirectories(configDir);
+        Files.writeString(configDir.resolve("custom-rules.yml"), """
+                rules:
+                  always-pass:
+                    message: "info.name is present"
+                    severity: info
+                    given: "$"
+                    then:
+                      field: "name"
+                      function: defined
+                """);
+
+        String yaml = """
+                validators:
+                  - ruleset
+                config:
+                  ruleset:
+                    rulesetPath: custom-rules.yml
+                """;
+        Path configFile = configDir.resolve(".polychro.yml");
+        Files.writeString(configFile, yaml);
+
+        LinterConfig config = LinterConfig.load(configFile);
+
+        String resolvedRulesetPath = (String) config.validatorConfigs().get("ruleset").get("rulesetPath");
+        assertEquals(
+                configDir.resolve("custom-rules.yml").toAbsolutePath().normalize().toString(),
+                resolvedRulesetPath);
+    }
 }

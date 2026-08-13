@@ -186,6 +186,50 @@ class LintCommandTest {
     }
 
     @Test
+    void lintShouldResolveConfigSchemaPathRelativeToConfigFileDirectoryNotProcessCwd() throws Exception {
+        // Regression test: reproduces the bug reported where
+        // `polychro lint --config files/.polychro.yml files/step-4-openapi.yml` fails with
+        // "Error: Schema not found on filesystem or classpath: openapi-schema.json" when run
+        // from a directory other than the one containing `.polychro.yml` — even though the
+        // schema file sits right next to the config. The process CWD during this JUnit run is
+        // the polychro-cli module root, i.e. NOT `filesDir` below, so this only passes once
+        // `schemaPath` is resolved against the config file's own directory.
+        Path filesDir = tempDir.resolve("files");
+        Files.createDirectories(filesDir);
+        Files.writeString(filesDir.resolve("openapi-schema.json"), """
+                {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "required": ["openapi", "info", "paths"],
+                  "properties": {
+                    "openapi": { "type": "string", "pattern": "^3\\\\." },
+                    "info": { "type": "object" },
+                    "paths": { "type": "object" }
+                  }
+                }
+                """);
+        Files.writeString(filesDir.resolve(".polychro.yml"), """
+                validators: []
+                config:
+                  json-schema:
+                    schemaPath: openapi-schema.json
+                """);
+        Files.writeString(filesDir.resolve("step-4-openapi.yml"), """
+                openapi: 3.0.3
+                info:
+                  title: Modern Maritime Registry API
+                  version: "1.0"
+                paths: {}
+                """);
+
+        int exitCode = executeLint(
+                "--config", filesDir.resolve(".polychro.yml").toString(),
+                filesDir.resolve("step-4-openapi.yml").toString());
+
+        assertEquals(0, exitCode);
+    }
+
+    @Test
     void buildConfigFromFlagsShouldConfigureBothSchemaModels() {
         LintCommand command = new LintCommand();
         command.schema = Path.of("custom-schema.json");
