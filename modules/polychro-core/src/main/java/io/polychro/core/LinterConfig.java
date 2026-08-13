@@ -25,6 +25,7 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Configuration for the {@link Linter}, loaded from {@code .polychro.yml}.
@@ -34,6 +35,17 @@ import java.util.Map;
 public class LinterConfig {
 
     private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
+
+    /**
+     * Config keys, across all built-in validator factories, whose value is a filesystem path
+     * ({@code schemaPath} for {@code json-schema}/{@code json-structure}, {@code rulesetPath} for
+     * {@code ruleset}, {@code customCheckDir} and {@code checkovPath} for {@code checkov}). When
+     * the config is loaded from a {@code .polychro.yml} file, relative values for these keys are
+     * resolved against the config file's own directory rather than the process CWD (see
+     * {@link #resolveRelativePaths}).
+     */
+    private static final Set<String> PATH_CONFIG_KEYS = Set.of(
+            "schemaPath", "rulesetPath", "customCheckDir", "checkovPath");
 
     private final List<String> validators;
     private final Map<String, Map<String, Object>> validatorConfigs;
@@ -66,13 +78,64 @@ public class LinterConfig {
 
     /**
      * Load configuration from a YAML file path.
+     * <p>
+     * Filesystem-path config values ({@link #PATH_CONFIG_KEYS}, e.g. {@code schemaPath},
+     * {@code rulesetPath}) that are relative are resolved against {@code path}'s parent
+     * directory (the directory containing the config file), not the process's current
+     * working directory — see {@link #resolveRelativePaths}. This mirrors how
+     * {@code extends} entries in a ruleset file are already resolved relative to the
+     * ruleset itself.
      */
     public static LinterConfig load(Path path) {
         try (InputStream is = Files.newInputStream(path)) {
-            return load(is);
+            LinterConfig config = load(is);
+            Path configDir = path.toAbsolutePath().normalize().getParent();
+            return configDir != null ? resolveRelativePaths(config, configDir) : config;
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to load config: " + path, e);
         }
+    }
+
+    /**
+     * Return a copy of {@code config} where relative values of the well-known
+     * {@link #PATH_CONFIG_KEYS} are rewritten to be resolved against {@code configDir} —
+     * the directory containing the {@code .polychro.yml} file — instead of the process's
+     * current working directory.
+     * <p>
+     * A key is only rewritten when the resulting file actually exists next to the config
+     * file; otherwise the original value is left untouched, so values intended to be
+     * resolved against the CWD (the previous behavior) or a classpath resource keep
+     * working exactly as before.
+     */
+    static LinterConfig resolveRelativePaths(LinterConfig config, Path configDir) {
+        Map<String, Map<String, Object>> resolvedConfigs = new LinkedHashMap<>();
+        for (var entry : config.validatorConfigs().entrySet()) {
+            resolvedConfigs.put(entry.getKey(), resolveRelativePaths(entry.getValue(), configDir));
+        }
+        return new LinterConfig(
+                config.validators(), resolvedConfigs, config.failFast(), config.defaultSchemaValidator());
+    }
+
+    private static Map<String, Object> resolveRelativePaths(Map<String, Object> props, Path configDir) {
+        Map<String, Object> resolvedProps = null;
+        for (String key : PATH_CONFIG_KEYS) {
+            Object value = props.get(key);
+            if (!(value instanceof String stringValue) || stringValue.isBlank()) {
+                continue;
+            }
+            Path candidate = Path.of(stringValue);
+            if (candidate.isAbsolute()) {
+                continue;
+            }
+            Path resolved = configDir.resolve(candidate).normalize();
+            if (Files.exists(resolved)) {
+                if (resolvedProps == null) {
+                    resolvedProps = new LinkedHashMap<>(props);
+                }
+                resolvedProps.put(key, resolved.toString());
+            }
+        }
+        return resolvedProps != null ? resolvedProps : props;
     }
 
     /**

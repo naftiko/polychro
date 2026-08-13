@@ -106,10 +106,33 @@ class SchemaModelValidator implements Validator {
         }
 
         Map<String, Map<String, Object>> validatorConfigs = config.validatorConfigs();
+        boolean jsonSchemaExplicit = validatorConfigs.containsKey(JSON_SCHEMA_NAME);
+        boolean jsonStructureExplicit = validatorConfigs.containsKey(JSON_STRUCTURE_NAME);
         ValidatorConfig jsonSchemaConfig = new ValidatorConfig(
                 validatorConfigs.getOrDefault(JSON_SCHEMA_NAME, Map.of()));
         ValidatorConfig jsonStructureConfig = new ValidatorConfig(
                 validatorConfigs.getOrDefault(JSON_STRUCTURE_NAME, Map.of()));
+
+        // A .polychro.yml (or --schema/--config flag combination) commonly configures only
+        // ONE of the two schema-model factories (e.g. `config: json-schema: schemaPath: ...`
+        // with no `json-structure` block at all). Without this guard, the factory that has no
+        // configuration throws IllegalArgumentException from its own create() (it requires
+        // schemaNode/schemaPath/mode) and that exception propagated uncaught out of this
+        // constructor, crashing the whole `lint` invocation even though the *other* schema
+        // validator was perfectly configured and ready to run. Mirror the same
+        // autoDiscovered-and-not-explicitly-configured "silent skip" semantics already applied
+        // to every other validator factory in Linter.Builder#createValidator (see issue #20):
+        // only silently drop a factory when the user did not explicitly configure it.
+        if (jsonSchemaFactory != null && !jsonSchemaExplicit && !canCreate(jsonSchemaFactory, jsonSchemaConfig)) {
+            jsonSchemaFactory = null;
+        }
+        if (jsonStructureFactory != null && !jsonStructureExplicit
+                && !canCreate(jsonStructureFactory, jsonStructureConfig)) {
+            jsonStructureFactory = null;
+        }
+        if (jsonSchemaFactory == null && jsonStructureFactory == null) {
+            return null;
+        }
 
         return new SchemaModelValidator(
                 jsonSchemaFactory,
@@ -117,5 +140,14 @@ class SchemaModelValidator implements Validator {
                 jsonStructureFactory,
                 jsonStructureConfig,
                 config.defaultSchemaValidator());
+    }
+
+    private static boolean canCreate(ValidatorFactory factory, ValidatorConfig config) {
+        try {
+            factory.create(config);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 }
