@@ -1,11 +1,11 @@
 /**
  * Copyright 2026 Naftiko
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
  * or implied. See the License for the specific language governing permissions and limitations under
@@ -16,13 +16,15 @@ package io.polychro.ruleset;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import io.polychro.ruleset.utils.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,9 +32,15 @@ import java.util.Map;
 /**
  * Parses Spectral-format ruleset YAML files into {@link Ruleset} records.
  */
-class RulesetParser {
+public class RulesetParser {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(RulesetParser.class);
     private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
+    public static final List<String> SUPPORTED_SCRIPT_EXTENSIONS = List.of(".js", ".py", ".groovy");
+
+    public enum RulesetSource {
+        FILE_SYSTEM, CLASSPATH
+    }
 
     /**
      * Parse a ruleset from a file path.
@@ -42,13 +50,34 @@ class RulesetParser {
      * @throws UncheckedIOException if the file cannot be read or parsed
      * @throws RulesetParseException if the content is not a valid ruleset
      */
-    Ruleset parse(Path path) {
-        try (InputStream is = Files.newInputStream(path)) {
-            JsonNode root = YAML_MAPPER.readTree(is);
-            return parseNode(root);
+    public Ruleset parse(Path path) {
+        try {
+            String content = FileUtils.getFileContentFromFileSystem(path);
+            JsonNode root = YAML_MAPPER.readTree(content);
+            return parseNode(root, resolveBaseDir(path).toString(), RulesetSource.FILE_SYSTEM);
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to read ruleset: " + path, e);
         }
+    }
+
+    /**
+     * Resolves the directory to use as the base for locating a ruleset's custom function scripts.
+     *
+     * <p>Normally this is the ruleset file's parent directory. A bare relative filename (e.g.
+     * {@code ruleset.yml}, the shape typed on {@code --ruleset ruleset.yml}) resolves safely via
+     * {@link Path#toAbsolutePath()} — its parent becomes the current working directory. The only
+     * case with no parent is a path that already denotes a filesystem root (e.g. {@code /});
+     * {@link Path#getParent()} then returns {@code null}, so this falls back to the root itself
+     * rather than letting the caller's {@code .toString()} throw a {@link NullPointerException}
+     * (PR #128 review, finding #1).
+     *
+     * @param path the ruleset file path (relative or absolute)
+     * @return the resolved absolute base directory, never {@code null}
+     */
+    static Path resolveBaseDir(Path path) {
+        Path absolute = path.toAbsolutePath();
+        Path parent = absolute.getParent();
+        return parent != null ? parent : absolute;
     }
 
     /**
@@ -58,16 +87,49 @@ class RulesetParser {
      * @return the parsed Ruleset
      * @throws RulesetParseException if the content is not a valid ruleset
      */
-    Ruleset parse(String yaml) {
+    public Ruleset parse(String yaml) {
         try {
             JsonNode root = YAML_MAPPER.readTree(yaml);
-            return parseNode(root);
+            return parseNode(root, ".", RulesetSource.FILE_SYSTEM);
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to parse ruleset YAML", e);
         }
     }
 
-    private Ruleset parseNode(JsonNode root) {
+    /**
+     * A ruleset parsing method capable of parsing functions from both the file system and classpath.
+     * @param rulesetPath           the ruleset's path.
+     * @param functionsBasePath     the functions' base path.
+     * @param rulesetSource         the parsing mode.
+     * @return                      the parsed ruleset.
+     * @throws UncheckedIOException in case an error occurs while reading the ruleset's content.
+     */
+    public Ruleset parse(String rulesetPath, String functionsBasePath, RulesetSource rulesetSource) {
+        return switch (rulesetSource) {
+            case FILE_SYSTEM -> {
+                Path path = Path.of(rulesetPath);
+                try {
+                    String content = FileUtils.getFileContentFromFileSystem(path);
+                    JsonNode root = YAML_MAPPER.readTree(content);
+                    yield parseNode(root, resolveBaseDir(path).resolve(functionsBasePath).toString(),
+                            RulesetSource.FILE_SYSTEM);
+                } catch (IOException e) {
+                    throw new UncheckedIOException("Failed to read ruleset: " + path, e);
+                }
+            }
+            case CLASSPATH -> {
+                try {
+                    String content = FileUtils.getFileContentFromClasspath(rulesetPath);
+                    JsonNode root = YAML_MAPPER.readTree(content);
+                    yield parseNode(root, functionsBasePath, RulesetSource.CLASSPATH);
+                } catch (IOException e) {
+                    throw new UncheckedIOException("Failed to read ruleset: " + rulesetPath, e);
+                }
+            }
+        };
+    }
+
+    private Ruleset parseNode(JsonNode root, String functionsBasePath, RulesetSource parseMode) {
         if (!root.isObject()) {
             throw new RulesetParseException("Ruleset must be a YAML object");
         }
@@ -76,12 +138,65 @@ class RulesetParser {
         Map<String, String> aliases = parseAliases(root.get("aliases"));
         List<RulesetOverride> overrides = parseOverrides(root.get("overrides"));
         List<String> formats = parseStringList(root.get("formats"));
-        String functionsDir = textOrNull(root.get("functionsDir"));
-        List<String> functions = parseStringList(root.get("functions"));
+        List<Function> functions = parseFunctions(root, functionsBasePath, parseMode);
         String documentationUrl = textOrNull(root.get("documentationUrl"));
         Map<String, Rule> rules = parseRules(root.get("rules"));
 
-        return new Ruleset(extendsRefs, aliases, overrides, formats, functionsDir, functions, rules, documentationUrl);
+        return new Ruleset(extendsRefs, aliases, overrides, formats,
+                functions, rules, documentationUrl);
+    }
+
+    private List<Function> parseFunctions(JsonNode root, String functionsBasePath, RulesetSource parseMode) {
+        String functionsDir = textOrNull(root.get("functionsDir"));
+        List<String> functionNames = parseStringList(root.get("functions"));
+        if (functionsDir == null) {
+            return Collections.emptyList();
+        }
+
+        List<Function> functions = new ArrayList<>(functionNames.size());
+        for (String functionName : functionNames) {
+            Function function = getFunction(functionsBasePath, functionsDir, functionName, parseMode);
+            if (function != null) {
+                functions.add(function);
+            } else {
+                LOGGER.warn("Function '{}' sourceCode could not be retrieved", functionName);
+            }
+        }
+
+        return functions;
+    }
+
+    private Function getFunction(String functionsBasePath,
+                                 String functionsDir,
+                                 String function,
+                                 RulesetSource parseMode) {
+        return switch (parseMode) {
+            case FILE_SYSTEM -> {
+                for (String extension : SUPPORTED_SCRIPT_EXTENSIONS) {
+                    String filename = function + extension;
+                    Path source = Path.of(functionsBasePath).resolve(functionsDir).resolve(filename);
+                    try {
+                        yield new Function(filename, function, FileUtils.getFileContentFromFileSystem(source));
+                    } catch (IOException e) {
+                        LOGGER.error("An error has occurred while reading function sourceCode at: {}", source, e);
+                    }
+                }
+                yield null;
+            }
+            case CLASSPATH -> {
+                for (String extension : SUPPORTED_SCRIPT_EXTENSIONS) {
+                    String filename = function + extension;
+                    String source = functionsBasePath + "/" + functionsDir + "/" + filename;
+                    try {
+                        String content = FileUtils.getFileContentFromClasspath(source);
+                        yield new Function(filename, function, content);
+                    } catch (IOException e) {
+                        LOGGER.error("An error has occurred while reading function sourceCode at: {}", source, e);
+                    }
+                }
+                yield null;
+            }
+        };
     }
 
     private List<String> parseExtends(JsonNode node) {

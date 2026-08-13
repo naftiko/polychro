@@ -38,7 +38,7 @@ class RuleExecutor {
     private final FunctionRegistry functions;
 
     RuleExecutor(JsonPathEvaluator evaluator) {
-        this(evaluator, FunctionRegistry.forRuleset(null, List.of()));
+        this(evaluator, FunctionRegistry.forRuleset(List.of()));
     }
 
     RuleExecutor(JsonPathEvaluator evaluator, FunctionRegistry functions) {

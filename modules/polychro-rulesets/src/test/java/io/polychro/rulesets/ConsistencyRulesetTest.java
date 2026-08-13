@@ -13,6 +13,7 @@
  */
 package io.polychro.rulesets;
 
+import io.polychro.ruleset.Ruleset;
 import io.polychro.ruleset.RulesetValidatorFactory;
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Document;
@@ -25,7 +26,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConsistencyRulesetTest {
 
@@ -34,9 +35,9 @@ class ConsistencyRulesetTest {
 
     @BeforeAll
     static void setUp() {
-        String content = RulesetCatalog.load("consistency");
+        Ruleset ruleset = RulesetCatalog.loadAsRuleset("consistency");
         validator = new RulesetValidatorFactory().create(
-                new ValidatorConfig(Map.of("rulesetContent", content)));
+                new ValidatorConfig(Map.of("ruleset", ruleset)));
     }
 
     @Test

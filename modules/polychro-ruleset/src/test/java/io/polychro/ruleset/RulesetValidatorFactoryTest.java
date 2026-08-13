@@ -22,6 +22,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
@@ -127,5 +128,17 @@ class RulesetValidatorFactoryTest {
             }
         }
         assertTrue(found, "RulesetValidatorFactory should be discoverable via ServiceLoader");
+    }
+
+    @Test
+    void createShouldBuildValidatorFromRuleset() {
+        Ruleset ruleset = new Ruleset(List.of(), Map.of(), List.of(), List.of(), List.of(), Map.of(), "");
+
+        RulesetValidatorFactory factory = new RulesetValidatorFactory();
+        ValidatorConfig config = new ValidatorConfig(Map.of("ruleset", ruleset));
+        Validator validator = factory.create(config);
+
+        assertNotNull(validator);
+        assertEquals("ruleset", validator.name());
     }
 }

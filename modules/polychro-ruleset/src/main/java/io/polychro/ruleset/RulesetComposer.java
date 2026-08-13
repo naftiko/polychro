@@ -115,7 +115,6 @@ class RulesetComposer {
                 ruleset.aliases(),
                 ruleset.overrides(),
                 ruleset.formats(),
-                ruleset.functionsDir(),
                 ruleset.functions(),
                 mergedRules,
                 ruleset.documentationUrl()

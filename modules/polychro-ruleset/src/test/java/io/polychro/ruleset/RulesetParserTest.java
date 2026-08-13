@@ -1,11 +1,11 @@
 /**
  * Copyright 2026 Naftiko
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
  * or implied. See the License for the specific language governing permissions and limitations under
@@ -16,12 +16,20 @@ package io.polychro.ruleset;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static io.polychro.ruleset.RulesetParser.RulesetSource.CLASSPATH;
+import static io.polychro.ruleset.RulesetParser.RulesetSource.FILE_SYSTEM;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RulesetParserTest {
 
@@ -29,36 +37,12 @@ class RulesetParserTest {
 
     @Test
     void parseShouldHandleFullRuleset() {
-        String yaml = """
-                extends:
-                  - spectral:oas
-                aliases:
-                  PathItem: "$.paths[*]"
-                formats:
-                  - oas3
-                functionsDir: ./functions
-                functions:
-                  - myCustomFn
-                documentationUrl: https://docs.example.com
-                rules:
-                  my-rule:
-                    message: Something is wrong
-                    description: A detailed description
-                    severity: error
-                    recommended: true
-                    given: "$.info"
-                    then:
-                      function: truthy
-                      field: title
-                """;
-
-        Ruleset ruleset = parser.parse(yaml);
+        Ruleset ruleset = parser.parse("/fixtures/test-ruleset.yml", "/fixtures", CLASSPATH);
 
         assertEquals(List.of("spectral:oas"), ruleset.extendsRefs());
         assertEquals(Map.of("PathItem", "$.paths[*]"), ruleset.aliases());
         assertEquals(List.of("oas3"), ruleset.formats());
-        assertEquals("./functions", ruleset.functionsDir());
-        assertEquals(List.of("myCustomFn"), ruleset.functions());
+        assertEquals(List.of("myCustomFn"), ruleset.functions().stream().map(Function::functionName).toList());
         assertEquals("https://docs.example.com", ruleset.documentationUrl());
         assertEquals(1, ruleset.rules().size());
 
@@ -96,27 +80,6 @@ class RulesetParserTest {
 
         Ruleset ruleset = parser.parse(yaml);
         assertTrue(ruleset.extendsRefs().isEmpty());
-    }
-
-    @Test
-    void parseShouldHandleFunctionsDirPresent() {
-        String yaml = """
-                functionsDir: ./custom-functions
-                rules: {}
-                """;
-
-        Ruleset ruleset = parser.parse(yaml);
-        assertEquals("./custom-functions", ruleset.functionsDir());
-    }
-
-    @Test
-    void parseShouldHandleFunctionsDirAbsent() {
-        String yaml = """
-                rules: {}
-                """;
-
-        Ruleset ruleset = parser.parse(yaml);
-        assertNull(ruleset.functionsDir());
     }
 
     @Test
@@ -490,6 +453,42 @@ class RulesetParserTest {
     }
 
     @Test
+    void parseShouldHandleBareRelativeFilenameFromCwd() throws IOException {
+        // Regression test for PR #128 review finding #1: `--ruleset ruleset.yml` on the CLI
+        // passes a bare relative filename (no parent segment) that RulesetValidatorFactory
+        // forwards straight into parse(Path), resolved against the process CWD. Every other
+        // file-based test in this class builds an absolute path via
+        // System.getProperty("user.dir"), so this shape — the one a user is most likely to
+        // type — had no coverage.
+        Path bareRelativePath = Path.of("bare-relative-ruleset-" + System.nanoTime() + ".yml");
+        Path absolutePath = bareRelativePath.toAbsolutePath();
+        String yaml = """
+                rules:
+                  bare-relative-test:
+                    given: "$"
+                    then:
+                      function: defined
+                """;
+        try {
+            Files.writeString(absolutePath, yaml);
+            Ruleset ruleset = parser.parse(bareRelativePath);
+            assertEquals(1, ruleset.rules().size());
+            assertEquals("defined", ruleset.rules().get("bare-relative-test").then().get(0).functionName());
+        } finally {
+            Files.deleteIfExists(absolutePath);
+        }
+    }
+
+    @Test
+    void resolveBaseDirShouldFallBackToRootWhenPathHasNoParent() {
+        // PR #128 review finding #1: a path that already denotes a filesystem root (e.g. "/")
+        // has no parent — Path.getParent() returns null there, which used to make the caller's
+        // .toString() throw an NPE. resolveBaseDir must fall back to the root itself instead.
+        Path root = Path.of("/").toAbsolutePath();
+        assertEquals(root, RulesetParser.resolveBaseDir(root));
+    }
+
+    @Test
     void parseShouldHandleMissingRulesSection() {
         String yaml = """
                 extends: spectral:oas
@@ -544,5 +543,54 @@ class RulesetParserTest {
 
         Ruleset ruleset = parser.parse(yaml);
         assertTrue(ruleset.rules().isEmpty());
+    }
+
+    @Test
+    void parseNonExistentRulesetsShouldThrow() {
+        assertThrows(UncheckedIOException.class, () -> parser.parse("non-existent",
+                "functions", FILE_SYSTEM));
+        assertThrows(UncheckedIOException.class, () -> parser.parse("non-existent",
+                "functions", CLASSPATH));
+    }
+
+    @Test
+    void parseShouldHandleFileSystemResources() {
+        Path path = Path.of(System.getProperty("user.dir")).resolve("src").resolve("test")
+                .resolve("resources").resolve("fixtures").resolve("test-ruleset.yml");
+
+        Ruleset ruleset = parser.parse(path.toString(), path.getParent().toString(), FILE_SYSTEM);
+
+        assertNotNull(ruleset);
+    }
+
+    @Test
+    void parseShouldHandleBundledResources() {
+        Ruleset ruleset = parser.parse("/fixtures/test-ruleset.yml", "/fixtures", CLASSPATH);
+
+        assertNotNull(ruleset);
+    }
+
+    @Test
+    void parseShouldBypassNonExistentFunctions() {
+        Path path = Path.of(System.getProperty("user.dir")).resolve("src").resolve("test")
+                .resolve("resources").resolve("fixtures").resolve("ruleset-with-non-existent-functions.yml");
+        Ruleset fsRuleset = parser.parse(path.toString(),
+                path.getParent().toString(), FILE_SYSTEM);
+        Ruleset bundledRuleset = parser.parse("/fixtures/ruleset-with-non-existent-functions.yml",
+                "/fixtures", CLASSPATH);
+
+        assertNotNull(fsRuleset);
+        assertNotNull(bundledRuleset);
+    }
+
+    @Test
+    void parseShouldThrowIfMapperFails() {
+        RulesetParser rulesetParser = new RulesetParser();
+        Path path = Path.of(System.getProperty("user.dir")).resolve("src").resolve("test")
+                .resolve("resources").resolve("fixtures").resolve("invalid-ruleset.yml");
+        assertThrows(UncheckedIOException.class, () -> rulesetParser.parse(path.toString(),
+                path.getParent().toString(), FILE_SYSTEM));
+        assertThrows(UncheckedIOException.class, () -> rulesetParser.parse("/fixtures/invalid-ruleset.yml",
+                "/fixtures", CLASSPATH));
     }
 }

@@ -46,13 +46,15 @@ public class RulesetValidatorFactory implements ValidatorFactory {
      * {@code polychro-html} modules (discovered via {@link java.util.ServiceLoader} in
      * {@link Document#fromString(String, String, String)}). When the corresponding module is on
      * the classpath, JSONPath {@code given} expressions traverse the projected structure
-     * (e.g. {@code $.document.blocks[*]} for markdown, {@code $.document.nodes[*]} for html) and
+     * (e.g. {@code $.document.blocks[*]} for Markdown, {@code $.document.nodes[*]} for html) and
      * carry a resolved {@link io.polychro.spi.SourceRange}. Absent that module, the document falls
      * back to a raw {@code TextNode} and a ruleset scoped to those formats produces no matches —
      * a graceful degradation, not an error.
      */
     private static final Set<String> SUPPORTED_FORMATS = Set.of(
             "json", "yaml", "xml", "markdown", "html");
+    private static final RulesetParser PARSER = new RulesetParser();
+    private static final RulesetComposer COMPOSER = new RulesetComposer(PARSER);
 
     @Override
     public String name() {
@@ -69,41 +71,35 @@ public class RulesetValidatorFactory implements ValidatorFactory {
         boolean includeNonRecommended = config.get("includeNonRecommended", Boolean.class)
                 .orElse(false);
 
-        var pathOpt = config.get("rulesetPath", String.class);
-        if (pathOpt.isPresent()) {
-            Path rulesetPath = Path.of(pathOpt.get());
-            Path baseDir = rulesetPath.toAbsolutePath().getParent();
-            Ruleset ruleset = loadRuleset(config);
-            return new RulesetValidator(ruleset, baseDir, includeNonRecommended);
-        }
-
         Ruleset ruleset = loadRuleset(config);
         return new RulesetValidator(ruleset, includeNonRecommended);
     }
 
     private Ruleset loadRuleset(ValidatorConfig config) {
-        RulesetParser parser = new RulesetParser();
-        RulesetComposer composer = new RulesetComposer(parser);
-
         var pathOpt = config.get("rulesetPath", String.class);
         if (pathOpt.isPresent()) {
             Path rulesetPath = Path.of(pathOpt.get());
-            Ruleset ruleset = parser.parse(rulesetPath);
+            Ruleset ruleset = PARSER.parse(rulesetPath);
             Path baseDir = rulesetPath.toAbsolutePath().getParent();
-            return composer.compose(ruleset, baseDir, rulesetPath.normalize().toString());
+            return COMPOSER.compose(ruleset, baseDir, rulesetPath.normalize().toString());
         }
 
         var contentOpt = config.get("rulesetContent", String.class);
         if (contentOpt.isPresent()) {
-            Ruleset ruleset = parser.parse(contentOpt.get());
-            return composer.compose(ruleset);
+            Ruleset ruleset = PARSER.parse(contentOpt.get());
+            return COMPOSER.compose(ruleset);
+        }
+
+        var ruleset = config.get("ruleset", Ruleset.class);
+        if (ruleset.isPresent()) {
+            return COMPOSER.compose(ruleset.get());
         }
 
         // Use IllegalArgumentException (consistent with JsonSchemaValidatorFactory and
-        // JsonStructureValidatorFactory) so the Linter.Builder can recognise this as
+        // JsonStructureValidatorFactory) so the Linter.Builder can recognize this as
         // a "missing-config" signal and silently skip the factory when it was
         // auto-discovered without user-supplied configuration. See issue #20.
         throw new IllegalArgumentException(
-                "RulesetValidatorFactory requires either 'rulesetPath' or 'rulesetContent' in config");
+                "RulesetValidatorFactory requires either 'rulesetPath', 'rulesetContent' or 'ruleset' in config");
     }
 }

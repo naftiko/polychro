@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class RulesetValidatorTest {
 
     private static RulesetValidator newValidator() {
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of(), null);
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of(), null);
         return new RulesetValidator(ruleset, false);
     }
 
@@ -38,49 +38,8 @@ class RulesetValidatorTest {
     }
 
     @Test
-    void constructorShouldHandleNonNullFunctionsDir() {
-        // Exercises the functionsDir != null branch: a declared (but empty) custom-functions
-        // directory builds a FunctionRegistry without loading any custom function.
-        Ruleset ruleset = new Ruleset(null, null, null, null, "custom-functions", List.of(),
-                Map.of(), null);
-        RulesetValidator validator = new RulesetValidator(ruleset, false);
-        Document doc = Document.fromString("{\"info\": {\"name\": \"test\"}}", "json");
-
-        assertTrue(validator.validate(doc).isEmpty());
-    }
-
-    @Test
-    void constructorWithNullBaseDirAndNonNullFunctionsDirShouldUseCwdFallback() {
-        // Exercises the false branch of (baseDir != null) in the three-arg constructor:
-        // when baseDir is null and functionsDir is declared, functionsDir is kept as-is
-        // (CWD-relative) — the inline-content / no-path case (issue #44).
-        Ruleset ruleset = new Ruleset(null, null, null, null, "./functions", List.of(),
-                Map.of(), null);
-        RulesetValidator validator = new RulesetValidator(ruleset, null, false);
-        Document doc = Document.fromString("{}", "json");
-
-        assertTrue(validator.validate(doc).isEmpty());
-    }
-
-    @Test
-    void constructorWithNonNullBaseDirAndNonNullFunctionsDirShouldResolveAgainstBaseDir(
-            @org.junit.jupiter.api.io.TempDir java.nio.file.Path tempDir) {
-        // Exercises the true branch of (baseDir != null) in the three-arg constructor:
-        // when baseDir is supplied, a relative functionsDir is resolved against it.
-        Ruleset ruleset = new Ruleset(null, null, null, null, "./functions", List.of(),
-                Map.of(), null);
-        RulesetValidator validator = new RulesetValidator(ruleset, tempDir, false);
-        Document doc = Document.fromString("{}", "json");
-
-        // No rules → empty diagnostics, but the constructor must complete without error
-        // (the resolved path tempDir/functions simply doesn't exist, which is fine when
-        // no functions are declared).
-        assertTrue(validator.validate(doc).isEmpty());
-    }
-
-    @Test
     void validateShouldReturnEmptyForEmptyRuleset() {
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of(), null);
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of(), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         Document doc = Document.fromString("{\"info\": {\"name\": \"test\"}}", "json");
 
@@ -93,7 +52,7 @@ class RulesetValidatorTest {
         Rule rule = new Rule("name-truthy", "Name must not be empty", null, "warn", true,
                 null, null, List.of("$.info.name"),
                 List.of(new RuleAction(null, "truthy", Map.of())));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("name-truthy", rule), null);
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of("name-truthy", rule), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         Document doc = Document.fromString("{\"info\": {\"name\": \"\"}}", "json");
 
@@ -111,7 +70,7 @@ class RulesetValidatorTest {
         Rule rule2 = new Rule("desc-truthy", "Description required", null, "warn", true,
                 null, null, List.of("$.info"),
                 List.of(new RuleAction("description", "truthy", Map.of())));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, null,
+        Ruleset ruleset = new Ruleset(null, null, null, null, null,
                 Map.of("name-truthy", rule1, "desc-truthy", rule2), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         Document doc = Document.fromString("{\"info\": {\"name\": \"\"}}", "json");
@@ -128,7 +87,7 @@ class RulesetValidatorTest {
         Rule rule = new Rule("optional-rule", "Optional", null, "warn", false,
                 null, null, List.of("$.info.name"),
                 List.of(new RuleAction(null, "truthy", Map.of())));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("optional-rule", rule), null);
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of("optional-rule", rule), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         Document doc = Document.fromString("{\"info\": {\"name\": \"\"}}", "json");
 
@@ -141,7 +100,7 @@ class RulesetValidatorTest {
         Rule rule = new Rule("optional-rule", "Optional", null, "warn", false,
                 null, null, List.of("$.info.name"),
                 List.of(new RuleAction(null, "truthy", Map.of())));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("optional-rule", rule), null);
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of("optional-rule", rule), null);
         RulesetValidator validator = new RulesetValidator(ruleset, true);
         Document doc = Document.fromString("{\"info\": {\"name\": \"\"}}", "json");
 
@@ -154,7 +113,7 @@ class RulesetValidatorTest {
         Rule rule = new Rule("disabled-rule", "Disabled", null, "off", true,
                 null, null, List.of("$.info.name"),
                 List.of(new RuleAction(null, "truthy", Map.of())));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("disabled-rule", rule), null);
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of("disabled-rule", rule), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         Document doc = Document.fromString("{\"info\": {\"name\": \"\"}}", "json");
 
@@ -170,7 +129,7 @@ class RulesetValidatorTest {
         Rule rule2 = new Rule("error-rule", "Error issue", null, "error", true,
                 null, null, List.of("$.a"),
                 List.of(new RuleAction(null, "truthy", Map.of())));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, null,
+        Ruleset ruleset = new Ruleset(null, null, null, null, null,
                 Map.of("warn-rule", rule1, "error-rule", rule2), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         Document doc = Document.fromString("{\"a\": \"\", \"b\": \"\"}", "json");
@@ -186,7 +145,7 @@ class RulesetValidatorTest {
         Rule rule = new Rule("empty-given", "No path", null, "warn", true,
                 null, null, List.of(),
                 List.of(new RuleAction(null, "truthy", Map.of())));
-        Ruleset ruleset = new Ruleset(null, Map.of("Info", "$.info"), null, null, null, null,
+        Ruleset ruleset = new Ruleset(null, Map.of("Info", "$.info"), null, null, null,
                 Map.of("empty-given", rule), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         Document doc = Document.fromString("{\"info\": {\"name\": \"test\"}}", "json");
@@ -200,7 +159,7 @@ class RulesetValidatorTest {
         Rule rule = new Rule("markdown-only", "Markdown only", null, "warn", true,
                 List.of("markdown"), null, List.of("$.info.name"),
                 List.of(new RuleAction(null, "truthy", Map.of())));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("markdown-only", rule), null);
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of("markdown-only", rule), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         Document doc = Document.fromString("{\"info\": {\"name\": \"\"}}", "json");
 
@@ -213,7 +172,7 @@ class RulesetValidatorTest {
         Rule rule = new Rule("yaml-only", "YAML only", null, "warn", true,
                 List.of("yml"), null, List.of("$.info.name"),
                 List.of(new RuleAction(null, "truthy", Map.of())));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("yaml-only", rule), null);
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of("yaml-only", rule), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         Document doc = Document.fromString("info:\n  name: \"\"\n", "yaml");
 
@@ -229,7 +188,7 @@ class RulesetValidatorTest {
         Rule rule = new Rule("any-format", "Any format", null, "warn", true,
                 List.of(), null, List.of("$.info.name"),
                 List.of(new RuleAction(null, "truthy", Map.of())));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("any-format", rule), null);
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of("any-format", rule), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         Document doc = Document.fromString("{\"info\": {\"name\": \"\"}}", "json");
 
@@ -245,7 +204,7 @@ class RulesetValidatorTest {
         Rule rule = new Rule("json-only", "JSON only", null, "warn", true,
                 List.of("json"), null, List.of("$.info.name"),
                 List.of(new RuleAction(null, "truthy", Map.of())));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("json-only", rule), null);
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of("json-only", rule), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         Document doc = new Document(com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode(),
                 "   ", null);
@@ -259,7 +218,7 @@ class RulesetValidatorTest {
         Rule rule = new Rule("json-only", "JSON only", null, "warn", true,
                 List.of("json"), null, List.of("$.info.name"),
                 List.of(new RuleAction(null, "truthy", Map.of())));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("json-only", rule), null);
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of("json-only", rule), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         Document doc = new Document(com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode(),
                 (String) null, null);
@@ -277,7 +236,7 @@ class RulesetValidatorTest {
         Rule rule = new Rule("htm-only", "HTML only", null, "warn", true,
                 List.of("htm"), null, List.of("$"),
                 List.of(new RuleAction(null, "falsy", Map.of())));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, null, Map.of("htm-only", rule), null);
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of("htm-only", rule), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         Document doc = Document.fromString("<html><body>hi</body></html>", "html");
 
@@ -296,7 +255,7 @@ class RulesetValidatorTest {
         Rule rule = new Rule("baseuri-no-trailing-slash", "baseUri must not end with /",
                 null, "warn", true, null, null, List.of("$.consumes[*].baseUri"),
                 List.of(new RuleAction(null, "pattern", Map.of("notMatch", "/$"))));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, null,
+        Ruleset ruleset = new Ruleset(null, null, null, null, null,
                 Map.of("baseuri-no-trailing-slash", rule), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         String yaml = "consumes:\n  - name: api\n    baseUri: \"https://example.com/\"\n";
@@ -318,7 +277,7 @@ class RulesetValidatorTest {
         Rule rule = new Rule("baseuri-no-trailing-slash", "baseUri must not end with /",
                 null, "warn", true, null, null, List.of("$.consumes[*].baseUri"),
                 List.of(new RuleAction(null, "pattern", Map.of("notMatch", "/$"))));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, null,
+        Ruleset ruleset = new Ruleset(null, null, null, null, null,
                 Map.of("baseuri-no-trailing-slash", rule), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         String yaml = "consumes:\n  - name: api\n    baseUri: \"https://example.com/\"\n";
@@ -342,7 +301,7 @@ class RulesetValidatorTest {
         Rule rule = new Rule("owner-required", "owner must be present",
                 null, "warn", true, null, null, List.of("$['x-meta.owner']"),
                 List.of(new RuleAction(null, "truthy", null)));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, null,
+        Ruleset ruleset = new Ruleset(null, null, null, null, null,
                 Map.of("owner-required", rule), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         String yaml = "name: api\n\"x-meta.owner\": \"\"\n";
@@ -366,7 +325,7 @@ class RulesetValidatorTest {
         Rule rule = new Rule("owner-required", "owner must be present",
                 null, "warn", true, null, null, List.of("$['x-meta.owner']"),
                 List.of(new RuleAction(null, "truthy", null)));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, null,
+        Ruleset ruleset = new Ruleset(null, null, null, null, null,
                 Map.of("owner-required", rule), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         // The flat dotted key appears on line 2, the colliding nested "owner" on line 4.
@@ -390,7 +349,7 @@ class RulesetValidatorTest {
         Rule rule = new Rule("baseuri-no-trailing-slash", "baseUri must not end with /",
                 null, "warn", true, null, null, List.of("$.consumes[*].baseUri"),
                 List.of(new RuleAction(null, "pattern", Map.of("notMatch", "/$"))));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, null,
+        Ruleset ruleset = new Ruleset(null, null, null, null, null,
                 Map.of("baseuri-no-trailing-slash", rule), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         String yaml = "consumes:\n  - name: api\n    baseUri: \"https://example.com/\"\n";

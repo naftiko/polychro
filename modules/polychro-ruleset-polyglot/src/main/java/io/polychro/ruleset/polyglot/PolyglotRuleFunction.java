@@ -78,8 +78,9 @@ class PolyglotRuleFunction implements RuleFunction {
 
             String jsonInput = MAPPER.writeValueAsString(targetNode);
             Value jsInput = context.eval("js", "(" + jsonInput + ")");
+            Value jsOptions = context.eval("js", "(" + MAPPER.writeValueAsString(options) + ")");
 
-            Value result = function.execute(jsInput);
+            Value result = function.execute(jsInput, jsOptions);
             return extractViolations(result);
         } catch (Exception e) {
             LOG.warn("Error executing polyglot function '{}': {}", functionName, e.getMessage());

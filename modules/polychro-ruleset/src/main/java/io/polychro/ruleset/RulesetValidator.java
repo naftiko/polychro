@@ -18,7 +18,6 @@ import io.polychro.spi.Document;
 import io.polychro.spi.Formats;
 import io.polychro.spi.Validator;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -38,10 +37,6 @@ class RulesetValidator implements Validator {
     private final AliasResolver aliasResolver;
     private final OverrideResolver overrideResolver;
 
-    RulesetValidator(Ruleset ruleset, boolean includeNonRecommended) {
-        this(ruleset, null, includeNonRecommended);
-    }
-
     /**
      * Constructs a validator that resolves {@code functionsDir} relative to {@code baseDir}.
      *
@@ -52,17 +47,11 @@ class RulesetValidator implements Validator {
      * CWD-relative fallback is preserved in that case.
      *
      * @param ruleset              the composed ruleset to evaluate
-     * @param baseDir              the ruleset file's parent directory, or {@code null} for CWD
      * @param includeNonRecommended whether to enable non-recommended rules
      */
-    RulesetValidator(Ruleset ruleset, Path baseDir, boolean includeNonRecommended) {
+    RulesetValidator(Ruleset ruleset, boolean includeNonRecommended) {
         this.ruleset = ruleset;
-        Path functionsDir = null;
-        if (ruleset.functionsDir() != null) {
-            Path raw = Path.of(ruleset.functionsDir());
-            functionsDir = (baseDir != null) ? baseDir.resolve(raw).normalize() : raw;
-        }
-        FunctionRegistry functions = FunctionRegistry.forRuleset(functionsDir, ruleset.functions());
+        FunctionRegistry functions = FunctionRegistry.forRuleset(ruleset.functions());
         this.executor = new RuleExecutor(new JsonPathEvaluator(), functions);
         this.includeNonRecommended = includeNonRecommended;
         this.aliasResolver = new AliasResolver();

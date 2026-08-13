@@ -1,0 +1,6 @@
+functionsDir: functions
+
+functions:
+- myCustomFn
+- 42
+rules: {}

@@ -13,11 +13,13 @@
  */
 package io.polychro.ruleset.polyglot;
 
+import io.polychro.ruleset.Function;
 import io.polychro.ruleset.FunctionProvider;
 import io.polychro.ruleset.RuleFunction;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -63,6 +65,17 @@ public class PolyglotFunctionProvider implements FunctionProvider {
         }
         PolyglotFunctionLoader loader = new PolyglotFunctionLoader();
         Map<String, PolyglotRuleFunction> loaded = loader.loadFunctions(dir, names);
+        return new ArrayList<>(loaded.values());
+    }
+
+    @Override
+    public List<RuleFunction> functions(List<Function> functions) {
+        if (functions.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        PolyglotFunctionLoader loader = new PolyglotFunctionLoader();
+        Map<String, PolyglotRuleFunction> loaded = loader.loadFunctions(functions);
         return new ArrayList<>(loaded.values());
     }
 

@@ -249,15 +249,10 @@ class RulesetParserEdgeCasesTest {
 
     @Test
     void parseShouldHandleNonTextualFunctionsItems() {
-        String yaml = """
-                functions:
-                  - myFunc
-                  - 42
-                rules: {}
-                """;
-        Ruleset ruleset = parser.parse(yaml);
+        Ruleset ruleset = parser.parse("/fixtures/ruleset-with-invalid-function-name.yml", "/fixtures", RulesetParser.RulesetSource.CLASSPATH);
+
         // Only textual items are included
-        assertEquals(List.of("myFunc"), ruleset.functions());
+        assertEquals(List.of("myCustomFn"), ruleset.functions().stream().map(Function::functionName).toList());
     }
 
     @Test

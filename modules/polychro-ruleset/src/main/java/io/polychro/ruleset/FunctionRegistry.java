@@ -13,7 +13,6 @@
  */
 package io.polychro.ruleset;
 
-import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,20 +40,19 @@ class FunctionRegistry {
     /**
      * Build a registry for a ruleset.
      *
-     * @param functionsDir  the ruleset's custom-functions directory, or {@code null} if undeclared
-     * @param functionNames the function names declared by the ruleset (may be empty)
+     * @param functions  the ruleset's custom-functions.
      * @return a registry combining built-ins with the ruleset's custom functions
      */
-    static FunctionRegistry forRuleset(Path functionsDir, List<String> functionNames) {
+    static FunctionRegistry forRuleset(List<Function> functions) {
+        List<Function> declared = functions != null ? functions : List.of();
         Map<String, RuleFunction> resolved = new LinkedHashMap<>();
         for (String name : BuiltinFunctions.names()) {
             BuiltinFunctions.get(name).ifPresent(fn -> resolved.put(fn.name(), fn));
         }
 
-        List<String> names = functionNames != null ? functionNames : List.of();
         ServiceLoader<FunctionProvider> providers = ServiceLoader.load(FunctionProvider.class);
         for (FunctionProvider provider : providers) {
-            for (RuleFunction function : provider.functions(functionsDir, names)) {
+            for (RuleFunction function : provider.functions(declared)) {
                 resolved.put(function.name(), function);
             }
         }

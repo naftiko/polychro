@@ -19,6 +19,8 @@ import org.graalvm.polyglot.Engine;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.List;
 import java.util.Map;
@@ -54,6 +56,25 @@ class PolyglotRuleFunctionTest {
 
         List<String> results = fn.evaluate(input, Map.of());
         assertTrue(results.isEmpty());
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {"3;0", "5;1"}, delimiter = ';')
+    void evaluateWithOptionsShouldReturnResultDependingOnInput(int minimumLength,
+                                                               int expectedNumberOfViolations) throws Exception {
+        String source = """
+                export default function simpleCheck(targetVal, params) {
+                  if (!targetVal || typeof targetVal !== "object") return [];
+                  if (targetVal.name && targetVal.name.length > params.minimumLength) return [];
+                  return [{ message: "name is required a minimum length of: " + params.minimumLength}];
+                }
+                """;
+        PolyglotRuleFunction fn = new PolyglotRuleFunction("simple-check", source, "js", engine);
+        JsonNode input = JSON.readTree("{\"name\": \"value\"}");
+
+        List<String> results = fn.evaluate(input, Map.of("minimumLength", minimumLength));
+        assertEquals(expectedNumberOfViolations, results.size(),
+                "Expected number of violations: %s, got: %s".formatted(expectedNumberOfViolations, results.size()));
     }
 
     @Test

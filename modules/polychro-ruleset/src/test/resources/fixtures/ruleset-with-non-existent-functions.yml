@@ -1,0 +1,21 @@
+extends:
+  - spectral:oas
+aliases:
+  PathItem: "$.paths[*]"
+formats:
+  - oas3
+functionsDir: functions
+functions:
+  - myCustomFn1
+  - myCustomFn2
+documentationUrl: https://docs.example.com
+rules:
+  my-rule:
+    message: Something is wrong
+    description: A detailed description
+    severity: error
+    recommended: true
+    given: "$.info"
+    then:
+      function: truthy
+      field: title

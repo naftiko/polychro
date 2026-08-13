@@ -48,7 +48,7 @@ class BuiltinFunctionsTest {
         assertTrue(builtinView.isEmpty(),
                 "custom functions are no longer part of the static built-in registry");
 
-        FunctionRegistry registry = FunctionRegistry.forRuleset(null, List.of());
+        FunctionRegistry registry = FunctionRegistry.forRuleset(List.of());
         Optional<RuleFunction> fn = registry.get("testCustomFunction");
         assertTrue(fn.isPresent());
         assertEquals("testCustomFunction", fn.get().name());

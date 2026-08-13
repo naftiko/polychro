@@ -25,14 +25,14 @@ class FunctionRegistryTest {
 
     @Test
     void shouldResolveBuiltinFunctions() {
-        FunctionRegistry registry = FunctionRegistry.forRuleset(null, List.of());
+        FunctionRegistry registry = FunctionRegistry.forRuleset(List.of());
         assertTrue(registry.get("truthy").isPresent());
         assertTrue(registry.get("pattern").isPresent());
     }
 
     @Test
     void shouldDiscoverCustomFunctionsViaServiceLoader() {
-        FunctionRegistry registry = FunctionRegistry.forRuleset(null, List.of());
+        FunctionRegistry registry = FunctionRegistry.forRuleset(List.of());
         Optional<RuleFunction> fn = registry.get("testCustomFunction");
         assertTrue(fn.isPresent());
     }
@@ -40,13 +40,13 @@ class FunctionRegistryTest {
     @Test
     void shouldTreatNullFunctionNamesAsEmpty() {
         // Exercises the null-guard on the declared function names.
-        FunctionRegistry registry = FunctionRegistry.forRuleset(null, null);
+        FunctionRegistry registry = FunctionRegistry.forRuleset(null);
         assertTrue(registry.get("truthy").isPresent());
     }
 
     @Test
     void shouldReturnEmptyForUnknownFunction() {
-        FunctionRegistry registry = FunctionRegistry.forRuleset(null, List.of());
+        FunctionRegistry registry = FunctionRegistry.forRuleset(List.of());
         assertFalse(registry.get("nonexistent").isPresent());
     }
 

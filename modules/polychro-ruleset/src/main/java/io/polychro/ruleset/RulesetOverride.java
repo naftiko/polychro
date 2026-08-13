@@ -28,13 +28,13 @@ import java.util.Map;
  * @param aliases         aliases scoped to this override block
  * @param formats         format restrictions for this override block
  */
-record RulesetOverride(
+public record RulesetOverride(
         List<String> files,
         Map<String, Rule> rules,
         Map<String, String> aliases,
         List<String> formats
 ) {
-    RulesetOverride {
+    public RulesetOverride {
         files = files != null ? List.copyOf(files) : List.of();
         rules = rules != null ? Map.copyOf(rules) : Map.of();
         aliases = aliases != null ? Map.copyOf(aliases) : Map.of();

@@ -32,11 +32,22 @@
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.polychro</groupId>
+            <artifactId>polychro-markdown</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
 
         <!-- Test -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -76,15 +87,6 @@
                                     </limits>
                                 </rule>
                             </rules>
-                            <!-- RulesetCatalog contains two defensive branches that are hard to
-                                 reach in tests: the `is == null` guard (resource is always
-                                 bundled in the jar) and the IOException catch (InputStream.readAllBytes()
-                                 is declared to throw IOException but fails only under abnormal JVM
-                                 conditions). Excluding the class avoids brittle classpath-
-                                 manipulation hacks in tests. -->
-                            <excludes>
-                                <exclude>io/polychro/rulesets/RulesetCatalog.class</exclude>
-                            </excludes>
                         </configuration>
                     </execution>
                 </executions>

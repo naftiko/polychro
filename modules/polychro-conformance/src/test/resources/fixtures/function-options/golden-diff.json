@@ -1,8 +1,4 @@
 {
-  "onlyInSpectral" : [ {
-    "ruleId" : "description-min-length",
-    "path" : "info.description",
-    "severity" : "error"
-  } ],
+  "onlyInSpectral" : [ ],
   "onlyInPolychro" : [ ]
 }

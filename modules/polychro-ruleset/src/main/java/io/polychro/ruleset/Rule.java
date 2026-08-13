@@ -28,7 +28,7 @@ import java.util.List;
  * @param given            list of JSONPath expressions or alias references
  * @param then             list of actions to apply at each matched node
  */
-record Rule(
+public record Rule(
         String name,
         String message,
         String description,
@@ -39,7 +39,7 @@ record Rule(
         List<String> given,
         List<RuleAction> then
 ) {
-    Rule {
+    public Rule {
         given = given != null ? List.copyOf(given) : List.of();
         then = then != null ? List.copyOf(then) : List.of();
         formats = formats != null ? List.copyOf(formats) : null;

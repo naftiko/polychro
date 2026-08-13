@@ -52,4 +52,24 @@ public interface FunctionProvider {
     default List<RuleFunction> functions(Path functionsDir, List<String> functionNames) {
         return functions();
     }
+
+    /**
+     * Provide the rule functions declared by a ruleset.
+     *
+     * <p>The default implementation bridges to {@link #functions(Path, List)} — passing
+     * {@code null} for the (now unused) {@code functionsDir} and the function names extracted
+     * from {@code functions} — so a provider that only overrides the previous contract keeps
+     * contributing functions unchanged. Only a provider that overrides none of the three
+     * {@code functions} methods falls through to the deprecated {@link #functions()} default.
+     * A {@code null} {@code functions} list is treated the same as an empty one.
+     *
+     * @param functions   the custom functions, or {@code null} if none were declared
+     * @return the rule functions this provider contributes for the given ruleset
+     */
+    default List<RuleFunction> functions(List<Function> functions) {
+        List<String> functionNames = functions == null
+                ? List.of()
+                : functions.stream().map(Function::functionName).toList();
+        return functions(null, functionNames);
+    }
 }
