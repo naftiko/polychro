@@ -211,6 +211,10 @@ The `pr-review` skill is served by the **`agents-shared` capability** in the
 See `.github/instructions/agents-shared.instructions.md` for trigger keywords,
 the sync procedure, and prerequisites.
 
+When the PR is from an external/cross-repository contributor, also apply the skill's
+"External contributors — extra care" subsection (Part A) — deeper security analysis before
+flagging, non-blocking form findings, LLM-assistance disclosure, and a welcoming tone.
+
 ---
 
 ## Contribution Workflow
