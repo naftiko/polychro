@@ -4,23 +4,11 @@
 /.vscode
 dependency-reduced-pom.xml
 /.github/node_modules
-/modules/polychro-api/target
-/modules/polychro-json-schema/target
-/modules/polychro-json-structure/target
-/modules/polychro-wellformedness/target
-/modules/polychro-ruleset/target
-/modules/polychro-ruleset-polyglot/target
-/modules/polychro-rulesets/target
-/modules/polychro-core/target
-/modules/polychro-cli/target
-/modules/polychro-markdown/target
-/modules/polychro-checkov/target
-/modules/polychro-github-action/target
-/modules/polychro-html/target
+# Maven build output, wherever it sits — never enumerate modules one by one:
+# an omitted module (or a stale directory left by a past layout) silently leaks
+# build artifacts into `git add -A`.
+**/target/
 build-output.txt
-/modules/polychro-capability/target
-/modules/polychro-format-common/target
-/modules/polychro-coverage/target
 
 # flatten-maven-plugin output
 .flattened-pom.xml
