@@ -100,6 +100,22 @@ jobs:
           echo "| Critical | ${CRITICAL} |" >> $GITHUB_STEP_SUMMARY
           echo "| High     | ${HIGH} |" >> $GITHUB_STEP_SUMMARY
 
+          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "<details><summary>Critical/High vulnerability findings</summary>" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Package | Vulnerability ID | Severity | Installed | Fixed |" >> $GITHUB_STEP_SUMMARY
+            echo "|---------|-------------------|----------|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+            jq -r '
+              [.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL" or .Severity=="HIGH")]
+              | sort_by(if .Severity=="CRITICAL" then 0 else 1 end)
+              | .[]
+              | "| \(.PkgName) | \(.VulnerabilityID) | \(.Severity) | \(.InstalledVersion) | \(if (.FixedVersion // "") == "" then "n/a" else .FixedVersion end) |"
+            ' trivy-fs-results.json >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "</details>" >> $GITHUB_STEP_SUMMARY
+          fi
+
       - name: Upload scan report
         if: always()
         uses: actions/upload-artifact@v4
