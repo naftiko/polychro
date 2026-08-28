@@ -28,4 +28,26 @@ public interface SourceMap {
      * @return the corresponding source range, or null when unavailable
      */
     SourceRange resolve(String path);
+
+    /**
+     * Resolve a projected path to the source range of its <em>key</em> (the object field name /
+     * property name the value at {@code path} is keyed by in its parent) rather than the value
+     * itself.
+     *
+     * <p>Used by a JSONPath key-selector match ({@code ~}, naftiko/polychro#83): the
+     * diagnostic reports on the property <em>name</em> (e.g. a Paths Object key like
+     * {@code "/Pets"}), so its {@link SourceRange} must point at that key's own source location,
+     * not at the path-item object's location a plain {@link #resolve(String)} would return.
+     *
+     * <p>Default implementation delegates to {@link #resolve(String)} — a source map that does
+     * not track key locations separately (e.g. a lambda-based test double, or {@link #NONE})
+     * degrades gracefully to the value's range rather than {@code null}, preserving the prior
+     * behavior for every implementation that has not opted into key tracking.
+     *
+     * @param path projected path of the value the key belongs to
+     * @return the key's source range, or the value's range as a fallback, or null when unavailable
+     */
+    default SourceRange resolveKey(String path) {
+        return resolve(path);
+    }
 }

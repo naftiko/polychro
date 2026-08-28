@@ -15,6 +15,7 @@ overrides:
     rules:
       agents-required-sections:
         description: "Checks for this ruleset's default recommended sections (Build & Test, Code Style, Contribution Workflow) — not a requirement of the official AGENTS.md standard, which has no required headings. Override via functionOptions.sections to match your project's own conventions."
+        message: "{{error}}"
         severity: warn
         recommended: true
         formats:
@@ -34,6 +35,7 @@ overrides:
     rules:
       skill-required-frontmatter:
         description: "SKILL.md frontmatter must satisfy the Agent Skills spec (https://code.claude.com/docs/en/skills): `name` — required, max 64 chars, lowercase letters/numbers/hyphens only, must not start or end with a hyphen; `description` — required, non-empty, max 1024 chars."
+        message: "{{error}}"
         severity: error
         recommended: true
         formats:

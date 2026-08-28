@@ -1,0 +1,181 @@
+# polychro:openapi — Ports a subset of Spectral's built-in `spectral:oas` ruleset to validate
+# OpenAPI v2 (Swagger) and OpenAPI v3 contracts.
+#
+# This ruleset is the flagship consumer for two engine gaps closed by naftiko/polychro#83:
+#   1. JSONPath key selectors (`~`) — see `openapi-paths-kebab-case` below, which targets the
+#      *keys* of `$.paths` (the path strings themselves), not their values.
+#   2. Content-based spec-level format detection (`oas2`/`oas3`) — see the `formats:` filters on
+#      the OAS2-only and OAS3-only rules below, which fire only against documents whose content
+#      declares `swagger: 2.0` or `openapi: 3.x` respectively (Document.SPEC_FORMATS_METADATA_KEY).
+#
+# Rule bodies (description, given, then) are ported verbatim from Spectral's
+# packages/rulesets/src/oas/index.ts wherever Polychro's built-in functions (truthy, pattern,
+# schema, alphabetical) already cover the behavior, so diagnostics match Spectral's own
+# spectral:oas output for the same document (validated by the Phase 0 conformance harness).
+#
+# Ruleset-level `formats:` gate (mirrors Spectral's own `spectral:oas` top-level restriction):
+# without it, shared rules that declare no `formats` of their own (e.g. info-contact,
+# info-description) would run against *any* YAML/JSON document that happens to contain an
+# `info` key, not just OpenAPI ones. RulesetValidator.matchesFormat falls back to this
+# ruleset-level restriction for any rule that does not declare its own `formats`.
+formats:
+  - oas2
+  - oas3
+
+extends: []
+
+rules:
+
+  # ─── OpenAPI v2 & v3 ────────────────────────────────────────────────────────
+
+  info-contact:
+    description: "Info object must have \"contact\" object."
+    recommended: true
+    given: "$"
+    then:
+      field: "info.contact"
+      function: truthy
+
+  info-description:
+    description: "Info \"description\" must be present and non-empty string."
+    recommended: true
+    given: "$"
+    then:
+      field: "info.description"
+      function: truthy
+
+  info-license:
+    description: "Info object must have \"license\" object."
+    recommended: false
+    given: "$"
+    then:
+      field: "info.license"
+      function: truthy
+
+  license-url:
+    description: "License object must include \"url\"."
+    recommended: false
+    given: "$"
+    then:
+      field: "info.license.url"
+      function: truthy
+
+  no-eval-in-markdown:
+    description: "Markdown descriptions must not have \"eval(\"."
+    recommended: true
+    given:
+      - "$..description"
+      - "$..title"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "eval\\("
+
+  no-script-tags-in-markdown:
+    description: "Markdown descriptions must not have \"<script>\" tags."
+    recommended: true
+    given:
+      - "$..description"
+      - "$..title"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "<script"
+
+  openapi-tags:
+    description: "OpenAPI object must have non-empty \"tags\" array."
+    recommended: false
+    given: "$"
+    then:
+      field: "tags"
+      function: schema
+      functionOptions:
+        schema:
+          type: array
+          minItems: 1
+
+  openapi-tags-alphabetical:
+    description: "OpenAPI object must have alphabetical \"tags\"."
+    recommended: false
+    given: "$"
+    then:
+      field: "tags"
+      function: alphabetical
+      functionOptions:
+        keyedBy: name
+
+  # Key-selector (`~`) rule — issue #83, Priority 2. `$.paths.*~` matches the *keys* of the
+  # `paths` object (the path strings, e.g. "/pets/{id}"), not their values (the path-item
+  # objects). Ported from Spectral's own `path-no-trailing-slash` example
+  # (docs/reference/functions.md) and ruleset-migrator fixtures, adapted here to enforce
+  # kebab-case path segments instead.
+  #
+  # OpenAPI explicitly permits specification-extension keys (`x-*`) on a Paths Object —
+  # `$.paths.*~` selects those keys too, so the pattern must accept them as a distinct,
+  # always-valid alternative rather than rejecting every key that does not start with `/`.
+  openapi-paths-kebab-case:
+    description: "Path segments should be kebab-case."
+    message: "Path should be kebab-case (lower case and separated with hyphens)"
+    recommended: true
+    given: "$.paths.*~"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^(?:x-.*|(?:/(?:[a-z0-9]+(?:-[a-z0-9]+)*|\\{[a-zA-Z0-9_-]+\\}))+|/)$"
+
+  # ─── OpenAPI v2 (Swagger) only ──────────────────────────────────────────────
+
+  oas2-api-host:
+    description: "OpenAPI \"host\" must be present and non-empty string."
+    recommended: true
+    formats:
+      - oas2
+    given: "$"
+    then:
+      field: "host"
+      function: truthy
+
+  oas2-api-schemes:
+    description: "OpenAPI host \"schemes\" must be present and non-empty array."
+    recommended: true
+    formats:
+      - oas2
+    given: "$"
+    then:
+      field: "schemes"
+      function: schema
+      functionOptions:
+        schema:
+          type: array
+          items:
+            type: string
+          minItems: 1
+
+  # ─── OpenAPI v3 only ────────────────────────────────────────────────────────
+
+  oas3-api-servers:
+    description: "OpenAPI \"servers\" must be present and non-empty array."
+    recommended: true
+    formats:
+      - oas3
+    given: "$"
+    then:
+      field: "servers"
+      function: schema
+      functionOptions:
+        schema:
+          type: array
+          items:
+            type: object
+          minItems: 1
+
+  oas3-server-trailing-slash:
+    description: "Server URL must not have trailing slash."
+    recommended: true
+    formats:
+      - oas3
+    given: "$.servers[*].url"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "./$"

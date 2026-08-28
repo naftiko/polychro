@@ -34,7 +34,7 @@ class RulesetCatalogTest {
     @Test
     void availableShouldReturnAllRulesetNames() {
         List<String> names = RulesetCatalog.available();
-        assertEquals(7, names.size());
+        assertEquals(8, names.size());
         assertTrue(names.contains("governance"));
         assertTrue(names.contains("ai-safety"));
         assertTrue(names.contains("security"));
@@ -42,6 +42,7 @@ class RulesetCatalogTest {
         assertTrue(names.contains("consistency"));
         assertTrue(names.contains("resilience"));
         assertTrue(names.contains("agents"));
+        assertTrue(names.contains("openapi"));
     }
 
     @Test
@@ -88,6 +89,13 @@ class RulesetCatalogTest {
     }
 
     @Test
+    void loadShouldReturnOpenapiContent() {
+        String content = RulesetCatalog.load("openapi");
+        assertNotNull(content);
+        assertTrue(content.contains("openapi-paths-kebab-case"));
+    }
+
+    @Test
     void loadShouldThrowForUnknownRuleset() {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> RulesetCatalog.load("nonexistent"));
@@ -98,7 +106,8 @@ class RulesetCatalogTest {
     @ParameterizedTest
     @CsvSource(value = {"governance,capability-name-present", "ai-safety,consumer-base-uri-no-trailing-slash",
             "security,no-hardcoded-secrets", "mcp,mcp-tool-description-present",
-            "consistency,naming-convention-kebab", "resilience,consumer-timeout-declared"})
+            "consistency,naming-convention-kebab", "resilience,consumer-timeout-declared",
+            "openapi,openapi-paths-kebab-case"})
     void loadAsRulesetShouldReturnContent(String rulesetName, String ruleName) {
         Ruleset ruleset = RulesetCatalog.loadAsRuleset(rulesetName);
         assertNotNull(ruleset);

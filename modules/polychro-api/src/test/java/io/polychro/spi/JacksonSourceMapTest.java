@@ -275,4 +275,62 @@ class JacksonSourceMapTest {
         // 0-based: human line 1 -> index 0.
         assertEquals(0, map.resolve("$").startLine());
     }
+
+    // --- resolveKey() resolves the KEY's own range, not the value's ---
+
+    @Test
+    void resolveKeyShouldReturnKeyRangeDistinctFromValueRange() {
+        // "/Pets:" — the key "/Pets" sits on line 2 (0-based 1) cols 2..7; its mapping value
+        // ("get:" object) starts on line 3 (0-based 2). resolveKey must return the KEY's own
+        // range, not the value's, proving the two are tracked and resolved independently.
+        String yaml = "paths:\n  /Pets:\n    get: {}\n";
+        SourceMap map = JacksonSourceMap.forContent(yaml, "yaml");
+
+        SourceRange keyRange = map.resolveKey("$.paths./Pets");
+        SourceRange valueRange = map.resolve("$.paths./Pets");
+        assertNotNull(keyRange, "the /Pets key must have its own resolvable range");
+        assertNotNull(valueRange, "the /Pets value (the path-item object) must also resolve");
+        assertEquals(1, keyRange.startLine(), "key sits on line 2 (0-based 1)");
+        assertEquals(2, keyRange.startColumn());
+        assertEquals(1, keyRange.endLine());
+        assertEquals(7, keyRange.endColumn(), "key range stops before ':', hugging '/Pets'");
+        assertNotEquals(keyRange, valueRange,
+                "key and value must resolve to different ranges for a nested object value");
+    }
+
+    @Test
+    void resolveKeyShouldReturnNullForNullPath() {
+        SourceMap map = JacksonSourceMap.forContent("name: hello\n", "yaml");
+        assertNull(map.resolveKey(null));
+    }
+
+    @Test
+    void resolveKeyShouldReturnNullForUnknownPath() {
+        SourceMap map = JacksonSourceMap.forContent("name: hello\n", "yaml");
+        assertNull(map.resolveKey("$.does.not.exist"));
+    }
+
+    @Test
+    void resolveKeyShouldFallBackToValueRangeWhenPathHasNoOwnKey() {
+        // "$" (the document root) is never itself a FIELD_NAME token, so it has no entry in
+        // keyRangesByPath — resolveKey must fall back to the value range rather than null.
+        String yaml = "name: hello\n";
+        SourceMap map = JacksonSourceMap.forContent(yaml, "yaml");
+
+        SourceRange keyRange = map.resolveKey("$");
+        SourceRange valueRange = map.resolve("$");
+        assertNotNull(keyRange, "resolveKey must fall back to the value range for a keyless path");
+        assertEquals(valueRange, keyRange, "fallback must be exactly the value range");
+    }
+
+    @Test
+    void sourceMapDefaultResolveKeyShouldDelegateToResolve() {
+        // A SourceMap implementation that does not override resolveKey (e.g. a lambda, or
+        // SourceMap.NONE) must degrade gracefully to resolve() rather than losing the range —
+        // the prior behavior preserved for every non-JacksonSourceMap implementation.
+        SourceMap lambdaMap = path -> "$.stub".equals(path) ? new SourceRange(0, 0, 0, 5) : null;
+        assertEquals(lambdaMap.resolve("$.stub"), lambdaMap.resolveKey("$.stub"));
+        assertNull(lambdaMap.resolveKey("$.other"));
+        assertNull(SourceMap.NONE.resolveKey("$.anything"));
+    }
 }

@@ -53,9 +53,11 @@ import java.util.Map;
 public final class JacksonSourceMap implements SourceMap {
 
     private final Map<String, SourceRange> rangesByPath;
+    private final Map<String, SourceRange> keyRangesByPath;
 
-    private JacksonSourceMap(Map<String, SourceRange> rangesByPath) {
+    private JacksonSourceMap(Map<String, SourceRange> rangesByPath, Map<String, SourceRange> keyRangesByPath) {
         this.rangesByPath = rangesByPath;
+        this.keyRangesByPath = keyRangesByPath;
     }
 
     @Override
@@ -64,6 +66,15 @@ public final class JacksonSourceMap implements SourceMap {
             return null;
         }
         return rangesByPath.get(path);
+    }
+
+    @Override
+    public SourceRange resolveKey(String path) {
+        if (path == null) {
+            return null;
+        }
+        SourceRange keyRange = keyRangesByPath.get(path);
+        return keyRange != null ? keyRange : rangesByPath.get(path);
     }
 
     /**
@@ -84,7 +95,8 @@ public final class JacksonSourceMap implements SourceMap {
             return SourceMap.NONE;
         }
         try {
-            return new JacksonSourceMap(index(factory, content, "yaml".equals(format)));
+            Index index = index(factory, content, "yaml".equals(format));
+            return new JacksonSourceMap(index.ranges, index.keyRanges);
         } catch (IOException e) {
             // A document that cannot be scanned for locations degrades gracefully to no ranges;
             // the well-formedness validator surfaces the parse error separately.
@@ -92,9 +104,9 @@ public final class JacksonSourceMap implements SourceMap {
         }
     }
 
-    private static Map<String, SourceRange> index(JsonFactory factory, String content, boolean yaml)
-            throws IOException {
+    private static Index index(JsonFactory factory, String content, boolean yaml) throws IOException {
         Map<String, SourceRange> ranges = new HashMap<>();
+        Map<String, SourceRange> keyRanges = new HashMap<>();
         try (JsonParser parser = factory.createParser(content)) {
             // Each frame describes the container the parser is currently inside.
             Deque<Frame> stack = new ArrayDeque<>();
@@ -103,6 +115,15 @@ public final class JacksonSourceMap implements SourceMap {
             while ((token = parser.nextToken()) != null) {
                 if (token == JsonToken.FIELD_NAME) {
                     pendingField = parser.currentName();
+                    // The field-name token's own location — the key's source range, used by a
+                    // JSONPath key-selector match (~) to report on the property
+                    // NAME itself rather than the value it is keyed to. Field names are always
+                    // scalar text, so the yamlScalar end-scan applies exactly as for a value,
+                    // except the scan must stop at the "key:" separator rather than end-of-line
+                    // (isKey=true) — a plain-scalar key is never itself followed by more content
+                    // on the same physical line the way a value can be.
+                    String keyPath = pathOf(stack, pendingField);
+                    keyRanges.putIfAbsent(keyPath, toRange(parser.currentTokenLocation(), content, yaml, true));
                     continue;
                 }
                 if (token == JsonToken.END_OBJECT || token == JsonToken.END_ARRAY) {
@@ -117,7 +138,7 @@ public final class JacksonSourceMap implements SourceMap {
                 // guards malformed or dotted-key-colliding input (see class Javadoc) from silently
                 // overwriting a prior valid location — the first token encountered wins.
                 ranges.putIfAbsent(
-                        path, toRange(parser.currentTokenLocation(), content, yaml && scalar));
+                        path, toRange(parser.currentTokenLocation(), content, yaml && scalar, false));
 
                 if (token == JsonToken.START_OBJECT) {
                     stack.push(new Frame(path, true));
@@ -127,7 +148,7 @@ public final class JacksonSourceMap implements SourceMap {
                 pendingField = null;
             }
         }
-        return ranges;
+        return new Index(ranges, keyRanges);
     }
 
     /**
@@ -145,7 +166,7 @@ public final class JacksonSourceMap implements SourceMap {
         return parent.path + "[" + (parent.nextIndex++) + "]";
     }
 
-    private static SourceRange toRange(JsonLocation location, String content, boolean yamlScalar) {
+    private static SourceRange toRange(JsonLocation location, String content, boolean yamlScalar, boolean isKey) {
         // Jackson reports 1-based line/column; Polychro ranges are 0-based to match Spectral and
         // the LSP convention consumers expect (vscode.Position is 0-based, copied 1:1). Clamp at 0
         // so a synthetic location (-1) never produces a negative.
@@ -157,7 +178,7 @@ public final class JacksonSourceMap implements SourceMap {
             // JSON end ranges are tracked separately (#34).
             return new SourceRange(line, column, line, column);
         }
-        int[] end = endOfYamlScalar(content, line, column);
+        int[] end = endOfYamlScalar(content, line, column, isKey);
         return new SourceRange(line, column, end[0], end[1]);
     }
 
@@ -168,9 +189,15 @@ public final class JacksonSourceMap implements SourceMap {
      * counted by their physical source length, and the full span of a multi-line block scalar — so
      * the range reproduces the one Spectral emits for the same bytes.
      *
+     * @param isKey {@code true} when the scalar is a mapping KEY rather than a value — a plain
+     *              (unquoted) key's scalar text stops at its {@code :} separator, never at
+     *              end-of-line the way a value's plain scalar does (without this, a
+     *              key-selector diagnostic's range on {@code "/Pets:"} would swallow the trailing
+     *              colon). Quoted and block-scalar keys are unaffected — YAML's grammar for those
+     *              is unambiguous regardless of key/value position.
      * @return a two-element array {@code [endLine, endColumn]} (both 0-based, end exclusive)
      */
-    static int[] endOfYamlScalar(String content, int startLine, int startColumn) {
+    static int[] endOfYamlScalar(String content, int startLine, int startColumn, boolean isKey) {
         String[] lines = content.split("\n", -1);
         if (startLine < 0 || startLine >= lines.length) {
             return new int[] {startLine, startColumn};
@@ -186,7 +213,7 @@ public final class JacksonSourceMap implements SourceMap {
         if (first == '>' || first == '|') {
             return endOfBlockScalar(lines, startLine, startColumn);
         }
-        return endOfPlainScalar(line, startLine, startColumn);
+        return endOfPlainScalar(line, startLine, startColumn, isKey);
     }
 
     /**
@@ -218,11 +245,22 @@ public final class JacksonSourceMap implements SourceMap {
      * End of a plain (unquoted) scalar: the value runs from the start column to the last non-blank
      * character before a trailing comment ({@code " #"}) or end of line. Trailing whitespace is
      * excluded so the range hugs the value exactly, iso-Spectral.
+     *
+     * @param isKey {@code true} when this scalar is a mapping KEY — the scan additionally stops
+     *              at the key's {@code :} separator (a colon followed by whitespace or end-of-line,
+     *              per YAML's plain-scalar-key grammar), so a key like {@code /Pets:} yields the
+     *              end position just past {@code /Pets}, not past the colon or any trailing content
+     *              a value would legitimately have to its right.
      */
-    static int[] endOfPlainScalar(String line, int startLine, int startColumn) {
+    static int[] endOfPlainScalar(String line, int startLine, int startColumn, boolean isKey) {
         int end = line.length();
         for (int i = startColumn; i < line.length(); i++) {
             if (line.charAt(i) == '#' && i > startColumn && Character.isWhitespace(line.charAt(i - 1))) {
+                end = i;
+                break;
+            }
+            if (isKey && line.charAt(i) == ':'
+                    && (i + 1 == line.length() || Character.isWhitespace(line.charAt(i + 1)))) {
                 end = i;
                 break;
             }
@@ -285,5 +323,12 @@ public final class JacksonSourceMap implements SourceMap {
             this.path = path;
             this.isObject = isObject;
         }
+    }
+
+    /**
+     * The two range maps built by a single {@link #index} pass: value locations (used by
+     * {@link #resolve}) and field-name/key locations (used by {@link #resolveKey}).
+     */
+    private record Index(Map<String, SourceRange> ranges, Map<String, SourceRange> keyRanges) {
     }
 }

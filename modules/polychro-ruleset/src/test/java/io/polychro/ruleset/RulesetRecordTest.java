@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class RulesetRecordTest {
 
@@ -41,8 +42,17 @@ class RulesetRecordTest {
     }
 
     @Test
-    void rulesetShouldHandleNullFormats() {
+    void rulesetShouldPreserveNullFormats() {
+        // Mirrors Rule.formats(): an omitted top-level `formats:` stays null (format-agnostic),
+        // distinct from an explicit, non-null empty list (matches no document) — see Ruleset's
+        // Javadoc and RulesetValidator.matchesFormat.
         Ruleset ruleset = new Ruleset(List.of(), Map.of(), List.of(), null, List.of(), Map.of(), null);
+        assertNull(ruleset.formats());
+    }
+
+    @Test
+    void rulesetShouldPreserveExplicitlyEmptyFormats() {
+        Ruleset ruleset = new Ruleset(List.of(), Map.of(), List.of(), List.of(), List.of(), Map.of(), null);
         assertEquals(List.of(), ruleset.formats());
     }
 

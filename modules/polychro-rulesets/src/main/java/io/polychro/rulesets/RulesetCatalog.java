@@ -28,7 +28,7 @@ public final class RulesetCatalog {
     private static final String BASE = "/rulesets";
 
     private static final List<String> AVAILABLE = List.of(
-            "governance", "ai-safety", "security", "mcp", "consistency", "resilience", "agents");
+            "governance", "ai-safety", "security", "mcp", "consistency", "resilience", "agents", "openapi");
 
     private static final RulesetParser RULESET_PARSER = new RulesetParser();
 

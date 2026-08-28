@@ -1,0 +1,17 @@
+# Parent ruleset restricted to oas3, with a rule that explicitly declares an EMPTY formats list
+# (as opposed to omitting `formats:` entirely) — exercises the non-null-but-empty branch of
+# RulesetComposer.withInheritedFormats' `rule.formats() == null || rule.formats().isEmpty()` check.
+extends: []
+
+formats:
+  - oas3
+
+rules:
+  parent-empty-formats-rule:
+    message: "Empty formats rule"
+    severity: warn
+    recommended: true
+    formats: []
+    given: "$.info.name"
+    then:
+      function: truthy

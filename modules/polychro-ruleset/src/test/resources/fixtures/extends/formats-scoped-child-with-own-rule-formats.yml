@@ -1,0 +1,6 @@
+# Child ruleset extending a parent whose rule declares its own formats (oas2), distinct from
+# the parent ruleset's top-level formats (oas3)
+extends:
+  - formats-scoped-parent-with-own-rule-formats.yml
+
+rules: {}

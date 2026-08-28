@@ -4,7 +4,7 @@
   "severity" : "info"
 }, {
   "ruleId" : "capability-tags-present",
-  "path" : "info.tags",
+  "path" : "info",
   "severity" : "info"
 }, {
   "ruleId" : "consumer-base-uri-no-trailing-slash",
@@ -16,11 +16,11 @@
   "severity" : "warn"
 }, {
   "ruleId" : "consumer-description-present",
-  "path" : "capability.consumes.0.description",
+  "path" : "capability.consumes.0",
   "severity" : "warn"
 }, {
   "ruleId" : "expose-description-present",
-  "path" : "capability.exposes.0.description",
+  "path" : "capability.exposes.0",
   "severity" : "warn"
 }, {
   "ruleId" : "expose-namespace-kebab-case",
@@ -28,6 +28,6 @@
   "severity" : "warn"
 }, {
   "ruleId" : "operation-description-present",
-  "path" : "capability.exposes.0.resources.0.operations.0.description",
+  "path" : "capability.exposes.0.resources.0.operations.0",
   "severity" : "warn"
 } ]
