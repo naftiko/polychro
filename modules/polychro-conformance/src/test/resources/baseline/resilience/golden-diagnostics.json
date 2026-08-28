@@ -1,33 +1,33 @@
 [ {
   "ruleId" : "array-output-unbounded",
-  "path" : "capability.exposes.0.resources.0.operations.0.outputParameters.0.maxItems",
+  "path" : "capability.exposes.0.resources.0.operations.0.outputParameters.0",
   "severity" : "info"
 }, {
   "ruleId" : "consumer-retry-policy-present",
-  "path" : "capability.consumes.0.retry",
+  "path" : "capability.consumes.0",
   "severity" : "info"
 }, {
   "ruleId" : "consumer-timeout-declared",
-  "path" : "capability.consumes.0.timeout",
+  "path" : "capability.consumes.0",
   "severity" : "info"
 }, {
   "ruleId" : "expose-429-response-defined",
-  "path" : "capability.exposes.0.errorResponses",
+  "path" : "capability.exposes.0",
   "severity" : "info"
 }, {
   "ruleId" : "expose-error-response-defined",
-  "path" : "capability.exposes.0.errorResponses",
+  "path" : "capability.exposes.0",
   "severity" : "info"
 }, {
   "ruleId" : "rate-limit-headers-documented",
-  "path" : "capability.exposes.0.rateLimitHeaders",
+  "path" : "capability.exposes.0",
   "severity" : "info"
 }, {
   "ruleId" : "semantics-declared-on-write-operations",
-  "path" : "capability.aggregates.0.functions.0.semantics",
+  "path" : "capability.aggregates.0.functions.0",
   "severity" : "info"
 }, {
   "ruleId" : "string-input-unconstrained",
-  "path" : "capability.exposes.0.resources.0.operations.0.inputParameters.0.pattern",
+  "path" : "capability.exposes.0.resources.0.operations.0.inputParameters.0",
   "severity" : "info"
 } ]

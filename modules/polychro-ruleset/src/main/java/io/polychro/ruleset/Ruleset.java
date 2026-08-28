@@ -23,6 +23,14 @@ import java.util.Map;
  * @param aliases               global alias map (alias name → JSONPath expression)
  * @param overrides             list of file-scoped rule overrides
  * @param formats               list of document format identifiers this ruleset applies to
+ *                              ({@code null} when the {@code formats:} key is entirely omitted —
+ *                              distinct from an explicit, non-null empty list. Mirrors
+ *                              {@link Rule#formats()}: an omitted top-level {@code formats:}
+ *                              leaves every unscoped rule format-agnostic (matches every
+ *                              document), while an explicit {@code formats: []} is a deliberate
+ *                              restriction that makes every unscoped rule match no document —
+ *                              collapsing both to an empty list here would silently run rules
+ *                              that Spectral disables)
  * @param functions             list of the custom functions'
  * @param rules                 rule definitions keyed by rule name
  * @param documentationUrl      base URL for rule documentation
@@ -40,7 +48,7 @@ public record Ruleset(
         extendsRefs = extendsRefs != null ? List.copyOf(extendsRefs) : List.of();
         aliases = aliases != null ? Map.copyOf(aliases) : Map.of();
         overrides = overrides != null ? List.copyOf(overrides) : List.of();
-        formats = formats != null ? List.copyOf(formats) : List.of();
+        formats = formats != null ? List.copyOf(formats) : null;
         functions = functions != null ? List.copyOf(functions) : List.of();
         rules = rules != null ? Map.copyOf(rules) : Map.of();
     }

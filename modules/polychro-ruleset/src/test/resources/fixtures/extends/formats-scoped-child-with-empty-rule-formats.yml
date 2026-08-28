@@ -1,0 +1,5 @@
+# Child ruleset extending a parent whose rule has explicitly empty formats: []
+extends:
+  - formats-scoped-parent-with-empty-rule-formats.yml
+
+rules: {}

@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -65,6 +66,15 @@ class DocumentTest {
         assertTrue(ex.getMessage().contains("Failed to parse YAML"));
     }
 
+    @Test
+    void fromYamlShouldDetectOas3SpecFormat() throws IOException {
+        Path file = tempDir.resolve("openapi.yml");
+        Files.writeString(file, "openapi: 3.0.2\ninfo:\n  title: Test\n  version: \"1.0\"\npaths: {}\n");
+
+        Document doc = Document.fromYaml(file);
+        assertEquals(List.of("oas3"), doc.metadata().get(Document.SPEC_FORMATS_METADATA_KEY));
+    }
+
     // --- fromJson ---
 
     @Test
@@ -78,6 +88,15 @@ class DocumentTest {
         assertEquals(42, doc.root().get("value").asInt());
         assertEquals("json", doc.format());
         assertEquals(file.toString(), doc.sourcePath());
+    }
+
+    @Test
+    void fromJsonShouldDetectOas2SpecFormat() throws IOException {
+        Path file = tempDir.resolve("swagger.json");
+        Files.writeString(file, "{\"swagger\": \"2.0\", \"info\": {}, \"paths\": {}}");
+
+        Document doc = Document.fromJson(file);
+        assertEquals(List.of("oas2"), doc.metadata().get(Document.SPEC_FORMATS_METADATA_KEY));
     }
 
     @Test
@@ -293,6 +312,36 @@ class DocumentTest {
     void fromStringShouldThrowForInvalidJsonContent() {
         assertThrows(UncheckedIOException.class,
                 () -> Document.fromString("{invalid json", "json"));
+    }
+
+    // --- Issue #83: spec-level format detection (metadata) ---
+
+    @Test
+    void fromStringShouldDetectOas3SpecFormatForYamlDocument() {
+        String yaml = "openapi: 3.0.2\ninfo:\n  title: Test\n  version: \"1.0\"\npaths: {}\n";
+        Document doc = Document.fromString(yaml, "yaml");
+        assertEquals("yaml", doc.format());
+        assertEquals(List.of("oas3"), doc.metadata().get(Document.SPEC_FORMATS_METADATA_KEY));
+    }
+
+    @Test
+    void fromStringShouldDetectOas2SpecFormatForJsonDocument() {
+        String json = "{\"swagger\": \"2.0\", \"info\": {}, \"paths\": {}}";
+        Document doc = Document.fromString(json, "json");
+        assertEquals("json", doc.format());
+        assertEquals(List.of("oas2"), doc.metadata().get(Document.SPEC_FORMATS_METADATA_KEY));
+    }
+
+    @Test
+    void fromStringShouldNotCarrySpecFormatsKeyForPlainYamlDocument() {
+        Document doc = Document.fromString("name: hello\nvalue: 42\n", "yaml");
+        assertFalse(doc.metadata().containsKey(Document.SPEC_FORMATS_METADATA_KEY));
+    }
+
+    @Test
+    void fromStringShouldNotDetectSpecFormatsForXmlDocument() {
+        Document doc = Document.fromString("<openapi>3.0</openapi>", "xml");
+        assertFalse(doc.metadata().containsKey(Document.SPEC_FORMATS_METADATA_KEY));
     }
 
     @Test

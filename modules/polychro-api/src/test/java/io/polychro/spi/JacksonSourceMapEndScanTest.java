@@ -30,39 +30,39 @@ class JacksonSourceMapEndScanTest {
 
     @Test
     void endOfYamlScalarShouldReturnStartWhenStartLineIsNegative() {
-        assertArrayEquals(new int[] {-1, 4}, JacksonSourceMap.endOfYamlScalar("a: b\n", -1, 4));
+        assertArrayEquals(new int[] {-1, 4}, JacksonSourceMap.endOfYamlScalar("a: b\n", -1, 4, false));
     }
 
     @Test
     void endOfYamlScalarShouldReturnStartWhenStartLineIsBeyondContent() {
-        assertArrayEquals(new int[] {9, 0}, JacksonSourceMap.endOfYamlScalar("a: b\n", 9, 0));
+        assertArrayEquals(new int[] {9, 0}, JacksonSourceMap.endOfYamlScalar("a: b\n", 9, 0, false));
     }
 
     @Test
     void endOfYamlScalarShouldReturnStartWhenStartColumnIsNegative() {
-        assertArrayEquals(new int[] {0, -1}, JacksonSourceMap.endOfYamlScalar("a: b\n", 0, -1));
+        assertArrayEquals(new int[] {0, -1}, JacksonSourceMap.endOfYamlScalar("a: b\n", 0, -1, false));
     }
 
     @Test
     void endOfYamlScalarShouldReturnStartWhenStartColumnIsBeyondLine() {
-        assertArrayEquals(new int[] {0, 99}, JacksonSourceMap.endOfYamlScalar("a: b\n", 0, 99));
+        assertArrayEquals(new int[] {0, 99}, JacksonSourceMap.endOfYamlScalar("a: b\n", 0, 99, false));
     }
 
     @Test
     void endOfYamlScalarShouldTreatEndOfLineAsAnEmptyScalar() {
         // startColumn == line length is in bounds; first char is '\0' (plain path), end == start.
-        assertArrayEquals(new int[] {0, 4}, JacksonSourceMap.endOfYamlScalar("a: b", 0, 4));
+        assertArrayEquals(new int[] {0, 4}, JacksonSourceMap.endOfYamlScalar("a: b", 0, 4, false));
     }
 
     @Test
     void endOfYamlScalarShouldDispatchToQuotedForSingleQuote() {
-        int[] end = JacksonSourceMap.endOfYamlScalar("k: 'hi'\n", 0, 3);
+        int[] end = JacksonSourceMap.endOfYamlScalar("k: 'hi'\n", 0, 3, false);
         assertArrayEquals(new int[] {0, 7}, end, "single-quoted scalar ends past the closing quote");
     }
 
     @Test
     void endOfYamlScalarShouldDispatchToBlockForLiteralIndicator() {
-        int[] end = JacksonSourceMap.endOfYamlScalar("k: |\n  one\n", 0, 3);
+        int[] end = JacksonSourceMap.endOfYamlScalar("k: |\n  one\n", 0, 3, false);
         assertArrayEquals(new int[] {1, 6}, end, "literal '|' block spans its content line + newline");
     }
 
@@ -92,7 +92,7 @@ class JacksonSourceMapEndScanTest {
     @Test
     void endOfPlainScalarShouldStopBeforeTrailingComment() {
         String line = "k: value # comment";
-        int[] end = JacksonSourceMap.endOfPlainScalar(line, 0, 3);
+        int[] end = JacksonSourceMap.endOfPlainScalar(line, 0, 3, false);
         assertArrayEquals(new int[] {0, 8}, end, "range hugs 'value', the ' # comment' is excluded");
     }
 
@@ -101,7 +101,7 @@ class JacksonSourceMapEndScanTest {
         // A '#' that is the very last character of the line is still a comment marker:
         // the range must hug 'value', not include the trailing ' #'. Iso-Spectral end column = 8.
         String line = "k: value #";
-        int[] end = JacksonSourceMap.endOfPlainScalar(line, 0, 3);
+        int[] end = JacksonSourceMap.endOfPlainScalar(line, 0, 3, false);
         assertArrayEquals(new int[] {0, 8}, end, "terminal '#' is excluded, range hugs 'value'");
     }
 
@@ -110,7 +110,7 @@ class JacksonSourceMapEndScanTest {
         // Two spaces before a terminal '#': the comment marker is the last character and must
         // still be detected, so the trailing '  #' is excluded. Iso-Spectral end column = 8.
         String line = "k: value  #";
-        int[] end = JacksonSourceMap.endOfPlainScalar(line, 0, 3);
+        int[] end = JacksonSourceMap.endOfPlainScalar(line, 0, 3, false);
         assertArrayEquals(new int[] {0, 8}, end, "terminal '#' after extra space is excluded");
     }
 
@@ -120,14 +120,14 @@ class JacksonSourceMapEndScanTest {
         // marker — even as the line's last character under the widened loop bound. The range must
         // include the '#', so end == line.length() (the value is "value#").
         String line = "k: value#";
-        int[] end = JacksonSourceMap.endOfPlainScalar(line, 0, 3);
+        int[] end = JacksonSourceMap.endOfPlainScalar(line, 0, 3, false);
         assertArrayEquals(new int[] {0, 9}, end, "glued terminal '#' is part of the value, not a comment");
     }
 
     @Test
     void endOfPlainScalarShouldTrimTrailingWhitespace() {
         String line = "k: value   ";
-        int[] end = JacksonSourceMap.endOfPlainScalar(line, 0, 3);
+        int[] end = JacksonSourceMap.endOfPlainScalar(line, 0, 3, false);
         assertArrayEquals(new int[] {0, 8}, end, "trailing spaces are excluded from the range");
     }
 
@@ -168,7 +168,7 @@ class JacksonSourceMapEndScanTest {
     void endOfPlainScalarShouldNotTreatHashGluedToTextAsComment() {
         // A '#' that is not preceded by whitespace is part of the value, not a comment marker.
         String line = "k: va#lue";
-        int[] end = JacksonSourceMap.endOfPlainScalar(line, 0, 3);
+        int[] end = JacksonSourceMap.endOfPlainScalar(line, 0, 3, false);
         assertArrayEquals(new int[] {0, line.length()}, end, "glued '#' stays inside the value");
     }
 
@@ -210,7 +210,42 @@ class JacksonSourceMapEndScanTest {
         // A plain scalar reported at column 0 whose first char is '#': the comment-detection
         // back-reference (charAt(i - 1)) must not read charAt(-1). The '#' at the value's first
         // column is part of the value, not a trailing comment.
-        int[] end = JacksonSourceMap.endOfYamlScalar("#x", 0, 0);
+        int[] end = JacksonSourceMap.endOfYamlScalar("#x", 0, 0, false);
         assertArrayEquals(new int[] {0, 2}, end, "value starting with '#' at column 0 hugs the whole token");
+    }
+
+    // --- isKey must stop the plain-scalar scan at the ':' separator ---
+
+    @Test
+    void endOfPlainScalarShouldStopAtColonSeparatorWhenIsKey() {
+        // "/Pets:" as a mapping KEY: the scan must stop at the colon, not include it or scan
+        // past it the way a value's plain scalar (isKey=false) would.
+        String line = "  /Pets:";
+        int[] end = JacksonSourceMap.endOfPlainScalar(line, 0, 2, true);
+        assertArrayEquals(new int[] {0, 7}, end, "key scan stops before ':' — range hugs '/Pets'");
+    }
+
+    @Test
+    void endOfPlainScalarShouldNotStopAtColonWhenNotIsKey() {
+        // The same text scanned as a VALUE (isKey=false) has no reason to stop at ':' — it is not
+        // a key/value separator in that position, so the scan runs to end-of-line as usual.
+        String line = "  /Pets:";
+        int[] end = JacksonSourceMap.endOfPlainScalar(line, 0, 2, false);
+        assertArrayEquals(new int[] {0, 8}, end, "value scan ignores ':' and hugs the whole token");
+    }
+
+    @Test
+    void endOfPlainScalarShouldNotStopAtColonNotFollowedByWhitespaceWhenIsKey() {
+        // A ':' embedded in the key text without trailing whitespace/EOL (e.g. a URL-like key
+        // "a:b") is not YAML's key/value separator and must not truncate the key scan.
+        String line = "  a:b: value";
+        int[] end = JacksonSourceMap.endOfPlainScalar(line, 0, 2, true);
+        assertArrayEquals(new int[] {0, 5}, end, "embedded ':b' is part of the key, real separator is at index 5");
+    }
+
+    @Test
+    void endOfYamlScalarShouldStopAtColonSeparatorForKeyThroughDispatch() {
+        int[] end = JacksonSourceMap.endOfYamlScalar("  /Pets:\n", 0, 2, true);
+        assertArrayEquals(new int[] {0, 7}, end, "dispatch preserves isKey through to endOfPlainScalar");
     }
 }

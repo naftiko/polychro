@@ -25,7 +25,7 @@ public class TestFunctionProvider implements FunctionProvider {
 
     @Override
     public List<RuleFunction> functions() {
-        return List.of(new TestFunction(), new PathReportingFunction());
+        return List.of(new TestFunction(), new PathReportingFunction(), new MultiViolationFunction());
     }
 
     static class TestFunction implements RuleFunction {
@@ -58,6 +58,24 @@ public class TestFunctionProvider implements FunctionProvider {
         @Override
         public List<Violation> evaluateViolations(JsonNode targetNode, Map<String, Object> options) {
             return List.of(Violation.at("offending child", "name"));
+        }
+    }
+
+    /**
+     * A function that always reports two distinct violations for the same matched node, used to
+     * exercise the {@code {{error}}} message-placeholder feature in {@link RuleExecutor}: without
+     * opting in via {@code message: "{{error}}"}, a static rule message/description would collapse
+     * both violations into indistinguishable diagnostics.
+     */
+    static class MultiViolationFunction implements RuleFunction {
+        @Override
+        public String name() {
+            return "testMultiViolationFunction";
+        }
+
+        @Override
+        public List<String> evaluate(JsonNode targetNode, Map<String, Object> options) {
+            return List.of("first violation", "second violation");
         }
     }
 }

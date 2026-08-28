@@ -26,6 +26,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.ServiceLoader;
@@ -44,6 +45,14 @@ import java.util.ServiceLoader;
  */
 public record Document(JsonNode root, String format, String sourcePath, SourceMap sourceMap,
                        Map<String, Object> metadata) {
+
+    /**
+     * Metadata key under which {@link #fromString(String, String, String)} stores the spec-level
+     * formats detected by {@link SpecFormats#detect(JsonNode)} (e.g. {@code ["oas3"]}), for
+     * {@code yaml}/{@code json} documents. Value type is {@code List<String>}; the key is absent
+     * (never an empty list) when no spec-level format is detected (issue #83).
+     */
+    public static final String SPEC_FORMATS_METADATA_KEY = "spec.formats";
 
     /**
      * Shared Jackson mappers. {@link ObjectMapper} (and {@link XmlMapper}) are safe for
@@ -94,7 +103,7 @@ public record Document(JsonNode root, String format, String sourcePath, SourceMa
     public static Document fromYaml(Path path) {
         try {
             JsonNode root = YAML_MAPPER.readTree(Files.newInputStream(path));
-            return new Document(root, "yaml", path.toString());
+            return new Document(root, "yaml", path.toString(), null, specFormatsMetadata(root));
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to parse YAML: " + path, e);
         }
@@ -110,7 +119,7 @@ public record Document(JsonNode root, String format, String sourcePath, SourceMa
     public static Document fromJson(Path path) {
         try {
             JsonNode root = JSON_MAPPER.readTree(Files.newInputStream(path));
-            return new Document(root, "json", path.toString());
+            return new Document(root, "json", path.toString(), null, specFormatsMetadata(root));
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to parse JSON: " + path, e);
         }
@@ -207,7 +216,27 @@ public record Document(JsonNode root, String format, String sourcePath, SourceMa
             case "yaml", "json" -> JacksonSourceMap.forContent(content, effectiveFormat);
             default -> SourceMap.NONE;
         };
-        return new Document(root, effectiveFormat, sourcePath, sourceMap, null);
+        // Spec-level format detection (issue #83): a structured yaml/json document may declare
+        // itself as an OpenAPI/AsyncAPI spec (openapi/swagger/asyncapi root keys). This is layered
+        // on top of the syntax-level `format` via metadata rather than replacing it — `format`
+        // keeps meaning "yaml"/"json" for parsing dispatch (see parseStructured above), and
+        // ruleset `formats: [oas2]/[oas3]` filtering reads SPEC_FORMATS_METADATA_KEY instead.
+        Map<String, Object> metadata = switch (effectiveFormat) {
+            case "yaml", "json" -> specFormatsMetadata(root);
+            default -> null;
+        };
+        return new Document(root, effectiveFormat, sourcePath, sourceMap, metadata);
+    }
+
+    /**
+     * Builds the metadata map carrying the spec-level formats detected for {@code root} (issue
+     * #83), or {@code null} when none are detected — shared by {@link #fromYaml}, {@link #fromJson}
+     * and the {@code yaml}/{@code json} branch of {@link #fromString(String, String, String)} so
+     * spec-level detection behaves identically regardless of entry point.
+     */
+    private static Map<String, Object> specFormatsMetadata(JsonNode root) {
+        List<String> specFormats = SpecFormats.detect(root);
+        return specFormats.isEmpty() ? null : Map.of(SPEC_FORMATS_METADATA_KEY, specFormats);
     }
 
     private static JsonNode parseStructured(String content, String format) {

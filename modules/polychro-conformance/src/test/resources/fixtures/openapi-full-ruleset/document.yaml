@@ -1,0 +1,20 @@
+openapi: 3.0.2
+info:
+  title: Test API
+  version: "1.0"
+tags:
+  - name: Badger
+  - name: Aardvark
+paths:
+  /Pets:
+    get:
+      summary: list
+      responses:
+        "200":
+          description: ok
+  /pets/{id}:
+    get:
+      summary: get
+      responses:
+        "200":
+          description: ok

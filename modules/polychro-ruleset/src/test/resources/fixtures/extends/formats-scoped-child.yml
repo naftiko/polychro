@@ -1,0 +1,12 @@
+# Child ruleset with no formats of its own, extending a parent restricted to oas3
+extends:
+  - formats-scoped-parent.yml
+
+rules:
+  child-version-truthy:
+    message: "Version must not be empty"
+    severity: error
+    recommended: true
+    given: "$.info.version"
+    then:
+      function: truthy

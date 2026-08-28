@@ -1,6 +1,6 @@
 [ {
   "ruleId" : "mcp-input-parameter-description",
-  "path" : "capability.exposes.0.resources.0.operations.0.inputParameters.0.description",
+  "path" : "capability.exposes.0.resources.0.operations.0.inputParameters.0",
   "severity" : "warn"
 }, {
   "ruleId" : "mcp-input-parameter-type-valid",
