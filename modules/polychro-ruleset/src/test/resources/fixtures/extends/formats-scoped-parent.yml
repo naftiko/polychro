@@ -1,0 +1,15 @@
+# Parent ruleset restricted to oas3 documents at the top level, with an unscoped rule
+extends: []
+
+formats:
+  - oas3
+
+rules:
+  parent-info-truthy:
+    message: "Info name must not be empty"
+    severity: warn
+    recommended: true
+    given: "$.info"
+    then:
+      field: "name"
+      function: truthy

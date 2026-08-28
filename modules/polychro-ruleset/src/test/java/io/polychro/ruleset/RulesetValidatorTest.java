@@ -182,19 +182,21 @@ class RulesetValidatorTest {
     }
 
     @Test
-    void validateShouldRunRulesWhenRuleFormatsAreEmpty() {
-        // A rule with an explicit but empty formats list applies to every document
-        // (this exercises the early-return branch in the format filter).
-        Rule rule = new Rule("any-format", "Any format", null, "warn", true,
+    void validateShouldRunRulesWhenRuleFormatsAreExplicitlyEmpty() {
+        // An explicit but empty rule-level formats list is a deliberate "match nothing" —
+        // distinct from an omitted (null) formats, which inherits the ruleset's formats
+        // (or matches everything when the ruleset itself has none). Mirrors Spectral, which
+        // preserves this null-vs-empty distinction rather than treating [] as "not declared".
+        Rule rule = new Rule("no-format", "No format", null, "warn", true,
                 List.of(), null, List.of("$.info.name"),
                 List.of(new RuleAction(null, "truthy", Map.of())));
-        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of("any-format", rule), null);
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of("no-format", rule), null);
         RulesetValidator validator = new RulesetValidator(ruleset, false);
         Document doc = Document.fromString("{\"info\": {\"name\": \"\"}}", "json");
 
         List<Diagnostic> results = validator.validate(doc);
-        assertEquals(1, results.size());
-        assertEquals("Any format", results.get(0).message());
+        assertTrue(results.isEmpty(),
+                () -> "Explicit formats: [] must match no document, got: " + results);
     }
 
     @Test
@@ -363,5 +365,182 @@ class RulesetValidatorTest {
                 "#32: a mono-line scalar must stay on a single line");
         assertTrue(range.endColumn() > range.startColumn(),
                 "#32: the range must span the scalar (quotes included), so end must follow start");
+    }
+
+    // --- Issue #83: spec-level format (oas2/oas3/aas2/aas3) filtering ---
+
+    @Test
+    void validateShouldRunRulesScopedToOas3ForOpenapiThreeDocument() {
+        Rule rule = new Rule("oas3-only", "OAS3 only", null, "warn", true,
+                List.of("oas3"), null, List.of("$.info.name"),
+                List.of(new RuleAction(null, "truthy", Map.of())));
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of("oas3-only", rule), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
+        Document doc = Document.fromString("openapi: 3.0.2\ninfo:\n  name: \"\"\n", "yaml");
+
+        List<Diagnostic> results = validator.validate(doc);
+        assertEquals(1, results.size());
+        assertEquals("OAS3 only", results.get(0).message());
+    }
+
+    @Test
+    void validateShouldSkipRulesScopedToOas2ForOpenapiThreeDocument() {
+        Rule rule = new Rule("oas2-only", "OAS2 only", null, "warn", true,
+                List.of("oas2"), null, List.of("$.info.name"),
+                List.of(new RuleAction(null, "truthy", Map.of())));
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of("oas2-only", rule), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
+        Document doc = Document.fromString("openapi: 3.0.2\ninfo:\n  name: \"\"\n", "yaml");
+
+        List<Diagnostic> results = validator.validate(doc);
+        assertTrue(results.isEmpty());
+    }
+
+    @Test
+    void validateShouldRunRulesScopedToOas2ForSwaggerTwoDocument() {
+        Rule rule = new Rule("oas2-only", "OAS2 only", null, "warn", true,
+                List.of("oas2"), null, List.of("$.info.name"),
+                List.of(new RuleAction(null, "truthy", Map.of())));
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of("oas2-only", rule), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
+        Document doc = Document.fromString("swagger: \"2.0\"\ninfo:\n  name: \"\"\n", "yaml");
+
+        List<Diagnostic> results = validator.validate(doc);
+        assertEquals(1, results.size());
+        assertEquals("OAS2 only", results.get(0).message());
+    }
+
+    @Test
+    void validateShouldSkipRulesScopedToOas3ForSwaggerTwoDocument() {
+        Rule rule = new Rule("oas3-only", "OAS3 only", null, "warn", true,
+                List.of("oas3"), null, List.of("$.info.name"),
+                List.of(new RuleAction(null, "truthy", Map.of())));
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of("oas3-only", rule), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
+        Document doc = Document.fromString("swagger: \"2.0\"\ninfo:\n  name: \"\"\n", "yaml");
+
+        List<Diagnostic> results = validator.validate(doc);
+        assertTrue(results.isEmpty());
+    }
+
+    @Test
+    void validateShouldRunFormatAgnosticRuleOnBothOasVersions() {
+        Rule rule = new Rule("any-oas", "Any OAS", null, "warn", true,
+                null, null, List.of("$.info.name"),
+                List.of(new RuleAction(null, "truthy", Map.of())));
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of("any-oas", rule), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
+
+        Document oas2Doc = Document.fromString("swagger: \"2.0\"\ninfo:\n  name: \"\"\n", "yaml");
+        Document oas3Doc = Document.fromString("openapi: 3.0.2\ninfo:\n  name: \"\"\n", "yaml");
+
+        assertEquals(1, validator.validate(oas2Doc).size());
+        assertEquals(1, validator.validate(oas3Doc).size());
+    }
+
+    @Test
+    void validateShouldSkipSpecScopedRuleForPlainYamlDocumentWithNoSpecFormat() {
+        Rule rule = new Rule("oas3-only", "OAS3 only", null, "warn", true,
+                List.of("oas3"), null, List.of("$.info.name"),
+                List.of(new RuleAction(null, "truthy", Map.of())));
+        Ruleset ruleset = new Ruleset(null, null, null, null, null, Map.of("oas3-only", rule), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
+        Document doc = Document.fromString("info:\n  name: \"\"\n", "yaml");
+
+        List<Diagnostic> results = validator.validate(doc);
+        assertTrue(results.isEmpty());
+    }
+
+    // --- ruleset-level `formats:` gate for rules with no formats of their own ---
+
+    @Test
+    void validateShouldSkipUnscopedRuleWhenDocumentDoesNotMatchRulesetLevelFormats() {
+        // A rule with no formats of its own (e.g. info-contact in polychro:openapi) must NOT
+        // fire against a plain YAML/JSON document that happens to contain "info" — the
+        // ruleset-level `formats:` restriction gates it, mirroring Spectral's top-level
+        // spectral:oas formats restriction.
+        Rule rule = new Rule("info-name-truthy", "Name required", null, "warn", true,
+                null, null, List.of("$.info.name"),
+                List.of(new RuleAction(null, "truthy", Map.of())));
+        Ruleset ruleset = new Ruleset(null, null, null, List.of("oas3"), null,
+                Map.of("info-name-truthy", rule), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
+        Document doc = Document.fromString("info:\n  name: \"\"\n", "yaml");
+
+        List<Diagnostic> results = validator.validate(doc);
+        assertTrue(results.isEmpty(),
+                () -> "Unscoped rule must be gated by the ruleset-level formats, got: " + results);
+    }
+
+    @Test
+    void validateShouldRunUnscopedRuleWhenDocumentMatchesRulesetLevelFormats() {
+        Rule rule = new Rule("info-name-truthy", "Name required", null, "warn", true,
+                null, null, List.of("$.info.name"),
+                List.of(new RuleAction(null, "truthy", Map.of())));
+        Ruleset ruleset = new Ruleset(null, null, null, List.of("oas3"), null,
+                Map.of("info-name-truthy", rule), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
+        Document doc = Document.fromString("openapi: 3.0.2\ninfo:\n  name: \"\"\n", "yaml");
+
+        List<Diagnostic> results = validator.validate(doc);
+        assertEquals(1, results.size(),
+                () -> "Unscoped rule must fire once the document matches the ruleset-level "
+                        + "formats, got: " + results);
+    }
+
+    @Test
+    void validateShouldPreferRuleLevelFormatsOverRulesetLevelFormats() {
+        // A rule that declares its own formats overrides the ruleset-level restriction entirely —
+        // here the ruleset restricts to oas3, but the rule restricts to oas2, and an oas2
+        // document must still fire it.
+        Rule rule = new Rule("oas2-only", "OAS2 only", null, "warn", true,
+                List.of("oas2"), null, List.of("$.info.name"),
+                List.of(new RuleAction(null, "truthy", Map.of())));
+        Ruleset ruleset = new Ruleset(null, null, null, List.of("oas3"), null,
+                Map.of("oas2-only", rule), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
+        Document doc = Document.fromString("swagger: \"2.0\"\ninfo:\n  name: \"\"\n", "yaml");
+
+        List<Diagnostic> results = validator.validate(doc);
+        assertEquals(1, results.size(),
+                () -> "A rule's own formats must override the ruleset-level restriction, got: "
+                        + results);
+    }
+
+    @Test
+    void validateShouldRunUnscopedRuleWhenRulesetHasNoFormatsRestriction() {
+        // No ruleset-level formats and no rule-level formats — applies to every document, same
+        // as before this gate was introduced.
+        Rule rule = new Rule("any-format", "Any format", null, "warn", true,
+                null, null, List.of("$.info.name"),
+                List.of(new RuleAction(null, "truthy", Map.of())));
+        Ruleset ruleset = new Ruleset(null, null, null, null, null,
+                Map.of("any-format", rule), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
+        Document doc = Document.fromString("info:\n  name: \"\"\n", "yaml");
+
+        List<Diagnostic> results = validator.validate(doc);
+        assertEquals(1, results.size());
+    }
+
+    @Test
+    void validateShouldSkipUnscopedRuleWhenRulesetLevelFormatsIsExplicitlyEmpty() {
+        // An explicit, non-null empty ruleset-level `formats: []` is a deliberate "match no
+        // document" restriction — distinct from an omitted `formats:` (null), which leaves
+        // unscoped rules format-agnostic. Before this fix, Ruleset's constructor collapsed
+        // both null and [] to List.of(), so this explicit deny-all list was indistinguishable
+        // from "no restriction" and unscoped rules ran against every document regardless.
+        Rule rule = new Rule("info-name-truthy", "Name required", null, "warn", true,
+                null, null, List.of("$.info.name"),
+                List.of(new RuleAction(null, "truthy", Map.of())));
+        Ruleset ruleset = new Ruleset(null, null, null, List.of(), null,
+                Map.of("info-name-truthy", rule), null);
+        RulesetValidator validator = new RulesetValidator(ruleset, false);
+        Document doc = Document.fromString("info:\n  name: \"\"\n", "yaml");
+
+        List<Diagnostic> results = validator.validate(doc);
+        assertTrue(results.isEmpty(),
+                () -> "An explicitly empty ruleset-level formats must match no document, got: "
+                        + results);
     }
 }

@@ -1,0 +1,29 @@
+[ {
+  "ruleId" : "info-contact",
+  "path" : "info",
+  "severity" : "warn"
+}, {
+  "ruleId" : "info-description",
+  "path" : "info",
+  "severity" : "warn"
+}, {
+  "ruleId" : "info-license",
+  "path" : "info",
+  "severity" : "warn"
+}, {
+  "ruleId" : "license-url",
+  "path" : "info",
+  "severity" : "warn"
+}, {
+  "ruleId" : "oas3-api-servers",
+  "path" : "",
+  "severity" : "warn"
+}, {
+  "ruleId" : "openapi-paths-kebab-case",
+  "path" : "paths./Pets",
+  "severity" : "warn"
+}, {
+  "ruleId" : "openapi-tags-alphabetical",
+  "path" : "tags",
+  "severity" : "warn"
+} ]

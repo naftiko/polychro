@@ -1,0 +1,16 @@
+# Parent ruleset restricted to oas3, with a rule that declares its own (different) formats
+extends: []
+
+formats:
+  - oas3
+
+rules:
+  parent-scoped-rule:
+    message: "Scoped rule"
+    severity: warn
+    recommended: true
+    formats:
+      - oas2
+    given: "$.info.name"
+    then:
+      function: truthy
