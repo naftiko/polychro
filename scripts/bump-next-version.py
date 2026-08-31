@@ -17,6 +17,14 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent))
+from polychro_version import (
+    read_pom_revision,
+    write_pom_revision,
+    read_ikanos_dependency_version,
+    write_ikanos_dependency_version,
+)
+
 VERSION_PATTERN = re.compile(r"^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$")
 
 
@@ -45,54 +53,23 @@ def validate_version_format(version, label):
 def update_pom_revision(pom_path, new_revision):
     """Updates the <revision> element in pom.xml to new_revision (already
     carrying the -SNAPSHOT suffix)."""
-    pom_path = Path(pom_path)
-    content = pom_path.read_text(encoding="utf-8")
-
-    pattern = re.compile(r"(<revision>)[^<]*(</revision>)")
-
-    if not pattern.search(content):
-        print(f"[error] <revision> element not found in {pom_path}", file=sys.stderr)
-        sys.exit(1)
-
-    updated_content = pattern.sub(rf"\g<1>{new_revision}\g<2>", content, count=1)
-
-    if updated_content == content:
+    if read_pom_revision(pom_path) == new_revision:
         print(f"[ok] {pom_path} already at revision {new_revision}", file=sys.stderr)
         return False
 
-    pom_path.write_text(updated_content, encoding="utf-8")
+    write_pom_revision(pom_path, new_revision)
     print(f"[ok] {pom_path}: revision -> {new_revision}", file=sys.stderr)
     return True
 
 
 def update_ikanos_dependency_version(pom_path, artifact_id, new_revision):
     """Updates the <version> of the io.ikanos:<artifact_id> <dependency> block
-    in pom_path to new_revision. Anchored on the <groupId>io.ikanos</groupId>
-    followed by the exact <artifactId>, not on the old version string, so it
-    works regardless of what version is currently declared."""
-    pom_path = Path(pom_path)
-    content = pom_path.read_text(encoding="utf-8")
-
-    pattern = re.compile(
-        r"(<groupId>io\.ikanos</groupId>\s*<artifactId>"
-        + re.escape(artifact_id)
-        + r"</artifactId>\s*<version>)[^<]*(</version>)"
-    )
-
-    if not pattern.search(content):
-        print(
-            f"[error] io.ikanos:{artifact_id} dependency not found in {pom_path}",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    updated_content = pattern.sub(rf"\g<1>{new_revision}\g<2>", content, count=1)
-
-    if updated_content == content:
+    in pom_path to new_revision."""
+    if read_ikanos_dependency_version(pom_path, artifact_id) == new_revision:
         print(f"[ok] {pom_path}: io.ikanos:{artifact_id} already at {new_revision}", file=sys.stderr)
         return False
 
-    pom_path.write_text(updated_content, encoding="utf-8")
+    write_ikanos_dependency_version(pom_path, artifact_id, new_revision)
     print(f"[ok] {pom_path}: io.ikanos:{artifact_id} -> {new_revision}", file=sys.stderr)
     return True
 
