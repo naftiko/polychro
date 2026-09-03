@@ -217,6 +217,17 @@ flagging, non-blocking form findings, LLM-assistance disclosure, and a welcoming
 
 ---
 
+## Release Notes Drafting Skill
+
+When asked to draft or write release notes for a tag (this repo or `naftiko/fleet`, which
+also covers `warden`/`skipper`/`crafter`), load and follow the `release-notes-drafting`
+skill via the **`agents-shared`** capability — see
+`.github/instructions/agents-shared.instructions.md` for the discovery and sync procedure.
+It resolves the previous tag, the boat codename, and every fact from the real commit range
+itself — it does not need the previous release link or the boat name supplied manually.
+
+---
+
 ## Contribution Workflow
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow. Key rules:
