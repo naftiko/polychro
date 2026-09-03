@@ -73,7 +73,7 @@
         <slf4j.version>2.0.17</slf4j.version>
         <picocli.version>4.7.6</picocli.version>
         <graalvm.polyglot.version>24.2.1</graalvm.polyglot.version>
-        <jsoup.version>1.18.3</jsoup.version>
+        <jsoup.version>1.23.1</jsoup.version>
         <bouncycastle.version>1.84</bouncycastle.version>
         <jetty.version>12.0.33</jetty.version>
         <json-smart.version>2.5.2</json-smart.version>
