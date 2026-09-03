@@ -1,23 +1,22 @@
 # Track 1 — YAML / OpenAPI — Known limitations (release)
 
-This track is **scaffolded, domain-aligned** (maritime), and its expected output is now
-**verified against the `beta1` engine** (see §1). This file records what is
-known-incomplete — including two real divergences between the engine and the tutorial
-narrative — so the gaps can be closed in a later iteration and a reader is not misled.
-Nothing below is fixed in this pass; the point is an honest inventory.
+This track is **scaffolded, domain-aligned** (maritime), and its expected output is
+**verified against the `beta5` engine** (see §1). This file records what is
+known-incomplete — including the one remaining divergence between the engine and the
+tutorial narrative — so the gaps can be closed in a later iteration and a reader is not
+misled. The point is an honest inventory.
 
-## 1. Expected output — now VERIFIED against beta1
+## 1. Expected output — VERIFIED against beta5
 
 The diagnostics (`code`, `severity`, `message`, exit code) in
-[`EXPECTED-OUTPUT.md`](./EXPECTED-OUTPUT.md) were **verified on 2026-06-26** by running a
-freshly built `polychro 1.0.0-beta1-SNAPSHOT` CLI over each example from this directory.
-The table now records the **real** engine output, not a reading of the source. Two steps
-diverge from the intended narrative; both are captured as known limitations §5 and §6
-below — they are **documented, not fixed**, in this pass.
+[`EXPECTED-OUTPUT.md`](./EXPECTED-OUTPUT.md) were originally **verified on 2026-06-26**
+against a freshly built `polychro 1.0.0-beta1-SNAPSHOT` CLI, and **re-verified on
+2026-09-03** against `polychro 1.0.0-beta5`. The table records the **real** engine output,
+not a reading of the source. One step still diverges from the intended narrative (§5);
+the Step 4 schema wiring that used to diverge is now **resolved** (§6).
 
 The earlier UNVERIFIED hypotheses that held (single-fire rules, message-override,
-polyglot path resolution, exit-code mapping) were all confirmed; the two that did not
-hold became §5 and §6.
+polyglot path resolution, exit-code mapping) were all confirmed.
 
 ## 2. No CI harness yet
 
@@ -67,22 +66,24 @@ own issue, a unit test in `WellformednessValidatorTest`, and 100% coverage; it i
 done here. Until then, the tutorial narrative must mention the warning rather than promise
 a clean Step 1/7.
 
-## 6. Step 4 `config.json-schema` block is not consumed
+## 6. ~~Step 4 `config.json-schema` block is not consumed~~ — RESOLVED in `1.0.0-beta5`
 
-Step 4 is meant to run the JSON-Schema stage via `--config .polychro.yml` (which carries a
-`config.json-schema.schemaPath: openapi-schema.json` block) and surface a `type` ERROR at
-`$.info.version`. Instead the CLI exits `2` with:
+**Status: resolved.** Re-verified on 2026-09-03 against `polychro 1.0.0-beta5`:
 
 ```
-Error: JsonStructureValidatorFactory requires 'schemaNode', 'schemaPath', or an explicit 'mode' in config
+$ polychro lint --config .polychro.yml step-4-openapi.yml
+ERROR at $.info.version [type]: $.info.version: number found, string expected
+WARN [non-string-key]: Non-string YAML key: 200
+
+2 issue(s) found.   # exit 2
 ```
 
-So the schema-model stage is **mis-wired**: the `.polychro.yml` config shape does not match
-what the active factory (`JsonStructureValidatorFactory`) expects, and the intended
-JSON-Schema validation never runs. The `1.0`-parses-as-float defect is therefore **not**
-exercised at all.
+Step 4 now runs the JSON-Schema stage via `--config .polychro.yml` (which carries a
+`config.json-schema.schemaPath: openapi-schema.json` block) and surfaces the `type` ERROR
+at `$.info.version` — the `1.0`-parses-as-float defect is exercised exactly as the
+narrative intends, so no fixture change is needed.
 
-**To close (out of scope for this pass):** reconcile the `.polychro.yml` `config` shape with
-the validator factory's expected keys (`schemaNode` / `schemaPath` / `mode`), confirm whether
-Step 4 should target `json-schema` or `json-structure`, and verify the resulting diagnostic.
-Documented here, **not fixed**.
+**Historical record (what this section used to describe).** The CLI previously exited `2`
+with `Error: JsonStructureValidatorFactory requires 'schemaNode', 'schemaPath', or an
+explicit 'mode' in config`: the `.polychro.yml` config shape did not match what the active
+factory expected, and the intended JSON-Schema validation never ran.
