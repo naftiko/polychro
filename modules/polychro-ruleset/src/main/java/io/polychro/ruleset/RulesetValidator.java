@@ -108,17 +108,62 @@ class RulesetValidator implements Validator {
         return diagnostics;
     }
 
+    /**
+     * Determines whether {@code rule} applies to {@code doc}, matching against both the
+     * document's syntax-level format ({@link Document#format()}, e.g. {@code yaml}/{@code json})
+     * and, when present, its spec-level formats ({@code oas2}/{@code oas3}/{@code aas2}/
+     * {@code aas3}) detected by {@link io.polychro.spi.SpecFormats} and carried under
+     * {@link Document#SPEC_FORMATS_METADATA_KEY} — so a rule scoped with {@code formats: [oas3]}
+     * matches an OpenAPI v3 document exactly as it would in Spectral (issue #83).
+     *
+     * <p>A ruleset-level {@code formats:} restriction ({@link Ruleset#formats()}) is enforced
+     * first and applies to every rule in the ruleset that does not declare its own {@code
+     * formats}, mirroring Spectral's top-level ruleset {@code formats} gate — this is how a
+     * ruleset such as {@code polychro:openapi} restricts its unscoped shared rules (e.g.
+     * {@code info-contact}) to OAS2/OAS3 documents without repeating {@code formats:} on every
+     * rule.
+     *
+     * <p>An omitted rule-level {@code formats} ({@code rule.formats() == null}) is distinct from
+     * an explicit {@code formats: []}: the former inherits the ruleset's own {@code formats}
+     * (or matches everything when the ruleset has none), while the latter is a deliberate,
+     * non-null empty set that matches <strong>no</strong> document — mirroring Spectral, which
+     * preserves this distinction rather than treating an empty array as "inherit".
+     *
+     * <p>The same null-vs-empty distinction applies one level up, to the ruleset's own
+     * {@link Ruleset#formats()}: an omitted top-level {@code formats:} ({@code null}) leaves
+     * every unscoped rule format-agnostic (matches every document), while an explicit
+     * {@code formats: []} restricts every unscoped rule to match <strong>no</strong> document —
+     * collapsing both to an empty list would silently run rules that Spectral disables.
+     */
     private boolean matchesFormat(Rule rule, Document doc) {
-        if (rule.formats() == null || rule.formats().isEmpty()) {
-            return true;
+        List<String> effectiveFormats;
+        if (rule.formats() == null) {
+            if (ruleset.formats() == null) {
+                return true;
+            }
+            effectiveFormats = ruleset.formats();
+        } else if (rule.formats().isEmpty()) {
+            return false;
+        } else {
+            effectiveFormats = rule.formats();
         }
-        if (doc.format() == null) {
+
+        if (effectiveFormats.isEmpty()) {
             return false;
         }
 
-        String documentFormat = Formats.normalize(doc.format());
-        return rule.formats().stream()
-                .map(Formats::normalize)
-                .anyMatch(documentFormat::equals);
+        List<String> normalizedFormats = effectiveFormats.stream().map(Formats::normalize).toList();
+
+        if (doc.format() != null && normalizedFormats.contains(Formats.normalize(doc.format()))) {
+            return true;
+        }
+
+        return specFormats(doc).stream().anyMatch(normalizedFormats::contains);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> specFormats(Document doc) {
+        Object specFormats = doc.metadata().get(Document.SPEC_FORMATS_METADATA_KEY);
+        return specFormats instanceof List<?> list ? (List<String>) list : List.of();
     }
 }

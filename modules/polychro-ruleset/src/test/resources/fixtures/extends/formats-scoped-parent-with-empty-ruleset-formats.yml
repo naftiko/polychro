@@ -1,0 +1,17 @@
+# Parent ruleset with an explicit, non-null empty top-level `formats: []` — a deliberate
+# deny-all restriction, distinct from omitting `formats:` entirely (null, format-agnostic).
+# Exercises the null-vs-empty branch of RulesetComposer.withInheritedFormats and
+# RulesetValidator.matchesFormat when the RULESET-level (not rule-level) formats are the
+# explicit empty list.
+extends: []
+
+formats: []
+
+rules:
+  parent-empty-ruleset-formats-rule:
+    message: "Empty ruleset formats rule"
+    severity: warn
+    recommended: true
+    given: "$.info.name"
+    then:
+      function: truthy

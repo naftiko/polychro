@@ -1,0 +1,18 @@
+swagger: "2.0"
+info:
+  title: Test API
+  version: "1.0"
+  description: A well documented API for testing.
+  contact:
+    name: Team
+    email: team@example.com
+host: api.example.com
+schemes:
+  - https
+paths:
+  /pets:
+    get:
+      summary: list
+      responses:
+        "200":
+          description: ok

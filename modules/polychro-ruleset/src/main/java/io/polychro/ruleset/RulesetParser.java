@@ -137,7 +137,10 @@ public class RulesetParser {
         List<String> extendsRefs = parseExtends(root.get("extends"));
         Map<String, String> aliases = parseAliases(root.get("aliases"));
         List<RulesetOverride> overrides = parseOverrides(root.get("overrides"));
-        List<String> formats = parseStringList(root.get("formats"));
+        // An omitted `formats:` key (null) is distinct from an explicit `formats: []` — mirrors
+        // rule-level formats parsing (parseRule) and preserves Ruleset.formats()'s null-vs-empty
+        // contract (see Ruleset's Javadoc and RulesetValidator.matchesFormat).
+        List<String> formats = root.has("formats") ? parseStringList(root.get("formats")) : null;
         List<Function> functions = parseFunctions(root, functionsBasePath, parseMode);
         String documentationUrl = textOrNull(root.get("documentationUrl"));
         Map<String, Rule> rules = parseRules(root.get("rules"));

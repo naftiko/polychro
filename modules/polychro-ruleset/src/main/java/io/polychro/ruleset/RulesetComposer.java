@@ -91,8 +91,15 @@ class RulesetComposer {
             Path parentDir = resolveParentDir(ref, baseDir);
             Ruleset composedParent = compose(parent, parentDir, newVisited);
 
-            // Merge parent rules (earlier parents have lower priority)
-            mergedRules.putAll(composedParent.rules());
+            // Merge parent rules (earlier parents have lower priority). Rules that don't declare
+            // their own `formats` are implicitly gated by the parent ruleset's top-level `formats`
+            // (RulesetValidator.matchesFormat's fallback) — but once flattened into mergedRules,
+            // that ownership is lost: the final composed ruleset below carries only the CHILD's
+            // own `formats()`, so if the child has none, an inherited unscoped rule would run
+            // against every document instead of staying gated by the parent it came from. Stamp
+            // the parent's effective top-level formats onto its own unscoped rules before merging
+            // so the gate survives composition, mirroring Spectral's inherited-ruleset formats.
+            mergedRules.putAll(withInheritedFormats(composedParent.rules(), composedParent.formats()));
         }
 
         // Child rules override parent rules by name
@@ -133,5 +140,38 @@ class RulesetComposer {
 
     private String normalizeRef(String ref, Path baseDir) {
         return baseDir.resolve(ref).normalize().toString();
+    }
+
+    /**
+     * Stamps {@code parentFormats} onto every rule in {@code rules} that omits its own
+     * {@code formats} (null), so the parent ruleset's top-level format gate survives being
+     * flattened into the composed ruleset's rule map.
+     *
+     * <p>{@code parentFormats} itself distinguishes an omitted parent-level {@code formats:}
+     * ({@code null} — the parent is format-agnostic, so its unscoped rules need no stamping and
+     * keep matching every document) from an explicit {@code formats: []} (a deliberate
+     * deny-all that must still be stamped, otherwise the composed ruleset's own top-level
+     * {@code formats} — which may be {@code null} or a different restriction — would silently
+     * let the inherited rule match again).
+     */
+    private Map<String, Rule> withInheritedFormats(Map<String, Rule> rules, List<String> parentFormats) {
+        if (parentFormats == null) {
+            return rules;
+        }
+        Map<String, Rule> result = new LinkedHashMap<>();
+        for (Map.Entry<String, Rule> entry : rules.entrySet()) {
+            Rule rule = entry.getValue();
+            // Only an OMITTED rule-level `formats` (null) inherits the parent ruleset's formats.
+            // An explicit `formats: []` is a deliberate, non-null empty set that must keep
+            // matching no document — mirroring Spectral, which preserves this distinction
+            // instead of treating an empty array the same as "not declared".
+            if (rule.formats() == null) {
+                rule = new Rule(rule.name(), rule.message(), rule.description(), rule.severity(),
+                        rule.recommended(), parentFormats, rule.documentationUrl(), rule.given(),
+                        rule.then());
+            }
+            result.put(entry.getKey(), rule);
+        }
+        return result;
     }
 }

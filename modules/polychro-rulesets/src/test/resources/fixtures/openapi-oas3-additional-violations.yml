@@ -1,0 +1,17 @@
+openapi: 3.0.2
+info:
+  title: Test API
+  version: "1.0"
+  description: "Do not eval(this) or run <script>alert(1)</script> in the docs."
+  license:
+    name: MIT
+tags: []
+servers:
+  - url: https://api.example.com/
+paths:
+  /pets:
+    get:
+      summary: list
+      responses:
+        "200":
+          description: ok

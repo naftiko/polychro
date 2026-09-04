@@ -1,0 +1,30 @@
+openapi: 3.0.2
+info:
+  title: Test API
+  version: "1.0"
+  description: A well documented API for testing.
+  contact:
+    name: Team
+    email: team@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+tags:
+  - name: Aardvark
+  - name: Badger
+servers:
+  - url: https://api.example.com
+paths:
+  x-internal-note: "not a real path — a specification-extension key on the Paths Object"
+  /pets:
+    get:
+      summary: list
+      responses:
+        "200":
+          description: ok
+  /pets/{id}:
+    get:
+      summary: get
+      responses:
+        "200":
+          description: ok

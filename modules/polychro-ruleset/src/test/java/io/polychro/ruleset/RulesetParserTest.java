@@ -69,6 +69,31 @@ class RulesetParserTest {
     }
 
     @Test
+    void parseShouldPreserveOmittedTopLevelFormatsAsNull() {
+        // Mirrors rule-level formats parsing: an omitted top-level `formats:` key must stay
+        // null (format-agnostic) rather than normalize to an empty list, which
+        // RulesetValidator.matchesFormat would otherwise treat as an explicit "match nothing"
+        // restriction on every unscoped rule.
+        String yaml = """
+                rules: {}
+                """;
+
+        Ruleset ruleset = parser.parse(yaml);
+        assertNull(ruleset.formats());
+    }
+
+    @Test
+    void parseShouldPreserveExplicitlyEmptyTopLevelFormatsAsEmptyList() {
+        String yaml = """
+                formats: []
+                rules: {}
+                """;
+
+        Ruleset ruleset = parser.parse(yaml);
+        assertEquals(List.of(), ruleset.formats());
+    }
+
+    @Test
     void parseShouldHandleMissingExtends() {
         String yaml = """
                 rules:
