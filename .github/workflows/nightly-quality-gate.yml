@@ -277,15 +277,47 @@ jobs:
           path: sonar-report/
           retention-days: 14
 
-      - name: Run Trivy scan
+      - name: Generate SBOM (CycloneDX)
+        # Scans the SBOM (dependencies already resolved into ~/.m2 by the
+        # "Run tests + JaCoCo coverage" step above) instead of raw pom.xml files.
+        # Avoids Trivy's static pom.xml parser, which for a *released* (non-SNAPSHOT)
+        # parent POM falls back to a live Maven Central lookup and can hit a 429
+        # rate-limit (naftiko/polychro#154). Mirrors the approach already used in
+        # publish-maven.yml.
+        run: mvn -B org.cyclonedx:cyclonedx-maven-plugin:2.9.2:makeAggregateBom -DoutputFormat=json -DoutputName=bom
+        env:
+          MAVEN_USERNAME: ${{ github.actor }}
+          MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Trivy scan (dependency vulnerabilities via SBOM)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'sbom'
+          scan-ref: 'target/bom.json'
+          format: 'json'
+          output: 'trivy-vuln-report.json'
+          exit-code: '0'
+
+      - name: Run Trivy scan (misconfigurations)
+        # Filesystem scan restricted to 'misconfig' only — no pom.xml dependency
+        # resolution involved here, so no Maven Central network calls.
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
           scan-ref: '.'
-          scanners: 'vuln,misconfig'
+          scanners: 'misconfig'
           format: 'json'
-          output: 'trivy-report.json'
+          output: 'trivy-misconfig-report.json'
           exit-code: '0'
+
+      - name: Merge Trivy reports
+        if: always()
+        run: |
+          VULN_FILE="trivy-vuln-report.json"
+          MISCONFIG_FILE="trivy-misconfig-report.json"
+          [ -f "$VULN_FILE" ] || echo '{"Results":[]}' > "$VULN_FILE"
+          [ -f "$MISCONFIG_FILE" ] || echo '{"Results":[]}' > "$MISCONFIG_FILE"
+          jq -s '{Results: ([.[].Results // []] | add)}' "$VULN_FILE" "$MISCONFIG_FILE" > trivy-report.json
 
       - name: Publish Trivy summary
         id: trivy-summary
