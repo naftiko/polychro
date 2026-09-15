@@ -173,7 +173,7 @@ reflection. Reserve `private` for truly internal helpers trivially covered by pu
 **Coverage** — JaCoCo 100% line + branch coverage is enforced per module. Every new code path
 must be tested.
 
-Never modify CI/CD workflows (`.github/workflows/`), security configs, or branch protection rules.
+Never modify CI/CD workflows (`.github/workflows/`), security configs, or branch protection rules to bypass, weaken, or route around an existing safeguard; editing them as a legitimate, necessary part of the current task is allowed — judge by intent, not topic. Full rule: `agents-shared/context/agent-universal.md` (golden-repo-naftiko), "CI/CD and safeguard files — intent, not topic" — not restated here.
 
 **Guidelines coherence** — after modifying any guidelines file (`AGENTS.md`, `CONTRIBUTING.md`,
 `.github/copilot-instructions.md`, or any skill `SKILL.md`), re-read the file in full before
