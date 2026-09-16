@@ -217,6 +217,51 @@ class CliIntegrationTest {
         return dest;
     }
 
+    // ── Regression/coverage test for issue #84 ──────────────────────────────
+
+    @Test
+    void lintWithRulesetExtendingSpectralOasShouldResolveBundledRuleset() throws Exception {
+        // naftiko/polychro#84: a user-authored ruleset that extends the bundled spectral:oas
+        // equivalent must resolve end-to-end through the CLI, exactly the way it would in the
+        // packaged/native binary — the bundled ruleset is loaded via the classpath resource
+        // "rulesets/openapi.yml", the same resource path declared in
+        // META-INF/native-image/io.polychro/polychro-cli/resource-config.json
+        // ("rulesets/.*\\.yml"), so this test doubles as a functional guard that the existing
+        // glob pattern is sufficient — no new native-image resource-config entry is needed for
+        // bundled `extends` refs.
+        Path ruleset = createFile("extends-spectral-oas.yml", """
+                extends: "spectral:oas"
+                rules: {}
+                """);
+        Path file = createFile("bad-openapi.yml", "openapi: 3.0.2\ninfo: {}\n");
+
+        ExecutionResult result = run("lint", "--ruleset", ruleset.toString(), file.toString());
+
+        assertEquals(1, result.exitCode(), () ->
+                "Expected exit code 1 (warnings only) but got " + result.exitCode()
+                        + ". stdout=" + result.stdout() + " stderr=" + result.stderr());
+        assertTrue(result.stdout().contains("info-contact"),
+                () -> "Expected info-contact diagnostic from the bundled openapi ruleset: "
+                        + result.stdout());
+    }
+
+    @Test
+    void lintWithRulesetExtendingUnknownSpectralBundleShouldFailClearly() throws Exception {
+        Path ruleset = createFile("extends-unknown.yml", """
+                extends: "spectral:asyncapi"
+                rules: {}
+                """);
+        Path file = createFile("test.yml", "name: test\n");
+
+        ExecutionResult result = run("lint", "--ruleset", ruleset.toString(), file.toString());
+
+        assertEquals(2, result.exitCode(), () ->
+                "Expected exit code 2 (error) but got " + result.exitCode()
+                        + ". stdout=" + result.stdout() + " stderr=" + result.stderr());
+        assertTrue(result.stderr().contains("spectral:oas"),
+                () -> "Expected error naming known bundles: " + result.stderr());
+    }
+
     private ExecutionResult run(String... args) {
         StringWriter stdout = new StringWriter();
         StringWriter stderr = new StringWriter();

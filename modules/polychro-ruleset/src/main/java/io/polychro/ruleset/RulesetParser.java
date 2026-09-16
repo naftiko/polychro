@@ -134,7 +134,9 @@ public class RulesetParser {
             throw new RulesetParseException("Ruleset must be a YAML object");
         }
 
-        List<String> extendsRefs = parseExtends(root.get("extends"));
+        JsonNode extendsNode = root.get("extends");
+        List<String> extendsRefs = parseExtends(extendsNode);
+        Map<String, String> extendsSeverities = parseExtendsSeverities(extendsNode);
         Map<String, String> aliases = parseAliases(root.get("aliases"));
         List<RulesetOverride> overrides = parseOverrides(root.get("overrides"));
         // An omitted `formats:` key (null) is distinct from an explicit `formats: []` — mirrors
@@ -146,7 +148,7 @@ public class RulesetParser {
         Map<String, Rule> rules = parseRules(root.get("rules"));
 
         return new Ruleset(extendsRefs, aliases, overrides, formats,
-                functions, rules, documentationUrl);
+                functions, rules, documentationUrl, extendsSeverities);
     }
 
     private List<Function> parseFunctions(JsonNode root, String functionsBasePath, RulesetSource parseMode) {
@@ -222,6 +224,28 @@ public class RulesetParser {
             return result;
         }
         return List.of();
+    }
+
+    /**
+     * Extracts the severity marker from every {@code extends} entry written in the tuple form
+     * ({@code ["ref", "off"|"recommended"|"all"]}, naftiko/polychro#84), keyed by the literal ref
+     * string. A bare-string entry (no tuple) carries no explicit severity and is absent from the
+     * result — mirroring Spectral, where only an explicit marker touches the extended rules'
+     * enablement (see {@code RulesetComposer}, which applies {@code off}/{@code recommended}/
+     * {@code all}; any other second element is preserved here but has no special effect, the same
+     * way an unrecognized marker would leave the inherited rules unchanged).
+     */
+    private Map<String, String> parseExtendsSeverities(JsonNode node) {
+        if (node == null || !node.isArray()) {
+            return Map.of();
+        }
+        Map<String, String> severities = new LinkedHashMap<>();
+        for (JsonNode item : node) {
+            if (item.isArray() && item.size() == 2 && item.get(0).isTextual() && item.get(1).isTextual()) {
+                severities.put(item.get(0).asText(), item.get(1).asText());
+            }
+        }
+        return severities;
     }
 
     private Map<String, String> parseAliases(JsonNode node) {

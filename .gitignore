@@ -27,3 +27,6 @@ __pycache__/
 
 # Synced agent skills (fetched on demand from the agents-shared capability — never commit)
 .agents/skills/
+
+# Agent scratch directory (diffs, divergence drafts, temp payloads) — wiped per run, never committed.
+.work/

@@ -310,6 +310,68 @@ class RulesetParserTest {
     }
 
     @Test
+    void parseShouldCaptureExtendsSeverityFromTupleForm() {
+        // naftiko/polychro#84 — the severity marker (off/recommended/all) is no longer discarded.
+        String yaml = """
+                extends:
+                  - ["spectral:oas", "off"]
+                  - ["spectral:asyncapi", "recommended"]
+                  - "plain-ref"
+                rules: {}
+                """;
+
+        Ruleset ruleset = parser.parse(yaml);
+        assertEquals("off", ruleset.extendsSeverities().get("spectral:oas"));
+        assertEquals("recommended", ruleset.extendsSeverities().get("spectral:asyncapi"));
+        assertFalse(ruleset.extendsSeverities().containsKey("plain-ref"));
+    }
+
+    @Test
+    void parseShouldCaptureExtendsSeverityAll() {
+        String yaml = """
+                extends:
+                  - ["spectral:oas", "all"]
+                rules: {}
+                """;
+
+        Ruleset ruleset = parser.parse(yaml);
+        assertEquals("all", ruleset.extendsSeverities().get("spectral:oas"));
+    }
+
+    @Test
+    void parseShouldHandleBareStringExtendsWithNoSeverity() {
+        String yaml = """
+                extends: "spectral:oas"
+                rules: {}
+                """;
+
+        Ruleset ruleset = parser.parse(yaml);
+        assertTrue(ruleset.extendsSeverities().isEmpty());
+    }
+
+    @Test
+    void parseShouldIgnoreMalformedExtendsTuples() {
+        // Covers the defensive branches of parseExtendsSeverities: a tuple with the wrong arity,
+        // a tuple whose first element isn't a string ref, and a tuple whose second element isn't
+        // a string severity marker, must all be ignored rather than throwing — extendsRefs()
+        // (parsed separately by parseExtends) still records "wrong-arity" as a plain ref either
+        // way, this test only asserts extendsSeverities().
+        String yaml = """
+                extends:
+                  - ["only-one-element"]
+                  - [42, "off"]
+                  - ["spectral:oas", 42]
+                  - ["spectral:asyncapi", "off"]
+                rules: {}
+                """;
+
+        Ruleset ruleset = parser.parse(yaml);
+        assertFalse(ruleset.extendsSeverities().containsKey("only-one-element"));
+        assertFalse(ruleset.extendsSeverities().containsKey("spectral:oas"));
+        assertEquals("off", ruleset.extendsSeverities().get("spectral:asyncapi"));
+    }
+
+    @Test
     void parseShouldHandleComplexAliasFormat() {
         String yaml = """
                 aliases:

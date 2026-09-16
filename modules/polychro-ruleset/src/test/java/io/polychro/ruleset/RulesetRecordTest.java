@@ -69,6 +69,22 @@ class RulesetRecordTest {
     }
 
     @Test
+    void rulesetShouldHandleNullExtendsSeverities() {
+        // naftiko/polychro#84 — the 8-arg canonical constructor's own null-safety for the new
+        // extendsSeverities component; the 7-arg overload always passes Map.of() (non-null), so
+        // this is the only path that reaches the null branch of its ternary.
+        Ruleset ruleset = new Ruleset(List.of(), Map.of(), List.of(), List.of(), List.of(), Map.of(), null, null);
+        assertEquals(Map.of(), ruleset.extendsSeverities());
+    }
+
+    @Test
+    void rulesetShouldPreserveNonNullExtendsSeverities() {
+        Ruleset ruleset = new Ruleset(List.of(), Map.of(), List.of(), List.of(), List.of(), Map.of(), null,
+                Map.of("spectral:oas", "off"));
+        assertEquals(Map.of("spectral:oas", "off"), ruleset.extendsSeverities());
+    }
+
+    @Test
     void rulesetShouldPreserveNonNullValues() {
         Ruleset ruleset = new Ruleset(
                 List.of("a"), Map.of("k", "v"), List.of(), List.of("f"),
