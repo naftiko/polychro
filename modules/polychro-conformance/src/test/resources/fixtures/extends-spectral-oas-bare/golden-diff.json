@@ -1,0 +1,16 @@
+{
+  "onlyInSpectral" : [ {
+    "ruleId" : "operation-description",
+    "path" : "paths./pets.get",
+    "severity" : "warn"
+  }, {
+    "ruleId" : "operation-operationId",
+    "path" : "paths./pets.get",
+    "severity" : "warn"
+  }, {
+    "ruleId" : "operation-tags",
+    "path" : "paths./pets.get",
+    "severity" : "warn"
+  } ],
+  "onlyInPolychro" : [ ]
+}
