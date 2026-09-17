@@ -1,0 +1,52 @@
+# Test-only stub standing in for the real bundled polychro:openapi ruleset
+# (modules/polychro-rulesets/src/main/resources/rulesets/openapi.yml), which this module
+# (polychro-ruleset) cannot see on its test classpath: polychro-rulesets DEPENDS ON
+# polychro-ruleset, not the other way around, so the real resource is never reachable here.
+#
+# This fixture exercises the bundled-extends RESOLUTION MECHANISM in RulesetComposer
+# (naftiko/polychro#84) — that "spectral:oas"/"polychro:openapi" resolves to classpath
+# "/rulesets/openapi.yml" and that tuple-form severity remapping applies correctly. It is
+# deliberately NOT a copy of the real ruleset's rule set; end-to-end verification that
+# "spectral:oas" actually resolves to the REAL bundled openapi.yml belongs in a module that can
+# see both polychro-ruleset and polychro-rulesets (see RulesetCatalogBundledExtendsTest in
+# polychro-rulesets, and the conformance harness in polychro-conformance).
+formats:
+  - oas2
+  - oas3
+
+extends: []
+
+rules:
+  info-contact:
+    description: "Info object must have \"contact\" object."
+    recommended: true
+    given: "$"
+    then:
+      field: "info.contact"
+      function: truthy
+
+  info-license:
+    description: "Info object must have \"license\" object."
+    recommended: false
+    given: "$"
+    then:
+      field: "info.license"
+      function: truthy
+
+  openapi-paths-kebab-case:
+    description: "Path segments must be kebab-case."
+    recommended: true
+    given: "$.paths.*~"
+    then:
+      function: casing
+      functionOptions:
+        type: kebab
+
+  license-url:
+    description: "License object must include a \"url\"."
+    recommended: false
+    severity: "off"
+    given: "$"
+    then:
+      field: "info.license.url"
+      function: truthy

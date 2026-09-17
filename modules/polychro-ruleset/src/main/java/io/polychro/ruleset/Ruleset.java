@@ -34,6 +34,14 @@ import java.util.Map;
  * @param functions             list of the custom functions'
  * @param rules                 rule definitions keyed by rule name
  * @param documentationUrl      base URL for rule documentation
+ * @param extendsSeverities     ref → severity ({@code off}/{@code recommended}/{@code all}) for
+ *                              every {@code extends} entry written in the tuple form
+ *                              ({@code ["ref", "severity"]}, naftiko/polychro#84). A ref with no
+ *                              entry here was a bare string (or an unrecognized severity marker)
+ *                              and carries no explicit severity — mirrors Spectral, where only an
+ *                              explicit tuple marker touches the inherited rules' enablement.
+ *                              Keyed by the literal ref string (as it appears in
+ *                              {@link #extendsRefs()}), not by any resolved path.
  */
 public record Ruleset(
         List<String> extendsRefs,
@@ -42,7 +50,8 @@ public record Ruleset(
         List<String> formats,
         List<Function> functions,
         Map<String, Rule> rules,
-        String documentationUrl
+        String documentationUrl,
+        Map<String, String> extendsSeverities
 ) {
     public Ruleset {
         extendsRefs = extendsRefs != null ? List.copyOf(extendsRefs) : List.of();
@@ -51,5 +60,16 @@ public record Ruleset(
         formats = formats != null ? List.copyOf(formats) : null;
         functions = functions != null ? List.copyOf(functions) : List.of();
         rules = rules != null ? Map.copyOf(rules) : Map.of();
+        extendsSeverities = extendsSeverities != null ? Map.copyOf(extendsSeverities) : Map.of();
+    }
+
+    /**
+     * Backward-compatible constructor for callers built before {@code extendsSeverities}
+     * (naftiko/polychro#84) — equivalent to passing an empty severity map, i.e. every
+     * {@code extends} ref behaves as a bare reference with no explicit severity marker.
+     */
+    public Ruleset(List<String> extendsRefs, Map<String, String> aliases, List<RulesetOverride> overrides,
+            List<String> formats, List<Function> functions, Map<String, Rule> rules, String documentationUrl) {
+        this(extendsRefs, aliases, overrides, formats, functions, rules, documentationUrl, Map.of());
     }
 }
