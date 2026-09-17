@@ -1,6 +1,9 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-action.json
 name: 'Polychro Lint'
 description: 'Run Polychro linting on YAML/JSON specs with SARIF output for GitHub Code Scanning'
+# Requires GitHub Actions Runner 2.327.1 or newer. This composite action invokes
+# actions/cache@v6 and github/codeql-action/upload-sarif@v4, both of which run on
+# the Node24 runtime; older self-hosted runners will fail before Polychro runs.
 branding:
   icon: 'shield'
   color: 'purple'
