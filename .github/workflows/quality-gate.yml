@@ -154,7 +154,11 @@ jobs:
         working-directory: modules/polychro-python
         run: |
           pip install .
-          pip freeze | grep -v '^polychro' > requirements.txt
+          # grep -v exits 1 when it filters out every line (e.g. when there
+          # are currently no third-party dependencies at all) — under bash -e
+          # (GitHub Actions' default) that would fail this step even though
+          # an empty requirements.txt is a perfectly valid, expected outcome.
+          pip freeze | { grep -v '^polychro' || true; } > requirements.txt
 
       - name: Resolve Java dependencies
         # Populates the local .m2 repo so the SBOM reflects actual resolved
