@@ -22,6 +22,8 @@ __pycache__/
 /modules/polychro-python/.pytest_cache/
 /modules/polychro-python/dist/
 /modules/polychro-python/*.egg-info/
+# CI-generated frozen requirements (quality-gate.yml's security-scan job) — never committed.
+/modules/polychro-python/requirements.txt
 /modules/polychro-node/node_modules/
 /modules/polychro-node/dist/
 
