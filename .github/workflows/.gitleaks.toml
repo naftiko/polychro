@@ -26,9 +26,9 @@ paths = [
 [[allowlists]]
 description = "Repo convention: values explicitly marked as fake/dummy/placeholder are not real secrets"
 regexes = [
-  '''(?i)fake''',
-  '''(?i)dummy''',
-  '''(?i)placeholder''',
+  '''(?i)\bfake\b''',
+  '''(?i)\bdummy\b''',
+  '''(?i)\bplaceholder\b''',
 ]
 
 # security-violations.yml is a deliberately malicious fixture (SecurityRulesetTest)
