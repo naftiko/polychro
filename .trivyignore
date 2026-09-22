@@ -1,0 +1,11 @@
+# Trivy ignore list — accepted CVEs / findings for this repository.
+#
+# One entry per accepted finding. Each entry MUST be documented with the
+# reason it was accepted and a review date, using this exact format:
+#
+#   # CVE-XXXX-YYYYY  # accepted: <reason>, revisit on <date>
+#   CVE-XXXX-YYYYY
+#
+# Do not add an entry without a documented reason and a revisit date — an
+# undocumented suppression is indistinguishable from an oversight during
+# review. Remove the entry once the revisit date has passed and re-evaluate.
