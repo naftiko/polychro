@@ -10,6 +10,44 @@ results as SARIF, JSON, text, or LLM-native (agent) output.
 - **Language**: Java 21, Maven build system (multi-module)
 - **Shipyard**: https://shipyard.naftiko.io/docs/1.0.0-alpha3/polychro/ (Features, Architecture, CLI, Guides, Tutorial, FAQ)
 
+<!-- BEGIN agents-shared:always-on — mirrored from agents-shared/context/agent-universal.md.
+     Temporary: remove once that Context is served and verifiably loaded. Keep in sync. -->
+## Always-On Rules
+
+These apply to every task in this repository, regardless of topic. They mirror the universal
+guard-rails in `agents-shared/context/agent-universal.md` (golden-repo-naftiko) — the canonical,
+tightened wording lives there; this is a working copy so the rules are actually in context.
+
+- **Secrets — never expose one.** Never print, log, echo, or commit an API key, token, password,
+  or private key — not in output, a PR body, or a commit message. Never request a secret through
+  a chat tool; have the human type it into the terminal. A committed secret must be flagged for
+  rotation, not merely deleted (history retains it).
+- **Git hygiene — check before you edit.** Before the first edit of any task:
+  `git fetch origin --prune` + `git status -sb`. A branch behind `main`, or whose PR is already
+  merged, is cleaned up — not worked around.
+- **CI/CD and safeguards — judge by intent, not topic.** Never edit a workflow, security config,
+  or branch protection to bypass, weaken, or route around a safeguard. Editing them *is* allowed
+  when that is the legitimate point of the task. Ambiguous intent → ask first.
+- **Edits — never silently truncate.** Anchor-based edits fail silently: they delete between two
+  occurrences of a repeated anchor, or eat the file tail near the end of a file. Count the
+  anchor's occurrences first — it must be exactly 1; near the end of a file, splice by line range
+  instead. After every edit, check `git diff --stat` and confirm the terminal sections still
+  exist.
+- **Delegation — pass the finding, not the routing.** Hand a specialized agent the raw finding
+  and stop; naming the skill, repo, or tool it should use defeats the point of delegating.
+- **Reporting — hand over a pointer that opens.** Inviting someone to look at something requires
+  the pointer in that same message: a repo-relative path in backticks for a file (absolute paths
+  and `file://` URIs do not render), a full URL for an issue, PR, commit, or page.
+- **Investigation — scope before you scan.** Never grep or scan a whole filesystem, repo, or
+  branch set as a first move: name the plausible locations, or ask. A scan that times out is
+  mis-scoped, not slow.
+- **Working directory — inside the workspace, never outside it.** Scratch and working files
+  (diffs, findings, temp payloads, PR/commit bodies, downloaded tool binaries, CI artifacts) go
+  in this repo's git-ignored `.work/` — never `/tmp`, `$env:TEMP`, `%TEMP%`, or any path outside
+  the workspace. If unsure which directory a repo uses, check its `.gitignore` for an
+  already-declared scratch directory.
+<!-- END agents-shared:always-on -->
+
 ### Module map
 
 | Module | Role |
@@ -173,8 +211,6 @@ reflection. Reserve `private` for truly internal helpers trivially covered by pu
 **Coverage** — JaCoCo 100% line + branch coverage is enforced per module. Every new code path
 must be tested.
 
-Never modify CI/CD workflows (`.github/workflows/`), security configs, or branch protection rules to bypass, weaken, or route around an existing safeguard; editing them as a legitimate, necessary part of the current task is allowed — judge by intent, not topic. Full rule: `agents-shared/context/agent-universal.md` (golden-repo-naftiko), "CI/CD and safeguard files — intent, not topic" — not restated here.
-
 **Guidelines coherence** — after modifying any guidelines file (`AGENTS.md`, `CONTRIBUTING.md`,
 `.github/copilot-instructions.md`, or any skill `SKILL.md`), re-read the file in full before
 continuing, to verify global coherence and catch contradictions introduced by the edit.
@@ -270,8 +306,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow. Key rules:
 - Before submitting a PR body, explicitly confirm to the user that the template has been followed
   (section by section) — without necessarily displaying the full body unless asked.
 - When creating issues or PRs with multiline bodies via `gh`, **never construct the body as a
-  string in the terminal** — always write the body to a temp `.md` file using the file creation
-  tool, then pass it via `--body-file "/path/to/file.md"`.
+  string in the terminal** — always write the body to a `.md` file in the repo's git-ignored
+  `.work/` using the file creation tool, then pass it via `--body-file ".work/<name>.md"` (see
+  the always-on working-directory rule).
 - When resuming after a context compaction (conversation summary), always re-read any active
   skill's `SKILL.md` before continuing — compaction erases step formalism, workflow constraints,
   and all details defined in the skill.
