@@ -290,18 +290,28 @@ jobs:
           MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Trivy scan (dependency vulnerabilities via SBOM)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          # Skips Trivy's own check for a newer release (the network call that
+          # produced the harmless "Version X.Y.Z of Trivy is now available"
+          # warning in the original failing run) — irrelevant noise since the
+          # binary version is already pinned via the action version above.
+          TRIVY_SKIP_VERSION_CHECK: "true"
         with:
           scan-type: 'sbom'
           scan-ref: 'target/bom.json'
           format: 'json'
           output: 'trivy-vuln-report.json'
           exit-code: '0'
+          ignore-unfixed: 'true'
 
       - name: Run Trivy scan (misconfigurations)
         # Filesystem scan restricted to 'misconfig' only — no pom.xml dependency
         # resolution involved here, so no Maven Central network calls.
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          # See rationale above — same version-check skip on this second scan.
+          TRIVY_SKIP_VERSION_CHECK: "true"
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -390,6 +400,16 @@ jobs:
           name: trivy-report
           path: trivy-report.json
           retention-days: 14
+
+      - name: Fail on critical/high findings
+        if: always()
+        run: |
+          CRIT="${{ steps.trivy-summary.outputs.trivy_critical }}"
+          HIGH="${{ steps.trivy-summary.outputs.trivy_high }}"
+          if [ "${CRIT:-0}" -gt 0 ] || [ "${HIGH:-0}" -gt 0 ]; then
+            echo "::error::Trivy found ${CRIT} critical and ${HIGH} high findings"
+            exit 1
+          fi
 
       - name: Install Gitleaks
         run: |
