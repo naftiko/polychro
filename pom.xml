@@ -66,7 +66,7 @@
         <revision>1.0.0-beta7-SNAPSHOT</revision>
 
         <!-- Dependency versions (aligned with Naftiko Framework) -->
-        <jackson.version>2.21.5</jackson.version>
+        <jackson.version>2.21.7</jackson.version>
         <json-schema-validator.version>1.0.87</json-schema-validator.version>
         <json-path.version>2.9.0</json-path.version>
         <json-structure.version>0.5.5</json-structure.version>
