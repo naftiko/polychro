@@ -93,7 +93,6 @@ jobs:
           output: "trivy-fs-results.json"
           severity: "HIGH,CRITICAL"
           exit-code: "0"
-          ignore-unfixed: "true"
 
       - name: Publish Trivy summary
         id: trivy-summary
