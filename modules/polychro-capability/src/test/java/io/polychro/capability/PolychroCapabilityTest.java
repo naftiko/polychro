@@ -34,19 +34,16 @@ class PolychroCapabilityTest {
     }
 
     @Test
-    void startShouldDelegate() {
+    void startAndStopShouldRunTheEmbeddedMcpServer() throws Exception {
         PolychroCapability capability = PolychroCapability.builder().build();
 
-        // start() requires full runtime (OTel, Restlet); verify it propagates the error
-        assertThrows(Throwable.class, capability::start);
-    }
-
-    @Test
-    void stopShouldDelegate() {
-        PolychroCapability capability = PolychroCapability.builder().build();
-
-        // stop() requires full runtime; verify it propagates the error
-        assertThrows(Throwable.class, capability::stop);
+        // Binds the MCP port declared in polychro-capability.yml (3001) on the real Restlet 3
+        // server, then releases it.
+        try {
+            assertDoesNotThrow(capability::start);
+        } finally {
+            assertDoesNotThrow(capability::stop);
+        }
     }
 
     @Test

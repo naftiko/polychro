@@ -12,11 +12,11 @@
  * the License.
  */package io.polychro.capability;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.ikanos.engine.step.StepHandler;
 import io.ikanos.engine.step.StepHandlerContext;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.util.Map;
 

@@ -12,12 +12,10 @@
  * the License.
  */package io.polychro.capability;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.ikanos.Capability;
 import io.ikanos.engine.step.StepHandlerRegistry;
 import io.ikanos.spec.IkanosSpec;
+import io.ikanos.spec.util.IkanosMappers;
 import io.polychro.core.Linter;
 import io.polychro.core.LinterConfig;
 
@@ -124,9 +122,9 @@ public class PolychroCapability extends Capability {
                     throw new IllegalStateException(
                             "Classpath resource not found: /polychro-capability.yml");
                 }
-                ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-                mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-                return mapper.readValue(is, IkanosSpec.class);
+                // Use the Ikanos Jackson 3 mapper: the spec model is annotated for Jackson 3
+                // (tools.jackson), so a Jackson 2 mapper can no longer build it.
+                return IkanosMappers.lenientYaml().readValue(is, IkanosSpec.class);
             } catch (IllegalStateException e) {
                 throw e;
             } catch (Exception e) {
