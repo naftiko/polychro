@@ -44,9 +44,17 @@
             <artifactId>polyglot</artifactId>
             <version>${graalvm.polyglot.version}</version>
         </dependency>
+        <!-- Workaround: ikanos-engine declares the OpenTelemetry SDK as optional, but loading
+             io.ikanos.engine.observability.TelemetryBootstrap (on every tool call, even with
+             telemetry off) needs io.opentelemetry.sdk.metrics.export.MetricReader, so the first
+             tool call fails with NoClassDefFoundError without it. Only the SDK is added: without
+             opentelemetry-sdk-extension-autoconfigure, TelemetryBootstrap keeps its no-op mode.
+             Guarded by PolychroCapabilityEngineTest. Remove once ikanos-engine no longer needs
+             SDK classes in no-op mode. -->
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk</artifactId>
+            <version>${opentelemetry.version}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -66,22 +74,13 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Workaround for naftiko/framework#433: the framework's shade plugin does not fully
-             inline restlet classes, causing NoClassDefFoundError at test time.
-             org.restlet:org.restlet:2.7.0-m2 is available from Maven Central (no extra
-             repository needed). Remove this dependency once the upstream issue is fixed. -->
-        <dependency>
-            <groupId>org.restlet</groupId>
-            <artifactId>org.restlet</artifactId>
-            <version>2.7.0-m2</version>
-        </dependency>
-
-        <!-- Workaround for naftiko/framework#433: same shading issue with the MCP SDK. -->
-        <dependency>
-            <groupId>io.modelcontextprotocol.sdk</groupId>
-            <artifactId>mcp-core</artifactId>
-            <version>2.0.1</version>
-        </dependency>
+        <!--
+          Restlet and the MCP SDK are no longer pinned here: ikanos-engine declares
+          org.restlet:org.restlet, org.restlet.ext.jackson, org.restlet.ext.slf4j (all 3.0.0-m1)
+          and io.modelcontextprotocol.sdk:mcp-core as regular jar dependencies. The former
+          org.restlet:org.restlet:2.7.0-m2 pin (naftiko/framework#433) put Restlet 2 next to the
+          Restlet 3 extensions on the same classpath.
+        -->
     </dependencies>
 
     <build>

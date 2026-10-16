@@ -12,7 +12,7 @@
  * the License.
  */package io.polychro.capability;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import io.ikanos.engine.step.StepHandlerContext;
 import io.polychro.core.Linter;
 import io.polychro.core.LinterConfig;
