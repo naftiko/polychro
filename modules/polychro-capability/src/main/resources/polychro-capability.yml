@@ -50,11 +50,11 @@ capability:
             - name: "has-errors"
               type: "boolean"
           mappings:
-            - targetName: "diagnostics"
+            - target: "diagnostics"
               value: "$.do-lint.diagnostics"
-            - targetName: "count"
+            - target: "count"
               value: "$.do-lint.count"
-            - targetName: "has-errors"
+            - target: "has-errors"
               value: "$.do-lint.has-errors"
 
         - name: "validate-schema"
@@ -88,11 +88,11 @@ capability:
             - name: "count"
               type: "number"
           mappings:
-            - targetName: "valid"
+            - target: "valid"
               value: "$.do-validate-schema.valid"
-            - targetName: "diagnostics"
+            - target: "diagnostics"
               value: "$.do-validate-schema.diagnostics"
-            - targetName: "count"
+            - target: "count"
               value: "$.do-validate-schema.count"
 
         - name: "list-rules"
@@ -108,9 +108,9 @@ capability:
             - name: "count"
               type: "number"
           mappings:
-            - targetName: "validators"
+            - target: "validators"
               value: "$.do-list-rules.validators"
-            - targetName: "count"
+            - target: "count"
               value: "$.do-list-rules.count"
 
         - name: "explain-diagnostic"
@@ -134,11 +134,11 @@ capability:
             - name: "suggestion"
               type: "string"
           mappings:
-            - targetName: "code"
+            - target: "code"
               value: "$.do-explain.code"
-            - targetName: "explanation"
+            - target: "explanation"
               value: "$.do-explain.explanation"
-            - targetName: "suggestion"
+            - target: "suggestion"
               value: "$.do-explain.suggestion"
 
   consumes:

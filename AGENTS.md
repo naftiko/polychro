@@ -169,13 +169,21 @@ mvn install -DskipTests
 cd ../polychro
 ```
 
-The framework's `maven-shade-plugin` does not fully inline restlet and the MCP SDK into the
-published jar, causing `NoClassDefFoundError` at test time (tracked in
-[naftiko/framework#433](https://github.com/naftiko/framework/issues/433)).
-The workaround (explicit `org.restlet:org.restlet:2.7.0-m2` and
-`io.modelcontextprotocol.sdk:mcp-core:1.0.0` dependencies — `org.restlet` resolves from Maven
-Central, no extra repository needed) is already
-applied in `polychro-capability/pom.xml` — all 31 `PolychroCapabilityTest` tests pass locally.
+`polychro-capability` shares its classloader with the embedded Ikanos engine, which runs on
+Restlet 3 and Jackson 3 (`tools.jackson`). Constraints on that classpath:
+
+- **Restlet / MCP SDK** — not pinned: `ikanos-engine` brings Restlet 3 and `mcp-core`. Never
+  re-add an `org.restlet` 2.x pin (the old naftiko/framework#433 workaround) — it puts two
+  Restlet lines on one classpath.
+- **Jackson** — Polychro code stays on Jackson 2; code that touches the Ikanos API
+  (`StepHandler`, `IkanosSpec`) uses Jackson 3 and `IkanosMappers`. The root pom imports the
+  Jackson 3 BOM before the Jackson 2 one so that `jackson-annotations` matches Jackson 3.
+- **`json-schema-validator`** — Polychro keeps 1.x; it wins over the 3.x that Ikanos declares
+  (see the root pom for the consequence).
+- **OpenTelemetry SDK** — added explicitly (see `polychro-capability/pom.xml`).
+
+`PolychroCapabilityEngineTest` builds the capability with the real engine and runs a tool
+call, so a classpath conflict fails the build.
 
 **Separate known issue:** `polychro-rulesets` fails the JaCoCo coverage check on `main` — this
 is a pre-existing gap unrelated to the framework bootstrap.
