@@ -230,6 +230,12 @@ continuing, to verify global coherence and catch contradictions introduced by th
 
 ---
 
+## Vulnerability Findings
+
+Findings reported on `main` by the nightly (Trivy, Gitleaks) follow the
+[Vulnerability Remediation Cadence](https://github.com/naftiko/golden-repo-naftiko/blob/main/agents-shared/context/engineering.md#vulnerability-remediation-cadence):
+deadline per severity and how to accept a finding in `.trivyignore`. It is not restated here.
+
 ## Test Writing Rules
 
 **Do:**
