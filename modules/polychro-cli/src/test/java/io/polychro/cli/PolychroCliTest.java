@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.Properties;
 
 import picocli.CommandLine;
 
@@ -65,6 +66,21 @@ class PolychroCliTest {
         cmd.addSubcommand("crash", new CrashCommand());
         int exitCode = cmd.execute("crash");
         assertEquals(2, exitCode);
+    }
+
+    @Test
+    void applyJvmDefaultsShouldSilenceTheInterpreterOnlyWarning() {
+        Properties properties = new Properties();
+        PolychroCli.applyJvmDefaults(properties);
+        assertEquals("false", properties.getProperty("polyglot.engine.WarnInterpreterOnly"));
+    }
+
+    @Test
+    void applyJvmDefaultsShouldKeepAValueSetByTheUser() {
+        Properties properties = new Properties();
+        properties.setProperty("polyglot.engine.WarnInterpreterOnly", "true");
+        PolychroCli.applyJvmDefaults(properties);
+        assertEquals("true", properties.getProperty("polyglot.engine.WarnInterpreterOnly"));
     }
 
     @CommandLine.Command(name = "crash")

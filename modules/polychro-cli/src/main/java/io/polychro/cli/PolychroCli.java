@@ -41,7 +41,18 @@ public class PolychroCli implements Runnable {
     }
 
     public static void main(String[] args) {
+        applyJvmDefaults(System.getProperties());
         System.exit(execute(args));
+    }
+
+    /**
+     * Silences the GraalJS start-up warning that JavaScript functions run without runtime
+     * compilation. It only appears when the CLI runs as a jar on a regular JDK (the jar + JRE
+     * package, issue #170), never in the native executable. A value set on the command line
+     * ({@code -D...}) still wins.
+     */
+    static void applyJvmDefaults(Properties properties) {
+        properties.putIfAbsent("polyglot.engine.WarnInterpreterOnly", "false");
     }
 
     static int execute(String[] args) {

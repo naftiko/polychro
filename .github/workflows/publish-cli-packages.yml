@@ -1,0 +1,435 @@
+name: Publish CLI Packages
+
+# Builds the Polychro CLI as a jar plus a custom jlink JRE, one archive per OS with a SHA-256
+# checksum, and installs it with scripts/install.sh / install.ps1 (issue #170). Same mechanism
+# as naftiko/ikanos (#638): no executable of ours to sign, so Windows and macOS do not warn.
+# Not wired into a release yet: a release workflow can call it through workflow_call.
+
+on:
+  pull_request:
+    paths:
+      - 'pom.xml'
+      - 'modules/polychro-*/pom.xml'
+      - 'modules/polychro-cli/src/main/**'
+      - 'scripts/install.sh'
+      - 'scripts/install.ps1'
+      - '.github/workflows/publish-cli-packages.yml'
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build-package:
+    name: Build package on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      packages: read
+    strategy:
+      matrix:
+        include:
+          # macOS Apple Silicon (ARM64)
+          - os: macos-latest
+            artifact_name: polychro-cli-macos-arm64.tar.gz
+
+          # Linux AMD64
+          - os: ubuntu-latest
+            artifact_name: polychro-cli-linux-amd64.tar.gz
+
+          # Linux ARM64
+          - os: ubuntu-24.04-arm
+            artifact_name: polychro-cli-linux-arm64.tar.gz
+
+          # Windows AMD64
+          - os: windows-latest
+            artifact_name: polychro-cli-windows-amd64.zip
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup JDK 21 (Temurin)
+        uses: actions/setup-java@v6
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+          server-id: github-naftiko
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+
+      # -Pjre-package writes polychro-cli-<version>.jar (its manifest lists lib/*.jar) and copies
+      # every runtime dependency into target/lib. Not a shaded jar: see modules/polychro-cli/pom.xml.
+      - name: Build jar and lib/ with Maven
+        shell: bash
+        run: mvn -B clean package -Pjre-package -pl modules/polychro-cli -am -DskipTests
+        env:
+          MAVEN_USERNAME: ${{ github.actor }}
+          MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+      # jdeps finds the JDK modules the code links against. Two are added by hand because nothing
+      # links to them, they are only looked up at run time: jdk.crypto.ec (the EC ciphers most TLS
+      # servers need, for a remote $ref over HTTPS) and jdk.zipfs (zip file system provider).
+      # --bind-services (used by Ikanos) is left out: it pulls in every service provider of the
+      # JDK and makes the runtime about twice as large.
+      - name: Build custom JRE with jlink (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        working-directory: modules/polychro-cli/target
+        run: |
+          set -euo pipefail
+          JAR=$(ls polychro-cli-*.jar | grep -vE -- '-(sources|javadoc)\.jar$')
+          MODS=$(jdeps --print-module-deps -R --ignore-missing-deps --multi-release 21 \
+            --class-path 'lib/*' "$JAR")
+          if [ -z "$MODS" ]; then
+            echo "FAIL: jdeps produced no module list — check $JAR and lib/ exist"
+            exit 1
+          fi
+          MODS="$MODS,jdk.crypto.ec,jdk.zipfs"
+          echo "Modules: $MODS"
+
+          jlink \
+            --module-path "$JAVA_HOME/jmods" \
+            --add-modules "$MODS" \
+            --strip-debug --no-header-files --no-man-pages \
+            --output "$RUNNER_TEMP/polychro-jre"
+
+      - name: Build custom JRE with jlink (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        working-directory: modules/polychro-cli/target
+        run: |
+          $JAR = (Get-ChildItem polychro-cli-*.jar | Where-Object { $_.Name -notmatch '-(sources|javadoc)\.jar$' }).Name
+          $MODS = jdeps --print-module-deps -R --ignore-missing-deps --multi-release 21 --class-path 'lib\*' $JAR
+          if ([string]::IsNullOrWhiteSpace($MODS)) {
+            Write-Error "FAIL: jdeps produced no module list — check $JAR and lib\ exist"
+            exit 1
+          }
+          $MODS = "$MODS,jdk.crypto.ec,jdk.zipfs"
+          Write-Host "Modules: $MODS"
+
+          jlink `
+            --module-path "$env:JAVA_HOME\jmods" `
+            --add-modules "$MODS" `
+            --strip-debug --no-header-files --no-man-pages `
+            --output "$env:RUNNER_TEMP\polychro-jre"
+
+      - name: Stage archive contents — jre/ + lib/ + polychro.jar at top level (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET=modules/polychro-cli/target
+          STAGE="$RUNNER_TEMP/polychro-package-stage"
+          mkdir -p "$STAGE"
+          cp -R "$RUNNER_TEMP/polychro-jre" "$STAGE/jre"
+          cp -R "$TARGET/lib" "$STAGE/lib"
+          cp "$(ls $TARGET/polychro-cli-*.jar | grep -vE -- '-(sources|javadoc)\.jar$')" "$STAGE/polychro.jar"
+
+          # The wrapper written by install.sh runs jre/bin/java -jar polychro.jar, and the jar's
+          # manifest finds lib/ next to it — fail fast if that layout ever drifts.
+          ls "$STAGE"
+          test -x "$STAGE/jre/bin/java" || { echo "FAIL: jre/bin/java missing or not executable"; exit 1; }
+          test -f "$STAGE/polychro.jar" || { echo "FAIL: polychro.jar missing"; exit 1; }
+          ls "$STAGE"/lib/*.jar >/dev/null || { echo "FAIL: lib/ has no jars"; exit 1; }
+
+      - name: Stage archive contents — jre/ + lib/ + polychro.jar at top level (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $TARGET = "modules\polychro-cli\target"
+          $STAGE = "$env:RUNNER_TEMP\polychro-package-stage"
+          New-Item -ItemType Directory -Force -Path $STAGE | Out-Null
+          Copy-Item -Recurse "$env:RUNNER_TEMP\polychro-jre" "$STAGE\jre"
+          Copy-Item -Recurse "$TARGET\lib" "$STAGE\lib"
+          $JAR = Get-ChildItem "$TARGET\polychro-cli-*.jar" | Where-Object { $_.Name -notmatch '-(sources|javadoc)\.jar$' }
+          Copy-Item $JAR.FullName "$STAGE\polychro.jar"
+
+          # The wrapper written by install.ps1 runs jre\bin\java.exe -jar polychro.jar, and the
+          # jar's manifest finds lib\ next to it — fail fast if that layout ever drifts.
+          Get-ChildItem $STAGE
+          if (-not (Test-Path "$STAGE\jre\bin\java.exe")) {
+            Write-Error "FAIL: jre\bin\java.exe missing"
+            exit 1
+          }
+          if (-not (Test-Path "$STAGE\polychro.jar")) {
+            Write-Error "FAIL: polychro.jar missing"
+            exit 1
+          }
+          if (-not (Get-ChildItem "$STAGE\lib\*.jar")) {
+            Write-Error "FAIL: lib\ has no jars"
+            exit 1
+          }
+
+      - name: Create tarball (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          mkdir -p modules/polychro-cli/target/packages
+          tar czf "modules/polychro-cli/target/packages/${{ matrix.artifact_name }}" \
+            -C "$RUNNER_TEMP/polychro-package-stage" jre lib polychro.jar
+
+      - name: Create zip (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path modules\polychro-cli\target\packages | Out-Null
+          Compress-Archive -Path "$env:RUNNER_TEMP\polychro-package-stage\*" `
+            -DestinationPath "modules\polychro-cli\target\packages\${{ matrix.artifact_name }}" -Force
+
+      - name: Smoke test the package — extract + run --version (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          TESTDIR="$RUNNER_TEMP/polychro-package-smoketest"
+          mkdir -p "$TESTDIR"
+          tar xzf "modules/polychro-cli/target/packages/${{ matrix.artifact_name }}" -C "$TESTDIR"
+          "$TESTDIR/jre/bin/java" -jar "$TESTDIR/polychro.jar" --version
+
+      - name: Smoke test the package — extract + run --version (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $TESTDIR = "$env:RUNNER_TEMP\polychro-package-smoketest"
+          New-Item -ItemType Directory -Force -Path $TESTDIR | Out-Null
+          Expand-Archive -Path "modules\polychro-cli\target\packages\${{ matrix.artifact_name }}" -DestinationPath $TESTDIR -Force
+          & "$TESTDIR\jre\bin\java.exe" -jar "$TESTDIR\polychro.jar" --version
+
+      - name: Generate checksum (Unix)
+        if: runner.os != 'Windows'
+        working-directory: modules/polychro-cli/target/packages
+        shell: bash
+        run: shasum -a 256 "${{ matrix.artifact_name }}" > "${{ matrix.artifact_name }}.sha256"
+
+      - name: Generate checksum (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $hash = Get-FileHash modules\polychro-cli\target\packages\${{ matrix.artifact_name }} -Algorithm SHA256
+          $line = "$($hash.Hash.ToLower())  ${{ matrix.artifact_name }}`n"
+          $out = Join-Path $env:GITHUB_WORKSPACE "modules/polychro-cli/target/packages/${{ matrix.artifact_name }}.sha256"
+          [System.IO.File]::WriteAllText($out, $line, (New-Object System.Text.UTF8Encoding($false)))
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: |
+            modules/polychro-cli/target/packages/${{ matrix.artifact_name }}
+            modules/polychro-cli/target/packages/${{ matrix.artifact_name }}.sha256
+
+  test-package:
+    name: Test package on ${{ matrix.os }}
+    needs: build-package
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            artifact_name: polychro-cli-macos-arm64.tar.gz
+          - os: ubuntu-latest
+            artifact_name: polychro-cli-linux-amd64.tar.gz
+          - os: ubuntu-24.04-arm
+            artifact_name: polychro-cli-linux-arm64.tar.gz
+          - os: windows-latest
+            artifact_name: polychro-cli-windows-amd64.zip
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Download package
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ./pkg
+
+      - name: Verify checksum (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        working-directory: ./pkg
+        run: shasum -a 256 -c ${{ matrix.artifact_name }}.sha256
+
+      - name: Verify checksum (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $expected = (Get-Content "./pkg/${{ matrix.artifact_name }}.sha256" -Raw).Split(' ')[0].Trim().ToLower()
+          $actual = (Get-FileHash "./pkg/${{ matrix.artifact_name }}" -Algorithm SHA256).Hash.ToLower()
+          if ($actual -ne $expected) {
+            throw "Checksum mismatch: expected $expected, got $actual"
+          }
+
+      - name: Install via install.sh (real script, mock release endpoint) (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 8931 --directory ./pkg --bind 127.0.0.1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+
+          for i in $(seq 1 20); do
+            curl -fsS "http://127.0.0.1:8931/${{ matrix.artifact_name }}.sha256" >/dev/null 2>&1 && break
+            sleep 0.5
+          done
+
+          # A space in the install root, so quoting is exercised for real.
+          POLYCHRO_HOME="$RUNNER_TEMP/polychro home" \
+          POLYCHRO_NO_MODIFY_RC=1 \
+          POLYCHRO_VERSION="v0.0.0-local-ci" \
+          POLYCHRO_BASE_URL="http://127.0.0.1:8931" \
+            sh scripts/install.sh
+          # Only bin goes on PATH, like the rc file line. POLYCHRO_HOME is not exported, so the
+          # next steps run the wrapper as a new shell would.
+          echo "$RUNNER_TEMP/polychro home/bin" >> "$GITHUB_PATH"
+
+      - name: Install via install.ps1 (real script, mock release endpoint) (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $pkgDir = Join-Path (Get-Location) "pkg"
+          $proc = Start-Process -FilePath "python" -ArgumentList "-m","http.server","8931","--directory","$pkgDir","--bind","127.0.0.1" -PassThru -NoNewWindow
+          try {
+            for ($i = 0; $i -lt 20; $i++) {
+              try {
+                Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8931/${{ matrix.artifact_name }}.sha256" | Out-Null
+                break
+              } catch { Start-Sleep -Milliseconds 500 }
+            }
+
+            # A space and a non-ASCII character in the install root: cmd.exe reads polychro.cmd
+            # in the OEM code page, so this catches a wrapper that would garble such a path.
+            $env:POLYCHRO_HOME = "$env:RUNNER_TEMP\polychro h$([char]0x00F4)me"
+            $env:POLYCHRO_NO_MODIFY_PATH = "1"
+            $env:POLYCHRO_VERSION = "v0.0.0-local-ci"
+            $env:POLYCHRO_BASE_URL = "http://127.0.0.1:8931"
+            & .\scripts\install.ps1
+
+            # Only bin goes on PATH. POLYCHRO_HOME is not exported, so the next steps check that
+            # polychro.cmd finds its install root by itself.
+            Add-Content -Path $env:GITHUB_PATH -Value "$env:POLYCHRO_HOME\bin"
+          } finally {
+            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+          }
+
+      # Git Bash does not resolve a .cmd file from a bare name, so the bash steps below call
+      # the wrapper through $POLYCHRO.
+      - name: CLI is on PATH
+        shell: bash
+        run: |
+          POLYCHRO=polychro
+          [ "$RUNNER_OS" = "Windows" ] && POLYCHRO=polychro.cmd
+          echo "POLYCHRO=$POLYCHRO" >> "$GITHUB_ENV"
+          command -v "$POLYCHRO"
+          "$POLYCHRO" --version
+          "$POLYCHRO" --help
+          "$POLYCHRO" lint --help
+
+      # The same regression guards as publish-cli-bin.yml's test-binary job, so both channels
+      # are held to the same behaviour, plus three that only the jlink runtime can break:
+      # a JavaScript ruleset function (GraalJS on a regular JDK), an outbound HTTPS $ref
+      # (crypto modules) and `serve` (HTTP server). Each also fails on a missing class or
+      # module, the symptom of a jlink image that dropped one.
+      - name: Package regression — lint checks
+        shell: bash
+        run: |
+          set -u
+          FAIL=0
+          WORK="$RUNNER_TEMP/polychro-regression"
+          mkdir -p "$WORK"
+          check() {  # check <name> <expected exit> <expected text> <polychro args...>
+            local name=$1 want=$2 text=$3; shift 3
+            local out status
+            # Lint exits 1 or 2 on findings: keep -e (set by the runner) from ending the step.
+            out=$("$POLYCHRO" "$@" 2>&1) && status=0 || status=$?
+            echo "----- $name (exit $status) -----"; echo "$out"
+            if echo "$out" | grep -E "NoClassDefFoundError|ClassNotFoundException|ServiceConfigurationError|SSLHandshakeException|NoSuchAlgorithmException|ExceptionInInitializerError"; then
+              echo "FAIL: $name — missing class or module in the jlink image"; FAIL=1
+            elif [ "$status" -ne "$want" ] || ! echo "$out" | grep -q -- "$text"; then
+              echo "FAIL: $name — expected exit $want and '$text'"; FAIL=1
+            fi
+          }
+
+          cd "$WORK"
+          echo '{"type":"object","required":["missing"]}' > schema.json
+          echo 'foo: bar' > sample.yaml
+          check "JSON Schema lint" 2 "missing" lint sample.yaml -s schema.json
+
+          printf '# Title\n\nSome paragraph.\n' > doc.md
+          printf 'rules:\n  first-block-must-be-paragraph:\n    message: "First block must be a paragraph"\n    severity: error\n    given: "$.document.blocks[0]"\n    then:\n      field: "type"\n      function: pattern\n      functionOptions:\n        match: "^paragraph$"\n' > markdown-ruleset.yml
+          check "Markdown ruleset projection" 2 "First block must be a paragraph" lint doc.md -r markdown-ruleset.yml
+
+          printf '<html><body><p>hi</p></body></html>\n' > doc.html
+          printf 'rules:\n  first-node-must-be-body:\n    message: "First top-level node must be body"\n    severity: error\n    given: "$.document.nodes[0]"\n    then:\n      field: "tag"\n      function: pattern\n      functionOptions:\n        match: "^body$"\n' > html-ruleset.yml
+          check "HTML ruleset projection" 2 "First top-level node must be body" lint doc.html -r html-ruleset.yml
+
+          # Network-dependent: if json.schemastore.org is down the text check fails, but a
+          # missing crypto module still shows up as an SSL/algorithm exception above.
+          printf '{"$schema":"https://json-schema.org/draft/2020-12/schema","$ref":"https://json.schemastore.org/github-action.json"}\n' > remote-schema.json
+          printf 'name: x\n' > action.yml
+          check "Remote \$ref over HTTPS" 2 "runs" lint action.yml -s remote-schema.json
+
+          cd "$GITHUB_WORKSPACE/examples/tutorial/track-1-yaml"
+          check "JavaScript ruleset function" 1 "1 issue(s) found" \
+            lint step-7-openapi.yml -s openapi-schema.json -r openapi-ruleset.yml
+          # The jar runs GraalJS without runtime compilation; PolychroCli turns the notice off,
+          # and slf4j-nop keeps SLF4J quiet. Output must match the native executable's.
+          OUT=$("$POLYCHRO" lint step-7-openapi.yml -s openapi-schema.json -r openapi-ruleset.yml 2>&1 || true)
+          if echo "$OUT" | grep -iE "polyglot engine|slf4j"; then
+            echo "FAIL: start-up warnings leak into the output"; FAIL=1
+          fi
+          exit $FAIL
+
+      - name: Package regression — serve answers MCP tools/list
+        shell: bash
+        run: |
+          set -u
+          "$POLYCHRO" serve > "$RUNNER_TEMP/serve.log" 2>&1 &
+          SERVE_PID=$!
+          LISTENING=0
+          for i in $(seq 1 30); do
+            curl -s -o /dev/null --max-time 2 http://127.0.0.1:3001/ && { LISTENING=1; break; }
+            sleep 1
+          done
+          BODY=""
+          if [ "$LISTENING" -eq 1 ]; then
+            BODY=$(curl -s --max-time 15 -X POST http://127.0.0.1:3001/ \
+              -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
+              -H 'MCP-Protocol-Version: 2026-07-28' -H 'Mcp-Method: tools/list' \
+              -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28"}}}' || true)
+          fi
+          kill "$SERVE_PID" 2>/dev/null || true
+          echo "----- serve.log -----"; cat "$RUNNER_TEMP/serve.log"
+          echo "----- tools/list -----"; echo "$BODY"
+          if grep -E "NoClassDefFoundError|ClassNotFoundException|ServiceConfigurationError" "$RUNNER_TEMP/serve.log"; then
+            echo "FAIL: jlink module-set regression on serve"; exit 1
+          fi
+          [ "$LISTENING" -eq 1 ] || { echo "FAIL: serve never listened on port 3001"; exit 1; }
+          echo "$BODY" | grep -q '"name":"lint"' || { echo "FAIL: tools/list did not list the lint tool"; exit 1; }
+          echo "PASS: serve answered tools/list"
+
+      # The Python wrapper finds the binary on PATH (polychro.cmd on Windows) like a user's
+      # machine would, without POLYCHRO_BIN.
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Wrapper — the Python SDK runs the installed package
+        shell: bash
+        working-directory: examples/tutorial/track-1-yaml
+        env:
+          PYTHONPATH: ${{ github.workspace }}/modules/polychro-python/src
+        run: |
+          python - <<'EOF'
+          from polychro.binary import resolve_binary
+          from polychro.linter import Linter
+          print("binary:", resolve_binary())
+          result = Linter(schema="openapi-schema.json", ruleset="openapi-ruleset.yml").lint("step-7-openapi.yml")
+          print("diagnostics:", len(result.diagnostics))
+          assert len(result.diagnostics) == 1, result.diagnostics
+          EOF
