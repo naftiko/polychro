@@ -286,11 +286,13 @@
             <id>jre-package</id>
             <dependencies>
                 <!-- No SLF4J provider is on the classpath, so on a JVM SLF4J prints a
-                     "No SLF4J providers were found" warning on every run. The native
-                     executable stays silent; the package gets the same no-op logger. -->
+                     "No SLF4J providers were found" warning and drops every log, including
+                     errors such as a rule function that fails to load. The package gets
+                     slf4j-simple, set to warnings and errors on stderr by
+                     simplelogger.properties, so a normal run stays quiet. -->
                 <dependency>
                     <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-nop</artifactId>
+                    <artifactId>slf4j-simple</artifactId>
                     <version>${slf4j.version}</version>
                     <scope>runtime</scope>
                 </dependency>
