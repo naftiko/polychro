@@ -377,11 +377,20 @@ jobs:
           check "JavaScript ruleset function" 1 "1 issue(s) found" \
             lint step-7-openapi.yml -s openapi-schema.json -r openapi-ruleset.yml
           # The jar runs GraalJS without runtime compilation; PolychroCli turns the notice off,
-          # and slf4j-nop keeps SLF4J quiet. Output must match the native executable's.
+          # and slf4j-simple only prints warnings and errors. A clean run prints no log line
+          # ("WARN ClassName - ..."; a diagnostic reads "WARN [rule]: ..." or "ERROR at ...").
           OUT=$("$POLYCHRO" lint step-7-openapi.yml -s openapi-schema.json -r openapi-ruleset.yml 2>&1 || true)
-          if echo "$OUT" | grep -iE "polyglot engine|slf4j"; then
+          if echo "$OUT" | grep -iE "polyglot engine|slf4j" || echo "$OUT" | grep -E "^(WARN|ERROR) [A-Z][A-Za-z0-9]* - "; then
             echo "FAIL: start-up warnings leak into the output"; FAIL=1
           fi
+
+          # A function that throws must still be reported on stderr, not dropped by the logger.
+          mkdir -p "$WORK/broken-function/functions"
+          cd "$WORK/broken-function"
+          printf 'export default function (input) {\n  return input.nope.boom;\n}\n' > functions/broken.js
+          printf 'functionsDir: functions\nfunctions: [broken]\nrules:\n  broken-rule:\n    message: "{{error}}"\n    severity: error\n    given: "$.name"\n    then:\n      function: broken\n' > broken-ruleset.yml
+          printf 'name: x\n' > doc.yaml
+          check "Failing JavaScript function is logged" 2 "WARN PolyglotRuleFunction" lint doc.yaml -r broken-ruleset.yml
           exit $FAIL
 
       - name: Package regression — serve answers MCP tools/list
