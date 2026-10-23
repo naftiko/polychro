@@ -44,7 +44,11 @@ class ExternalLinkChecker {
     private final long rateLimitDelayMs;
     private final Set<String> successCache;
     private final Map<String, Diagnostic> failureCache;
-    private final HttpClient httpClient;
+    /**
+     * Created lazily by {@link #httpClient()} on the first check (an idle client's selector thread
+     * delays JVM exit). Package-private so tests can read it directly.
+     */
+    HttpClient httpClient;
     private long lastRequestTimeMs;
 
     ExternalLinkChecker(int timeoutMs, int rateLimitPerSecond) {
@@ -52,10 +56,6 @@ class ExternalLinkChecker {
         this.rateLimitDelayMs = rateLimitPerSecond > 0 ? 1000L / rateLimitPerSecond : 0;
         this.successCache = new HashSet<>();
         this.failureCache = new HashMap<>();
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(timeout)
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .build();
         this.lastRequestTimeMs = 0;
     }
 
@@ -66,6 +66,16 @@ class ExternalLinkChecker {
         this.failureCache = new HashMap<>();
         this.httpClient = httpClient;
         this.lastRequestTimeMs = 0;
+    }
+
+    synchronized HttpClient httpClient() {
+        if (httpClient == null) {
+            httpClient = HttpClient.newBuilder()
+                    .connectTimeout(timeout)
+                    .followRedirects(HttpClient.Redirect.NORMAL)
+                    .build();
+        }
+        return httpClient;
     }
 
     List<Diagnostic> check(List<MarkdownValidator.LinkInfo> links) {
@@ -103,7 +113,7 @@ class ExternalLinkChecker {
                     .timeout(timeout)
                     .build();
 
-            HttpResponse<Void> response = httpClient.send(headRequest,
+            HttpResponse<Void> response = httpClient().send(headRequest,
                     HttpResponse.BodyHandlers.discarding());
 
             int status = response.statusCode();
@@ -161,7 +171,7 @@ class ExternalLinkChecker {
                     .timeout(timeout)
                     .build();
 
-            HttpResponse<Void> response = httpClient.send(getRequest,
+            HttpResponse<Void> response = httpClient().send(getRequest,
                     HttpResponse.BodyHandlers.discarding());
 
             int status = response.statusCode();

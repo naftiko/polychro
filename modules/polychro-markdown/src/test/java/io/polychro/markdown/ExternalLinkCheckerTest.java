@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.http.HttpClient;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -86,6 +87,21 @@ class ExternalLinkCheckerTest {
 
         List<Diagnostic> diagnostics = checker.check(links);
         assertTrue(diagnostics.isEmpty());
+    }
+
+    @Test
+    void constructorShouldNotCreateTheHttpClientUntilALinkIsChecked() {
+        // An idle HttpClient keeps a selector thread that delays every JVM exit by about 0.4 s.
+        ExternalLinkChecker checker = new ExternalLinkChecker(5000, 100);
+        assertNull(checker.httpClient);
+
+        checker.check(List.of(new MarkdownValidator.LinkInfo(baseUrl + "/ok", 1)));
+        assertNotNull(checker.httpClient);
+
+        // A different URL: a cached one would never reach httpClient().
+        HttpClient first = checker.httpClient;
+        checker.check(List.of(new MarkdownValidator.LinkInfo(baseUrl + "/not-found", 2)));
+        assertSame(first, checker.httpClient);
     }
 
     @Test
