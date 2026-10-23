@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.http.HttpClient;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -96,6 +97,11 @@ class ExternalLinkCheckerTest {
 
         checker.check(List.of(new MarkdownValidator.LinkInfo(baseUrl + "/ok", 1)));
         assertNotNull(checker.httpClient);
+
+        // A different URL: a cached one would never reach httpClient().
+        HttpClient first = checker.httpClient;
+        checker.check(List.of(new MarkdownValidator.LinkInfo(baseUrl + "/not-found", 2)));
+        assertSame(first, checker.httpClient);
     }
 
     @Test

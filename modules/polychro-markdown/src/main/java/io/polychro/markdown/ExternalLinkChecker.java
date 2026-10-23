@@ -44,7 +44,10 @@ class ExternalLinkChecker {
     private final long rateLimitDelayMs;
     private final Set<String> successCache;
     private final Map<String, Diagnostic> failureCache;
-    /** Created on the first check (an idle client's selector thread delays JVM exit). Guarded by this. */
+    /**
+     * Created lazily by {@link #httpClient()} on the first check (an idle client's selector thread
+     * delays JVM exit). Package-private so tests can read it directly.
+     */
     HttpClient httpClient;
     private long lastRequestTimeMs;
 
