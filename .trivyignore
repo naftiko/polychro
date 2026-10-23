@@ -1,3 +1,5 @@
+# Acceptance rules: golden-repo-naftiko, agents-shared/context/engineering.md, Vulnerability Remediation Cadence
+
 # Trivy ignore list — accepted CVEs / findings for this repository.
 #
 # One entry per accepted finding. Each entry MUST be documented with the
