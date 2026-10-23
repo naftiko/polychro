@@ -89,6 +89,16 @@ class ExternalLinkCheckerTest {
     }
 
     @Test
+    void constructorShouldNotCreateTheHttpClientUntilALinkIsChecked() {
+        // An idle HttpClient keeps a selector thread that delays every JVM exit by about 0.4 s.
+        ExternalLinkChecker checker = new ExternalLinkChecker(5000, 100);
+        assertNull(checker.httpClient);
+
+        checker.check(List.of(new MarkdownValidator.LinkInfo(baseUrl + "/ok", 1)));
+        assertNotNull(checker.httpClient);
+    }
+
+    @Test
     void checkShouldReportWarnFor404() {
         ExternalLinkChecker checker = new ExternalLinkChecker(5000, 100);
         List<MarkdownValidator.LinkInfo> links = List.of(
