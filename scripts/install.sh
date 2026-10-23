@@ -170,9 +170,31 @@ cat > "$POLYCHRO_HOME/bin/polychro" <<WRAPPER
 # A POLYCHRO_HOME set at run time still wins over the install location.
 polychro_install_home='$quoted_home'
 POLYCHRO_HOME="\${POLYCHRO_HOME:-\$polychro_install_home}"
-exec "\$POLYCHRO_HOME/current/jre/bin/java" -jar "\$POLYCHRO_HOME/current/polychro.jar" "\$@"
+# polychro.jsa is the class cache (AppCDS) written at install time. It is only read here:
+# a missing or stale cache is skipped without a message, and the run is just slower.
+exec "\$POLYCHRO_HOME/current/jre/bin/java" \\
+  -XX:SharedArchiveFile="\$POLYCHRO_HOME/current/polychro.jsa" "-Xlog:cds*=off" \\
+  -jar "\$POLYCHRO_HOME/current/polychro.jar" "\$@"
 WRAPPER
 chmod +x "$POLYCHRO_HOME/bin/polychro"
+
+# Class cache: one lint that uses a JSON Schema and a JavaScript rule function, run with
+# ArchiveClassesAtExit, writes the classes it loaded to polychro.jsa. Later runs map that file
+# instead of loading about 2,500 classes from the jars. The lint result does not matter.
+info "Preparing the start-up cache..."
+warm_up_dir="$tmp_dir/warm-up"
+mkdir -p "$warm_up_dir/functions"
+printf 'name: warm-up\n' > "$warm_up_dir/doc.yaml"
+printf '{"type":"object","required":["name"]}\n' > "$warm_up_dir/schema.json"
+printf 'export default function (input) {\n  return input === "warm-up" ? [] : [{ message: "unexpected" }];\n}\n' \
+  > "$warm_up_dir/functions/warm_up.js"
+printf 'functionsDir: functions\nfunctions: [warm_up]\nrules:\n  warm-up:\n    message: "{{error}}"\n    severity: info\n    given: "$.name"\n    then:\n      function: warm_up\n' \
+  > "$warm_up_dir/ruleset.yml"
+# Run through "current", the path the launcher uses, so the cache matches its class path.
+current_dir="$POLYCHRO_HOME/current"
+(cd "$warm_up_dir" && "$current_dir/jre/bin/java" -XX:ArchiveClassesAtExit="$current_dir/polychro.jsa" \
+  -jar "$current_dir/polychro.jar" lint doc.yaml -s schema.json -r ruleset.yml) >/dev/null 2>&1 || true
+[ -s "$install_dir/polychro.jsa" ] || warn "Could not prepare the start-up cache; polychro will start more slowly."
 
 info "Installed polychro $POLYCHRO_VERSION -> $install_dir"
 
