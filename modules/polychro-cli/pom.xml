@@ -280,6 +280,70 @@
                 </plugins>
             </build>
         </profile>
+
+        <!-- Profile for the jar + custom JRE package (issue #170) -->
+        <profile>
+            <id>jre-package</id>
+            <dependencies>
+                <!-- No SLF4J provider is on the classpath, so on a JVM SLF4J prints a
+                     "No SLF4J providers were found" warning and drops every log, including
+                     errors such as a rule function that fails to load. The package gets
+                     slf4j-simple, set to warnings and errors on stderr by
+                     simplelogger.properties, so a normal run stays quiet. -->
+                <dependency>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-simple</artifactId>
+                    <version>${slf4j.version}</version>
+                    <scope>runtime</scope>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <!--
+                      Lays out target/ the way publish-cli-packages.yml ships it next to a jlink
+                      runtime: polychro-cli-<version>.jar plus every runtime dependency in lib/.
+                      Not a shaded jar, for the same reason as the native profile: the GraalJS and
+                      Truffle jars must stay separate jars. The jar's manifest lists lib/*.jar on
+                      its Class-Path, so "java -jar polychro.jar" works on its own.
+                      useUniqueVersions=false makes SNAPSHOT entries match the file names that
+                      copy-dependencies writes (no timestamp).
+                    -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-jar-plugin</artifactId>
+                        <configuration>
+                            <archive>
+                                <manifest>
+                                    <addClasspath>true</addClasspath>
+                                    <classpathPrefix>lib/</classpathPrefix>
+                                    <useUniqueVersions>false</useUniqueVersions>
+                                </manifest>
+                            </archive>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-dependency-plugin</artifactId>
+                        <version>3.7.0</version>
+                        <executions>
+                            <execution>
+                                <id>copy-runtime-dependencies</id>
+                                <goals>
+                                    <goal>copy-dependencies</goal>
+                                </goals>
+                                <phase>package</phase>
+                                <configuration>
+                                    <includeScope>runtime</includeScope>
+                                    <!-- GraalJS is declared as pom-type dependencies (BOMs). -->
+                                    <excludeTypes>pom</excludeTypes>
+                                    <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
 
 </project>
