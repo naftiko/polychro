@@ -24,15 +24,18 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Validates external HTTP/HTTPS links in Markdown documents.
  * Performs HEAD requests with fallback to GET on 405, respects rate limiting and caching.
+ *
+ * <p>Safe to share across threads: {@code polychro serve} builds one validator for all requests,
+ * so concurrent lints use the same checker. The caches are concurrent collections, and the rate
+ * limit holds across all threads, not per thread.
  */
 class ExternalLinkChecker {
 
@@ -49,23 +52,25 @@ class ExternalLinkChecker {
      * delays JVM exit). Package-private so tests can read it directly.
      */
     HttpClient httpClient;
-    private long lastRequestTimeMs;
+    /** Earliest time the next request may start. Guarded by {@link #throttleLock}. */
+    private long nextRequestTimeMs;
+    private final Object throttleLock = new Object();
 
     ExternalLinkChecker(int timeoutMs, int rateLimitPerSecond) {
         this.timeout = Duration.ofMillis(timeoutMs);
         this.rateLimitDelayMs = rateLimitPerSecond > 0 ? 1000L / rateLimitPerSecond : 0;
-        this.successCache = new HashSet<>();
-        this.failureCache = new HashMap<>();
-        this.lastRequestTimeMs = 0;
+        this.successCache = ConcurrentHashMap.newKeySet();
+        this.failureCache = new ConcurrentHashMap<>();
+        this.nextRequestTimeMs = 0;
     }
 
     ExternalLinkChecker(int timeoutMs, int rateLimitPerSecond, HttpClient httpClient) {
         this.timeout = Duration.ofMillis(timeoutMs);
         this.rateLimitDelayMs = rateLimitPerSecond > 0 ? 1000L / rateLimitPerSecond : 0;
-        this.successCache = new HashSet<>();
-        this.failureCache = new HashMap<>();
+        this.successCache = ConcurrentHashMap.newKeySet();
+        this.failureCache = new ConcurrentHashMap<>();
         this.httpClient = httpClient;
-        this.lastRequestTimeMs = 0;
+        this.nextRequestTimeMs = 0;
     }
 
     synchronized HttpClient httpClient() {
@@ -219,19 +224,28 @@ class ExternalLinkChecker {
         return successCache.size() + failureCache.size();
     }
 
+    /**
+     * Waits for this request's turn. Each caller reserves the next free slot under the lock, then
+     * sleeps outside it, so concurrent callers are spaced {@code rateLimitDelayMs} apart in total
+     * without holding the lock while they wait.
+     */
     private void throttle() {
         if (rateLimitDelayMs <= 0) {
             return;
         }
-        long now = System.currentTimeMillis();
-        long elapsed = now - lastRequestTimeMs;
-        if (elapsed < rateLimitDelayMs) {
+        long waitMs;
+        synchronized (throttleLock) {
+            long now = System.currentTimeMillis();
+            long slot = Math.max(now, nextRequestTimeMs);
+            nextRequestTimeMs = slot + rateLimitDelayMs;
+            waitMs = slot - now;
+        }
+        if (waitMs > 0) {
             try {
-                Thread.sleep(rateLimitDelayMs - elapsed);
+                Thread.sleep(waitMs);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
         }
-        lastRequestTimeMs = System.currentTimeMillis();
     }
 }
