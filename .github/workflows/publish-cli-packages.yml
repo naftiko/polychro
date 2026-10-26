@@ -10,7 +10,9 @@ on:
     paths:
       - 'pom.xml'
       - 'modules/polychro-*/pom.xml'
-      - 'modules/polychro-cli/src/main/**'
+      # Any module, not only polychro-cli: jdeps reads the final jar and all of lib/, so a module
+      # that starts using a new JDK API can need a new module in the jlink runtime.
+      - 'modules/*/src/main/**'
       - 'scripts/install.sh'
       - 'scripts/install.ps1'
       - '.github/workflows/publish-cli-packages.yml'
@@ -405,6 +407,16 @@ jobs:
               echo "FAIL: $name — expected exit $want and '$text'"; FAIL=1
             fi
           }
+          retry() {  # retry <attempts> <check args...>: a failure counts only if every attempt fails
+            local attempts=$1 i saved=$FAIL; shift
+            for ((i = 1; i <= attempts; i++)); do
+              FAIL=0
+              check "$@"
+              if [ "$FAIL" -eq 0 ]; then FAIL=$saved; return; fi
+              if [ "$i" -lt "$attempts" ]; then echo "Attempt $i of $attempts failed, retrying in 10 s"; sleep 10; fi
+            done
+            FAIL=1
+          }
 
           cd "$WORK"
           echo '{"type":"object","required":["missing"]}' > schema.json
@@ -419,11 +431,12 @@ jobs:
           printf 'rules:\n  first-node-must-be-body:\n    message: "First top-level node must be body"\n    severity: error\n    given: "$.document.nodes[0]"\n    then:\n      field: "tag"\n      function: pattern\n      functionOptions:\n        match: "^body$"\n' > html-ruleset.yml
           check "HTML ruleset projection" 2 "First top-level node must be body" lint doc.html -r html-ruleset.yml
 
-          # Network-dependent: if json.schemastore.org is down the text check fails, but a
-          # missing crypto module still shows up as an SSL/algorithm exception above.
+          # Network-dependent, so retried: only a lasting json.schemastore.org outage fails the job.
+          # A real HTTPS call is what exercises jdk.crypto.ec, and a missing crypto module fails
+          # every attempt with an SSL/algorithm exception, so the retry cannot hide it.
           printf '{"$schema":"https://json-schema.org/draft/2020-12/schema","$ref":"https://json.schemastore.org/github-action.json"}\n' > remote-schema.json
           printf 'name: x\n' > action.yml
-          check "Remote \$ref over HTTPS" 2 "runs" lint action.yml -s remote-schema.json
+          retry 3 "Remote \$ref over HTTPS" 2 "runs" lint action.yml -s remote-schema.json
 
           cd "$GITHUB_WORKSPACE/examples/tutorial/track-1-yaml"
           check "JavaScript ruleset function" 1 "1 issue(s) found" \
@@ -472,6 +485,30 @@ jobs:
           [ "$LISTENING" -eq 1 ] || { echo "FAIL: serve never listened on port 3001"; exit 1; }
           echo "$BODY" | grep -q '"name":"lint"' || { echo "FAIL: tools/list did not list the lint tool"; exit 1; }
           echo "PASS: serve answered tools/list"
+
+      # `call` runs polychro.cmd in this cmd session, the way a user's terminal or another batch
+      # file does: without setlocal, the POLYCHRO_HOME it sets would still be defined afterwards.
+      # The lint exit code (2 on findings) must still reach the caller through the wrapper.
+      - name: Wrapper — polychro.cmd leaves the caller's environment unchanged (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          set POLYCHRO_HOME=
+          call polychro.cmd --version
+          if errorlevel 1 exit /b 1
+          if defined POLYCHRO_HOME (
+            echo FAIL: polychro.cmd left POLYCHRO_HOME=%POLYCHRO_HOME% in the caller's session
+            exit /b 1
+          )
+          echo foo: bar> "%RUNNER_TEMP%\wrapper-sample.yaml"
+          echo {"type":"object","required":["missing"]}> "%RUNNER_TEMP%\wrapper-schema.json"
+          call polychro.cmd lint "%RUNNER_TEMP%\wrapper-sample.yaml" -s "%RUNNER_TEMP%\wrapper-schema.json"
+          set STATUS=%ERRORLEVEL%
+          if not "%STATUS%"=="2" (
+            echo FAIL: expected exit 2 from a lint with findings, got %STATUS%
+            exit /b 1
+          )
+          echo PASS: no POLYCHRO_HOME leak, exit code passed through
 
       # The Python wrapper finds the binary on PATH (polychro.cmd on Windows) like a user's
       # machine would, without POLYCHRO_BIN.
