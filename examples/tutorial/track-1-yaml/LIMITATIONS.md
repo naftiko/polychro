@@ -1,19 +1,20 @@
 # Track 1 — YAML / OpenAPI — Known limitations (release)
 
 This track is **scaffolded, domain-aligned** (maritime), and its expected output is
-**verified against the `beta5` engine** (see §1). This file records what is
-known-incomplete — including the one remaining divergence between the engine and the
-tutorial narrative — so the gaps can be closed in a later iteration and a reader is not
-misled. The point is an honest inventory.
+**verified against the `beta9-SNAPSHOT` engine** (see §1). This file records what is
+known-incomplete — and the engine divergences that have since been resolved — so the gaps
+can be closed in a later iteration and a reader is not misled. The point is an honest inventory.
 
-## 1. Expected output — VERIFIED against beta5
+## 1. Expected output — VERIFIED against beta9-SNAPSHOT
 
 The diagnostics (`code`, `severity`, `message`, exit code) in
 [`EXPECTED-OUTPUT.md`](./EXPECTED-OUTPUT.md) were originally **verified on 2026-06-26**
 against a freshly built `polychro 1.0.0-beta1-SNAPSHOT` CLI, and **re-verified on
-2026-09-03** against `polychro 1.0.0-beta5`. The table records the **real** engine output,
-not a reading of the source. One step still diverges from the intended narrative (§5);
-the Step 4 schema wiring that used to diverge is now **resolved** (§6).
+2026-09-03** against `polychro 1.0.0-beta5` and on **2026-10-27** against a CLI built
+from `main` (`1.0.0-beta9-SNAPSHOT`). The table records the **real** engine output, not a
+reading of the source. No step diverges from the intended narrative any more: the
+`non-string-key` false positive (§5) and the Step 4 schema wiring (§6) are both
+**resolved**.
 
 The earlier UNVERIFIED hypotheses that held (single-fire rules, message-override,
 polyglot path resolution, exit-code mapping) were all confirmed.
@@ -44,27 +45,21 @@ The runnable example files exist, but the public tutorial pages
 (`tutorials/track-1-yaml/`) on the Shipyard, the nav update, and the README link are
 **not** done. This file covers the `polychro` examples only.
 
-## 5. `non-string-key` false positive on quoted HTTP status codes (engine)
+## 5. ~~`non-string-key` false positive on quoted HTTP status codes~~ — RESOLVED ([#78](https://github.com/naftiko/polychro/issues/78))
 
-Every step's output carries `WARN [non-string-key]: Non-string YAML key: 200`, even
-though the response code is written **quoted** (`"200":`) — the idiomatic, valid OpenAPI
-form for a string key. The well-formedness validator
-(`polychro-wellformedness/.../WellformednessValidator.java`, `isNonStringKey`) tests the
-field name with `Double.parseDouble(key)` and ignores whether the original scalar was
-quoted, so any key that *looks* numeric is flagged regardless of quoting. Jackson's
-`YAMLParser.currentName()` returns the text `200` with no quote-style information, so the
-check cannot distinguish a genuine non-string key (`200:` unquoted) from a quoted string
-key (`"200":`).
+**Status: resolved.** Re-verified on 2026-10-27 against a CLI built from `main`
+(`1.0.0-beta9-SNAPSHOT`): Steps 1 and 7 exit `0` with no diagnostics, and no step carries
+the `non-string-key` WARN any more.
 
-Impact on this track: the warning appears on all 7 steps and raises **Step 1** and
-**Step 7** from the intended exit `0` to exit `1`. It is a **false positive in the
-engine**, not a defect in the fixtures — the fixtures already quote their status codes.
+The well-formedness validator now walks the raw SnakeYAML event stream instead of Jackson
+tokens, so it sees each key's scalar style: only a **plain** (unquoted, untagged) key that
+looks like a number, boolean or null is flagged. `"200":`, `'200':` and `!!str 200:` are
+string keys and stay silent; an unquoted `200:` is still reported.
 
-**To close (engine work, out of scope for #49):** make `isNonStringKey` (or its caller)
-honour the scalar's quote style — a quoted scalar key is always a string. This needs its
-own issue, a unit test in `WellformednessValidatorTest`, and 100% coverage; it is **not**
-done here. Until then, the tutorial narrative must mention the warning rather than promise
-a clean Step 1/7.
+**Historical record (what this section used to describe).** Every step's output carried
+`WARN [non-string-key]: Non-string YAML key: 200` even though the fixtures quote their
+response codes, because Jackson's `YAMLParser.currentName()` drops quote-style
+information. This raised Step 1 and Step 7 from the intended exit `0` to exit `1`.
 
 ## 6. ~~Step 4 `config.json-schema` block is not consumed~~ — RESOLVED in `1.0.0-beta5`
 
@@ -73,7 +68,7 @@ a clean Step 1/7.
 ```
 $ polychro lint --config .polychro.yml step-4-openapi.yml
 ERROR at $.info.version [type]: $.info.version: number found, string expected
-WARN [non-string-key]: Non-string YAML key: 200
+WARN [non-string-key]: Non-string YAML key: 200   # gone since §5 was resolved
 
 2 issue(s) found.   # exit 2
 ```
