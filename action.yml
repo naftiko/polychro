@@ -49,18 +49,20 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    # The native executable lives in ~/.polychro/native, apart from what scripts/install.sh
+    # writes (~/.polychro/bin, current, versions), so neither one overwrites the other.
     - name: Cache Polychro binary
       uses: actions/cache@v6
       with:
-        path: ~/.polychro/bin
-        key: polychro-${{ inputs.version }}-${{ runner.os }}-${{ runner.arch }}
+        path: ~/.polychro/native
+        key: polychro-native-${{ inputs.version }}-${{ runner.os }}-${{ runner.arch }}
 
     - name: Download Polychro binary
       shell: bash
       run: |
-        POLYCHRO_BIN="$HOME/.polychro/bin/polychro"
+        POLYCHRO_BIN="$HOME/.polychro/native/polychro"
         if [ ! -f "$POLYCHRO_BIN" ]; then
-          mkdir -p "$HOME/.polychro/bin"
+          mkdir -p "$HOME/.polychro/native"
           VERSION="${{ inputs.version }}"
           if [ "$VERSION" = "latest" ]; then
             VERSION=$(curl -fSL https://api.github.com/repos/naftiko/polychro/releases/latest | grep '"tag_name"' | sed 's/.*"v\(.*\)".*/\1/')
@@ -71,7 +73,7 @@ runs:
           curl -fSL "https://github.com/naftiko/polychro/releases/download/v${VERSION}/${BINARY}" -o "$POLYCHRO_BIN"
           chmod +x "$POLYCHRO_BIN"
         fi
-        echo "$HOME/.polychro/bin" >> "$GITHUB_PATH"
+        echo "$HOME/.polychro/native" >> "$GITHUB_PATH"
 
     - name: Run Polychro lint
       id: lint
