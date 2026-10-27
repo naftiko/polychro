@@ -3,7 +3,8 @@ name: Publish CLI Packages
 # Builds the Polychro CLI as a jar plus a custom jlink JRE, one archive per OS with a SHA-256
 # checksum, and installs it with scripts/install.sh / install.ps1 (issue #170). Same mechanism
 # as naftiko/ikanos (#638): no executable of ours to sign, so Windows and macOS do not warn.
-# Not wired into a release yet: a release workflow can call it through workflow_call.
+# On a v* tag, publish-cli-bin.yml calls it through workflow_call and attaches the archives to
+# the release.
 
 on:
   pull_request:
