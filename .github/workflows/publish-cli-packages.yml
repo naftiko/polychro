@@ -16,6 +16,9 @@ on:
       - 'modules/*/src/main/**'
       - 'scripts/install.sh'
       - 'scripts/install.ps1'
+      - 'modules/polychro-node/src/**'
+      - 'modules/polychro-go/*.go'
+      - 'modules/polychro-python/src/**'
       - '.github/workflows/publish-cli-packages.yml'
       - '.github/actions/scan-dependencies/**'
   workflow_dispatch:
@@ -533,3 +536,73 @@ jobs:
           print("diagnostics:", len(result.diagnostics))
           assert len(result.diagnostics) == 1, result.diagnostics
           EOF
+
+      # Same check for the Node and Go SDKs. On Windows the Node SDK cannot start polychro.cmd
+      # (Node.js refuses batch files without a shell) and runs the bundled java.exe instead.
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: modules/polychro-node/package-lock.json
+
+      - name: Wrapper — the Node SDK runs the installed package
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd modules/polychro-node && npm ci --no-audit --no-fund && npm run build)
+          cd examples/tutorial/track-1-yaml
+          node --input-type=module - <<'EOF'
+          import { pathToFileURL } from "node:url";
+          const sdk = pathToFileURL(`${process.env.GITHUB_WORKSPACE}/modules/polychro-node/dist/index.js`);
+          const { lint } = await import(sdk.href);
+          const result = await lint("step-7-openapi.yml", { schema: "openapi-schema.json", ruleset: "openapi-ruleset.yml" });
+          console.log("diagnostics:", result.diagnostics.length);
+          if (result.diagnostics.length !== 1) throw new Error(JSON.stringify(result.diagnostics));
+          EOF
+
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: modules/polychro-go/go.mod
+          cache: false
+
+      - name: Wrapper — the Go SDK runs the installed package
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHECK="$RUNNER_TEMP/go-sdk-check"
+          mkdir -p "$CHECK"
+          cat > "$CHECK/main.go" <<'EOF'
+          package main
+
+          import (
+          	"fmt"
+          	"os"
+
+          	polychro "github.com/naftiko/polychro/polychro-go"
+          )
+
+          func main() {
+          	bin, err := polychro.ResolveBinary()
+          	fmt.Println("binary:", bin, err)
+          	result, err := polychro.Lint("step-7-openapi.yml", polychro.Options{Schema: "openapi-schema.json", Ruleset: "openapi-ruleset.yml"})
+          	if err != nil {
+          		fmt.Println("error:", err)
+          		os.Exit(1)
+          	}
+          	fmt.Println("diagnostics:", len(result.Diagnostics))
+          	if len(result.Diagnostics) != 1 {
+          		os.Exit(1)
+          	}
+          }
+          EOF
+          cd "$CHECK"
+          go mod init go-sdk-check
+          go mod edit -require=github.com/naftiko/polychro/polychro-go@v0.0.0 \
+            -replace=github.com/naftiko/polychro/polychro-go="$GITHUB_WORKSPACE/modules/polychro-go"
+          EXE=""
+          [ "$RUNNER_OS" = "Windows" ] && EXE=".exe"
+          go build -o "$CHECK/check$EXE" .
+          cd "$GITHUB_WORKSPACE/examples/tutorial/track-1-yaml"
+          "$CHECK/check$EXE"
