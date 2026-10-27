@@ -27,7 +27,7 @@
             <version>${project.version}</version>
         </dependency>
         <!-- HTTP/3 is excluded: Restlet 3 (from ikanos-engine) brings the Jetty HTTP/3 and QUIC
-             jars, about 27 MB with the native QUIC libraries for every platform. Polychro serves
+             jars, about 26 MB with the native QUIC libraries for every platform. Polychro serves
              MCP over HTTP/1.1 on localhost and never turns HTTP/3 on (naftiko/polychro#201).
              Guarded by PolychroCapabilityEngineTest and the serve check of publish-cli-packages.yml. -->
         <dependency>
