@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { promisify } from "node:util";
-import { resolveBinary } from "./binary.js";
+import { commandFor, resolveBinary } from "./binary.js";
 import type { Diagnostic } from "./diagnostic.js";
 
 const execFileAsync = promisify(execFile);
@@ -76,7 +76,8 @@ export async function lint(
   const timeout = options.timeout ?? 30_000;
 
   try {
-    const { stdout } = await execFileAsync(binary, args, { timeout });
+    const command = commandFor(binary, args);
+    const { stdout } = await execFileAsync(command.file, command.args, { timeout });
     return parseLintOutput(stdout);
   } catch (err: unknown) {
     const execErr = err as { code?: string; stdout?: string; killed?: boolean };
@@ -120,7 +121,8 @@ export async function validateSchema(
   const timeout = options.timeout ?? 30_000;
 
   try {
-    const { stdout } = await execFileAsync(binary, args, { timeout });
+    const command = commandFor(binary, args);
+    const { stdout } = await execFileAsync(command.file, command.args, { timeout });
     return parseLintOutput(stdout);
   } catch (err: unknown) {
     const execErr = err as { stdout?: string; killed?: boolean };

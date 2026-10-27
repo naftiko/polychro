@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Mock the binary module before importing linter
 vi.mock("../src/binary.js", () => ({
   resolveBinary: vi.fn(() => "/usr/bin/polychro"),
+  commandFor: vi.fn((file: string, args: string[]) => ({ file, args })),
   BinaryNotFoundError: class extends Error {
     constructor(searched: string[]) {
       super(`Not found: ${searched.join(", ")}`);
