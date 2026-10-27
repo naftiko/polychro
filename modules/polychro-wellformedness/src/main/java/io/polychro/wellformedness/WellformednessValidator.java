@@ -18,16 +18,26 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.fasterxml.jackson.dataformat.yaml.YAMLParser;
 import io.polychro.spi.Diagnostic;
 import io.polychro.spi.Document;
 import io.polychro.spi.Severity;
 import io.polychro.spi.Validator;
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.events.CollectionEndEvent;
+import org.yaml.snakeyaml.events.Event;
+import org.yaml.snakeyaml.events.MappingStartEvent;
+import org.yaml.snakeyaml.events.NodeEvent;
+import org.yaml.snakeyaml.events.ScalarEvent;
+import org.yaml.snakeyaml.events.SequenceStartEvent;
 
 import java.io.IOException;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +51,10 @@ class WellformednessValidator implements Validator {
     static final String NAME = "wellformedness";
     static final int DEFAULT_MAX_DEPTH = 100;
     static final int DEFAULT_MAX_SIZE = 10_000;
+
+    private static final int SEQUENCE = 0;
+    private static final int MAPPING_KEY = 1;
+    private static final int MAPPING_VALUE = 2;
 
     private final int maxDepth;
     private final int maxSize;
@@ -208,27 +222,45 @@ class WellformednessValidator implements Validator {
     }
 
     void checkYamlKeys(Path path, List<Diagnostic> diagnostics) {
-        YAMLFactory factory = new YAMLFactory();
-        try {
-            YAMLParser parser = factory.createParser(Files.newInputStream(path));
-            parseYamlKeys(parser, diagnostics);
-            parser.close();
+        try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
+            parseYamlKeys(new Yaml().parse(reader), diagnostics);
         } catch (Exception e) {
             // parse errors are not our concern here
         }
     }
 
-    void parseYamlKeys(YAMLParser parser, List<Diagnostic> diagnostics) throws IOException {
-        while (parser.nextToken() != null) {
-            if (parser.currentToken() == JsonToken.FIELD_NAME) {
-                String key = parser.currentName();
-                if (isNonStringKey(key)) {
-                    diagnostics.add(new Diagnostic(
-                            Severity.WARN, "non-string-key",
-                            "Non-string YAML key: " + key,
-                            null, null));
-                    return;
-                }
+    /**
+     * Walks raw YAML events rather than Jackson tokens, because only the event stream retains the
+     * scalar style: a quoted ({@code "200"}) or explicitly tagged key is always a string.
+     */
+    void parseYamlKeys(Iterable<Event> events, List<Diagnostic> diagnostics) {
+        Deque<Integer> stack = new ArrayDeque<>();
+        for (Event event : events) {
+            if (event instanceof CollectionEndEvent) {
+                stack.pop();
+                continue;
+            }
+            if (!(event instanceof NodeEvent)) {
+                continue;
+            }
+            Integer state = stack.peek();
+            boolean isKey = state != null && state == MAPPING_KEY;
+            if (state != null && state != SEQUENCE) {
+                stack.pop();
+                stack.push(isKey ? MAPPING_VALUE : MAPPING_KEY);
+            }
+            if (event instanceof MappingStartEvent) {
+                stack.push(MAPPING_KEY);
+            } else if (event instanceof SequenceStartEvent) {
+                stack.push(SEQUENCE);
+            } else if (isKey && event instanceof ScalarEvent scalar
+                    && scalar.isPlain() && scalar.getTag() == null
+                    && isNonStringKey(scalar.getValue())) {
+                diagnostics.add(new Diagnostic(
+                        Severity.WARN, "non-string-key",
+                        "Non-string YAML key: " + scalar.getValue(),
+                        null, null));
+                return;
             }
         }
     }

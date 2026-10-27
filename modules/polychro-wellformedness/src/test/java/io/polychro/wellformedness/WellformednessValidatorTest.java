@@ -26,8 +26,10 @@ import io.polychro.spi.Severity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -130,6 +132,32 @@ class WellformednessValidatorTest {
         Document doc = Document.fromYaml(path);
         List<Diagnostic> result = validator.validate(doc);
         assertTrue(result.stream().anyMatch(d -> "non-string-key".equals(d.code())));
+    }
+
+    @Test
+    void validateShouldNotFlagQuotedOrTaggedNumericKeys() {
+        Path path = Path.of("src/test/resources/fixtures/quoted-keys.yml");
+        Document doc = Document.fromYaml(path);
+        List<Diagnostic> result = validator.validate(doc);
+        assertTrue(result.stream().noneMatch(d -> "non-string-key".equals(d.code())),
+                "Quoted keys and numeric values must not be flagged: " + result);
+    }
+
+    @Test
+    void validateShouldDetectUnquotedNumericKeyNextToQuotedOne() {
+        Path path = Path.of("src/test/resources/fixtures/nested-non-string-key.yml");
+        Document doc = Document.fromYaml(path);
+        List<Diagnostic> result = validator.validate(doc);
+        assertTrue(result.stream().anyMatch(d -> "non-string-key".equals(d.code())
+                && "Non-string YAML key: 404".equals(d.message())));
+    }
+
+    @Test
+    void parseYamlKeysShouldIgnoreAliasKeys() {
+        String yaml = "codes: [&code 200]\nresponses:\n  *code : aliased\n";
+        List<Diagnostic> diagnostics = new ArrayList<>();
+        validator.parseYamlKeys(new Yaml().parse(new StringReader(yaml)), diagnostics);
+        assertTrue(diagnostics.isEmpty(), "Alias keys must not be flagged: " + diagnostics);
     }
 
     @Test
