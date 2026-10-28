@@ -11,7 +11,7 @@ The diagnostics (`code`, `severity`, `message`, exit code) in
 [`EXPECTED-OUTPUT.md`](./EXPECTED-OUTPUT.md) were originally **verified on 2026-06-26**
 against a freshly built `polychro 1.0.0-beta1-SNAPSHOT` CLI, and **re-verified on
 2026-09-03** against `polychro 1.0.0-beta5` and on **2026-10-27** against a CLI built
-from `main` (`1.0.0-beta9-SNAPSHOT`). The table records the **real** engine output, not a
+from the [#218](https://github.com/naftiko/polychro/pull/218) branch (`1.0.0-beta9-SNAPSHOT`). The table records the **real** engine output, not a
 reading of the source. No step diverges from the intended narrative any more: the
 `non-string-key` false positive (§5) and the Step 4 schema wiring (§6) are both
 **resolved**.
@@ -47,7 +47,7 @@ The runnable example files exist, but the public tutorial pages
 
 ## 5. ~~`non-string-key` false positive on quoted HTTP status codes~~ — RESOLVED ([#78](https://github.com/naftiko/polychro/issues/78))
 
-**Status: resolved.** Re-verified on 2026-10-27 against a CLI built from `main`
+**Status: resolved.** Re-verified on 2026-10-27 against a CLI built from the [#218](https://github.com/naftiko/polychro/pull/218) branch
 (`1.0.0-beta9-SNAPSHOT`): Steps 1 and 7 exit `0` with no diagnostics, and no step carries
 the `non-string-key` WARN any more.
 
