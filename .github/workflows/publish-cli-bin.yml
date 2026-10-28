@@ -48,114 +48,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-java@v6
+      # Scoped to -pl modules/polychro-cli -am to match build-native's build scope: the
+      # classpath GraalVM will compile.
+      - uses: ./.github/actions/scan-dependencies
         with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: maven
-          server-id: github-naftiko
-          server-username: MAVEN_USERNAME
-          server-password: MAVEN_PASSWORD
-
-      - name: Resolve dependencies
-        # Populates the local .m2 repo so Trivy scans actual resolved transitive
-        # versions (the classpath GraalVM will compile) rather than raw pom.xml.
-        # Scoped to -pl modules/polychro-cli -am to match build-native's build scope
-        run: mvn -B dependency:go-offline -pl modules/polychro-cli -am
-        env:
-          MAVEN_USERNAME: ${{ github.actor }}
-          MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Generate SBOM (CycloneDX)
-        # Scans the SBOM (dependencies already resolved into ~/.m2 by the
-        # "Resolve dependencies" step above) instead of raw pom.xml files.
-        # Avoids Trivy's static pom.xml parser, which for a *released* (non-SNAPSHOT)
-        # parent POM falls back to a live Maven Central lookup and can hit a 429
-        # rate-limit (naftiko/polychro#154). Mirrors the approach already used in
-        # nightly-quality-gate.yml / publish-maven.yml.
-        run: mvn -B org.cyclonedx:cyclonedx-maven-plugin:2.9.2:makeAggregateBom -pl modules/polychro-cli -am -DoutputFormat=json -DoutputName=bom
-        env:
-          MAVEN_USERNAME: ${{ github.actor }}
-          MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Scan pre-native dependency tree (SBOM)
-        uses: aquasecurity/trivy-action@v0.36.0
-        env:
-          # Skips Trivy's own check for a newer release (the network call that
-          # produced the harmless "Version X.Y.Z of Trivy is now available"
-          # warning in the original failing run) — irrelevant noise since the
-          # binary version is already pinned via the action version above.
-          TRIVY_SKIP_VERSION_CHECK: "true"
-        with:
-          scan-type: "sbom"
-          scan-ref: "target/bom.json"
-          format: "json"
-          output: "trivy-fs-results.json"
-          severity: "HIGH,CRITICAL"
-          exit-code: "0"
-
-      - name: Publish Trivy summary
-        id: trivy-summary
-        if: always()
-        run: |
-          echo "## Trivy Dependency Scan" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          if [ ! -f trivy-fs-results.json ]; then
-            echo "> No report found." >> $GITHUB_STEP_SUMMARY
-            echo "trivy_critical=0" >> "$GITHUB_OUTPUT"
-            echo "trivy_high=0" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          CRITICAL=$(jq '[.Results[]?.Vulnerabilities[]?.Severity] | map(select(.=="CRITICAL")) | length' trivy-fs-results.json)
-          HIGH=$(jq '[.Results[]?.Vulnerabilities[]?.Severity] | map(select(.=="HIGH")) | length' trivy-fs-results.json)
-
-          [ "$CRITICAL" -gt 0 ] && STATUS="❌ ${CRITICAL} critical issue(s) — blocking publish" \
-            || { [ "$HIGH" -gt 0 ] && STATUS="❌ ${HIGH} high issue(s) — blocking publish" || STATUS="✅ No critical or high issues"; }
-
-          echo "**${STATUS}**" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Critical | ${CRITICAL} |" >> $GITHUB_STEP_SUMMARY
-          echo "| High     | ${HIGH} |" >> $GITHUB_STEP_SUMMARY
-
-          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "<details><summary>Critical/High vulnerability findings</summary>" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "| Package | Vulnerability ID | Severity | Installed | Fixed |" >> $GITHUB_STEP_SUMMARY
-            echo "|---------|-------------------|----------|-----------|-------|" >> $GITHUB_STEP_SUMMARY
-            jq -r '
-              [.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL" or .Severity=="HIGH")]
-              | sort_by(if .Severity=="CRITICAL" then 0 else 1 end)
-              | .[]
-              | "| \(.PkgName) | \(.VulnerabilityID) | \(.Severity) | \(.InstalledVersion) | \(if (.FixedVersion // "") == "" then "n/a" else .FixedVersion end) |"
-            ' trivy-fs-results.json >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "</details>" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          echo "trivy_critical=$CRITICAL" >> "$GITHUB_OUTPUT"
-          echo "trivy_high=$HIGH" >> "$GITHUB_OUTPUT"
-
-      - name: Upload scan report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: trivy-fs-report
-          path: trivy-fs-results.json
-
-      - name: Fail on critical/high findings
-        if: always()
-        run: |
-          CRIT="${{ steps.trivy-summary.outputs.trivy_critical }}"
-          HIGH="${{ steps.trivy-summary.outputs.trivy_high }}"
-          if [ "${CRIT:-0}" -gt 0 ] || [ "${HIGH:-0}" -gt 0 ]; then
-            echo "::error::Trivy found ${CRIT} critical and ${HIGH} high findings — blocking publish"
-            exit 1
-          fi
+          maven-args: -pl modules/polychro-cli -am
+          report-name: trivy-fs-report
+          title: Trivy Dependency Scan
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   build-native:
     name: Build on ${{ matrix.os }}
