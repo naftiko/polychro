@@ -529,7 +529,7 @@ jobs:
           from polychro.binary import resolve_binary
           from polychro.linter import Linter
           print("binary:", resolve_binary())
-          result = Linter(schema="openapi-schema.json", ruleset="openapi-ruleset.yml").lint("step-6-openapi.yml")
+          result = Linter(schema="openapi-schema.json", ruleset="openapi-ruleset.yml").lint("step-3-openapi.yml")
           print("diagnostics:", len(result.diagnostics))
           assert len(result.diagnostics) == 1, result.diagnostics
           EOF
