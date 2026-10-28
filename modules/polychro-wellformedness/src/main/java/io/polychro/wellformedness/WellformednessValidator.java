@@ -29,6 +29,7 @@ import org.yaml.snakeyaml.events.MappingStartEvent;
 import org.yaml.snakeyaml.events.NodeEvent;
 import org.yaml.snakeyaml.events.ScalarEvent;
 import org.yaml.snakeyaml.events.SequenceStartEvent;
+import org.yaml.snakeyaml.nodes.Tag;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -231,7 +232,8 @@ class WellformednessValidator implements Validator {
 
     /**
      * Walks raw YAML events rather than Jackson tokens, because only the event stream retains the
-     * scalar style: a quoted ({@code "200"}) or explicitly tagged key is always a string.
+     * scalar style: a quoted ({@code "200"}) or {@code !!str}-tagged key is always a string, while
+     * a key with any other tag ({@code !!int 200}) is still flagged when it looks non-string.
      */
     void parseYamlKeys(Iterable<Event> events, List<Diagnostic> diagnostics) {
         Deque<Integer> stack = new ArrayDeque<>();
@@ -254,7 +256,7 @@ class WellformednessValidator implements Validator {
             } else if (event instanceof SequenceStartEvent) {
                 stack.push(SEQUENCE);
             } else if (isKey && event instanceof ScalarEvent scalar
-                    && scalar.isPlain() && scalar.getTag() == null
+                    && scalar.isPlain() && !Tag.STR.getValue().equals(scalar.getTag())
                     && isNonStringKey(scalar.getValue())) {
                 diagnostics.add(new Diagnostic(
                         Severity.WARN, "non-string-key",

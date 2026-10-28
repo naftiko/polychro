@@ -1,7 +1,7 @@
 # Track 1 — YAML / OpenAPI — Expected output (verified against beta9-SNAPSHOT)
 
 > **STATUS: VERIFIED against `polychro 1.0.0-beta9-SNAPSHOT`.** Every row below was
-> re-verified on 2026-10-27 by running a CLI built from `main` from this directory
+> re-verified on 2026-10-27 by running a CLI built from the [#218](https://github.com/naftiko/polychro/pull/218) branch from this directory
 > (previously verified against `1.0.0-beta5` on 2026-09-03 and `1.0.0-beta1-SNAPSHOT`
 > on 2026-06-26). Every step now behaves as the tutorial narrative intends: the
 > `non-string-key` false positive on quoted status codes is **resolved** (see

@@ -92,6 +92,8 @@
         <picocli.version>4.7.6</picocli.version>
         <graalvm.polyglot.version>24.2.1</graalvm.polyglot.version>
         <jsoup.version>1.23.2</jsoup.version>
+        <!-- Used directly by polychro-wellformedness; keep aligned with jackson-dataformat-yaml -->
+        <snakeyaml.version>2.5</snakeyaml.version>
         <bouncycastle.version>1.85</bouncycastle.version>
         <jetty.version>12.0.33</jetty.version>
         <json-smart.version>2.5.2</json-smart.version>
@@ -176,6 +178,13 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
                 <version>${slf4j.version}</version>
+            </dependency>
+
+            <!-- YAML event stream -->
+            <dependency>
+                <groupId>org.yaml</groupId>
+                <artifactId>snakeyaml</artifactId>
+                <version>${snakeyaml.version}</version>
             </dependency>
 
             <!-- HTML parser -->

@@ -153,6 +153,15 @@ class WellformednessValidatorTest {
     }
 
     @Test
+    void parseYamlKeysShouldDetectNonStrTaggedNumericKeys() {
+        String yaml = "responses:\n  !!int 200: ok\n  !!str 404: missing\n";
+        List<Diagnostic> diagnostics = new ArrayList<>();
+        validator.parseYamlKeys(new Yaml().parse(new StringReader(yaml)), diagnostics);
+        assertEquals(1, diagnostics.size(), "Only the !!int key must be flagged: " + diagnostics);
+        assertEquals("Non-string YAML key: 200", diagnostics.get(0).message());
+    }
+
+    @Test
     void parseYamlKeysShouldIgnoreAliasKeys() {
         String yaml = "codes: [&code 200]\nresponses:\n  *code : aliased\n";
         List<Diagnostic> diagnostics = new ArrayList<>();
