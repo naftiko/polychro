@@ -52,7 +52,7 @@ The runnable example files exist, but the public tutorial pages
 the `non-string-key` WARN any more.
 
 The well-formedness validator now walks the raw SnakeYAML event stream instead of Jackson
-tokens, so it sees each key's scalar style: only a **plain** (unquoted, untagged) key that
+tokens, so it sees each key's scalar style: only a **plain** (unquoted, not tagged `!!str`) key that
 looks like a number, boolean or null is flagged. `"200":`, `'200':` and `!!str 200:` are
 string keys and stay silent; an unquoted `200:` is still reported.
 
