@@ -149,12 +149,11 @@ class ExternalLinkChecker {
             return diag;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            Diagnostic diag = new Diagnostic(Severity.INFO, "unreachable-external-link",
+            // Not cached: an interrupted check says nothing about the link itself.
+            return new Diagnostic(Severity.INFO, "unreachable-external-link",
                     "External link check interrupted: " + url,
                     null,
                     new SourceRange(line, 1, line, 1));
-            failureCache.put(url, diag);
-            return diag;
         } catch (IllegalArgumentException e) {
             Diagnostic diag = new Diagnostic(Severity.WARN, "broken-external-link",
                     "Invalid URL: " + url,
@@ -202,12 +201,11 @@ class ExternalLinkChecker {
             return diag;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            Diagnostic diag = new Diagnostic(Severity.INFO, "unreachable-external-link",
+            // Not cached: an interrupted check says nothing about the link itself.
+            return new Diagnostic(Severity.INFO, "unreachable-external-link",
                     "External link check interrupted: " + url,
                     null,
                     new SourceRange(line, 1, line, 1));
-            failureCache.put(url, diag);
-            return diag;
         }
     }
 
