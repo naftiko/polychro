@@ -84,7 +84,7 @@ jobs:
             artifact_name: polychro-cli-windows-amd64.exe
 
     permissions:
-      contents: write
+      contents: read  # The release job creates the release.
       packages: read
 
     steps:
@@ -176,16 +176,6 @@ jobs:
             modules/polychro-cli/target/${{ matrix.artifact_name }}
             modules/polychro-cli/target/${{ matrix.artifact_name }}.sha256
 
-      - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/')  # Only create release when a new tag is pushed (not when action is manually triggered).
-        uses: softprops/action-gh-release@v3
-        with:
-          files: |
-            modules/polychro-cli/target/${{ matrix.artifact_name }}
-            modules/polychro-cli/target/${{ matrix.artifact_name }}.sha256
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   # The jar + JRE packages that scripts/install.sh and install.ps1 download. Built and tested
   # by publish-cli-packages.yml in this same run, so one release per tag carries both channels.
   build-packages:
@@ -195,45 +185,49 @@ jobs:
       contents: read
       packages: read
 
-  release-packages:
-    name: Attach the packages to the release
-    needs: [build-native, build-packages]
-    if: startsWith(github.ref, 'refs/tags/')  # Same rule as the binaries' "Create Release" step.
+  # The one job that creates the release, once both channels are built and tested: a tag never
+  # goes out with only the binaries, or with nothing for install.sh, which installs the newest
+  # release. When the native build is dropped, only test-binary leaves `needs`.
+  release:
+    name: Create the release
+    needs: [test-binary, build-packages]  # test-binary itself needs build-native
+    if: startsWith(github.ref, 'refs/tags/')  # Not on a manual run, nor on the nightly's call.
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Download the tarballs
+      # Every artifact of this run named polychro-cli-*: the four native binaries and the four
+      # packages, each with its .sha256.
+      - name: Download the binaries and the packages
         uses: actions/download-artifact@v8
         with:
-          pattern: polychro-cli-*.tar.gz
-          path: packages
+          pattern: polychro-cli-*
+          path: release
           merge-multiple: true
 
-      - name: Download the zip
-        uses: actions/download-artifact@v8
-        with:
-          pattern: polychro-cli-*.zip
-          path: packages
-          merge-multiple: true
-
-      # The install scripts ask for exactly these names: fail here rather than ship a release
-      # on which one platform's install returns a 404.
-      - name: Check the four packages and their checksums
+      # The names the native binaries have always had, and the ones the install scripts ask for:
+      # fail here rather than ship a release on which one platform's download returns a 404.
+      - name: Check every file the release must carry
         shell: bash
         run: |
           set -euo pipefail
-          ls -l packages
-          for f in polychro-cli-macos-arm64.tar.gz polychro-cli-linux-amd64.tar.gz \
-                   polychro-cli-linux-arm64.tar.gz polychro-cli-windows-amd64.zip; do
-            test -f "packages/$f" || { echo "FAIL: $f is missing"; exit 1; }
-            test -f "packages/$f.sha256" || { echo "FAIL: $f.sha256 is missing"; exit 1; }
+          ls -l release
+          for f in polychro-cli-linux-amd64 polychro-cli-linux-arm64 \
+                   polychro-cli-macos-arm64 polychro-cli-windows-amd64.exe \
+                   polychro-cli-linux-amd64.tar.gz polychro-cli-linux-arm64.tar.gz \
+                   polychro-cli-macos-arm64.tar.gz polychro-cli-windows-amd64.zip; do
+            test -f "release/$f" || { echo "FAIL: $f is missing"; exit 1; }
+            test -f "release/$f.sha256" || { echo "FAIL: $f.sha256 is missing"; exit 1; }
           done
 
-      - name: Attach to the release
+      # The action creates the release as a draft, uploads every file, then publishes it, so the
+      # release is never public with only part of its files. If publish-maven.yml has already
+      # opened the release as a draft for its SBOM, the action reuses that draft.
+      - name: Create the release
         uses: softprops/action-gh-release@v3
         with:
-          files: packages/*
+          files: release/*
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
