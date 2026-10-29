@@ -556,7 +556,7 @@ jobs:
           import { pathToFileURL } from "node:url";
           const sdk = pathToFileURL(`${process.env.GITHUB_WORKSPACE}/modules/polychro-node/dist/index.js`);
           const { lint } = await import(sdk.href);
-          const result = await lint("step-7-openapi.yml", { schema: "openapi-schema.json", ruleset: "openapi-ruleset.yml" });
+          const result = await lint("step-3-openapi.yml", { schema: "openapi-schema.json", ruleset: "openapi-ruleset.yml" });
           console.log("diagnostics:", result.diagnostics.length);
           if (result.diagnostics.length !== 1) throw new Error(JSON.stringify(result.diagnostics));
           EOF
@@ -586,7 +586,7 @@ jobs:
           func main() {
           	bin, err := polychro.ResolveBinary()
           	fmt.Println("binary:", bin, err)
-          	result, err := polychro.Lint("step-7-openapi.yml", polychro.Options{Schema: "openapi-schema.json", Ruleset: "openapi-ruleset.yml"})
+          	result, err := polychro.Lint("step-3-openapi.yml", polychro.Options{Schema: "openapi-schema.json", Ruleset: "openapi-ruleset.yml"})
           	if err != nil {
           		fmt.Println("error:", err)
           		os.Exit(1)
