@@ -107,7 +107,9 @@ runs:
         fi
 
         SARIF_FILE="${RUNNER_TEMP}/polychro-results.sarif"
-        polychro $ARGS $FILES > "$SARIF_FILE" 2>"${RUNNER_TEMP}/polychro.err" || true
+        # By its path, not through PATH: if scripts/install.sh also ran on this runner, which
+        # polychro PATH finds first depends on the order of the GITHUB_PATH additions.
+        "$HOME/.polychro/native/polychro" $ARGS $FILES > "$SARIF_FILE" 2>"${RUNNER_TEMP}/polychro.err" || true
 
         echo "sarif-file=$SARIF_FILE" >> "$GITHUB_OUTPUT"
 
