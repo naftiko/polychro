@@ -207,6 +207,37 @@ class ExternalLinkEdgeCasesTest {
     }
 
     @Test
+    void checkUrlShouldCheckTheLinkAgainWhenAnEarlierCheckWasInterrupted() {
+        ExternalLinkChecker checker = new ExternalLinkChecker(5000, 0);
+
+        Thread.currentThread().interrupt();
+        try {
+            Diagnostic interrupted = checker.checkUrl(baseUrl + "/ok", 1);
+            assertEquals("unreachable-external-link", interrupted.code());
+        } finally {
+            Thread.interrupted();
+        }
+
+        // An interrupted check says nothing about the link, so `serve` must not keep reporting it.
+        assertNull(checker.checkUrl(baseUrl + "/ok", 2));
+    }
+
+    @Test
+    void checkUrlShouldCheckTheLinkAgainWhenAnEarlierFallbackGetWasInterrupted() {
+        ExternalLinkChecker checker = new ExternalLinkChecker(5000, 0);
+
+        Thread.currentThread().interrupt();
+        try {
+            Diagnostic interrupted = checker.fallbackGet(baseUrl + "/head-405-get-ok", 1);
+            assertEquals("unreachable-external-link", interrupted.code());
+        } finally {
+            Thread.interrupted();
+        }
+
+        assertNull(checker.checkUrl(baseUrl + "/head-405-get-ok", 2));
+    }
+
+    @Test
     void zeroRateLimitShouldSkipThrottle() {
         ExternalLinkChecker checker = new ExternalLinkChecker(5000, 0);
 
