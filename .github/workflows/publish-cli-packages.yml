@@ -35,8 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Its own report name: a release run can call this workflow next to publish-cli-bin.yml,
-      # which already uploads "trivy-fs-report", and two uploads with one name fail the run.
+      # Named for this workflow, so another scan in the same run can't clash with its upload.
       - uses: ./.github/actions/scan-dependencies
         with:
           maven-args: -Pjre-package -pl modules/polychro-cli -am
@@ -387,8 +386,8 @@ jobs:
             echo "FAIL: the class cache exists but the JVM did not use it"; exit 1
           fi
 
-      # The same regression guards as publish-cli-bin.yml's test-binary job, so both channels
-      # are held to the same behaviour, plus three that only the jlink runtime can break:
+      # The lint regression guards the native binaries had, plus three that only the jlink
+      # runtime can break:
       # a JavaScript ruleset function (GraalJS on a regular JDK), an outbound HTTPS $ref
       # (crypto modules) and `serve` (HTTP server). Each also fails on a missing class or
       # module, the symptom of a jlink image that dropped one.
