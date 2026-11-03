@@ -29,7 +29,7 @@ See **[Getting Started](https://shipyard.naftiko.io/polychro/1.0.0-beta1/getting
 |---|---|
 | **Polyglot Validation** | Lint **YAML**, **JSON**, **XML**, **Markdown**, and **HTML** specs through one pipeline |
 | **Composable Pipeline** | Layered **well-formedness → schema-model → ruleset → format-aware** validation |
-| **Native Executable** | Standalone binaries for **Linux**, **macOS**, and **Windows** — no JVM required |
+| **Self-contained CLI** | One package each for **Linux**, **macOS**, and **Windows**, with its own Java runtime — no JVM to install |
 | **MCP Server Mode** | Expose linting as **MCP** tools for AI agent consumption out of the box |
 | **GitHub Action** | Lint specs in CI with structured **SARIF** output |
 | **Spectral-Format Rulesets** | Execute governance rulesets with `given`/`then` semantics |
@@ -47,7 +47,7 @@ For the full feature list see [Features](https://shipyard.naftiko.io/polychro/1.
 
 - **Not a meta-linter.** Super-Linter and MegaLinter bundle dozens of third-party tools in a large Docker image. Polychro is a single engine that owns the spec-validation slice end to end — no Docker dependency, no per-tool config to stitch together.
 - **Not OpenAPI-only.** Polychro speaks the Spectral ruleset format, but treats arbitrary YAML, JSON, XML, Markdown, and HTML as first-class specs — capabilities, MCP manifests, CRDs, instruction files, not just OpenAPI.
-- **Not a Node.js tool.** Polychro runs as a GraalVM-native binary with sub-second cold start, or in-process inside any JVM — no Node.js runtime, no 2–5 s subprocess startup.
+- **Not a Node.js tool.** Polychro runs as a self-contained CLI with its own Java runtime, or in-process inside any JVM — no Node.js runtime.
 
 ---
 
