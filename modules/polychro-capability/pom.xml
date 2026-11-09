@@ -33,7 +33,7 @@
         <dependency>
             <groupId>io.ikanos</groupId>
             <artifactId>ikanos-engine</artifactId>
-            <version>1.0.0-beta9</version>
+            <version>1.0.0-beta10-SNAPSHOT</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.eclipse.jetty.http3</groupId>
@@ -48,7 +48,7 @@
         <dependency>
             <groupId>io.ikanos</groupId>
             <artifactId>ikanos-spec</artifactId>
-            <version>1.0.0-beta9</version>
+            <version>1.0.0-beta10-SNAPSHOT</version>
         </dependency>
         <!-- Workaround for naftiko/framework#433: ikanos-engine declares GraalVM polyglot
              as pom-type dependencies (BOMs), which do not transitively pull the runtime jar.
