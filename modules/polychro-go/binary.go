@@ -10,8 +10,8 @@ import (
 	"runtime"
 )
 
-// BinaryNotFoundError indicates that the Polychro native binary cannot be located.
-var BinaryNotFoundError = errors.New("polychro binary not found")
+// BinaryNotFoundError indicates that the polychro CLI cannot be located.
+var BinaryNotFoundError = errors.New("polychro CLI not found. Install it with scripts/install.sh or scripts/install.ps1, or set POLYCHRO_BIN")
 
 func platformBinaryName() string {
 	if runtime.GOOS == "windows" {
@@ -20,7 +20,7 @@ func platformBinaryName() string {
 	return "polychro"
 }
 
-// ResolveBinary locates the Polychro native binary.
+// ResolveBinary locates the polychro CLI.
 //
 // Search order:
 //  1. POLYCHRO_BIN environment variable

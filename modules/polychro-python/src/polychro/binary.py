@@ -1,6 +1,6 @@
 # Copyright 2026 Naftiko — Apache License 2.0
 
-"""Binary resolution for the Polychro native executable."""
+"""Locates the polychro CLI."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from pathlib import Path
 
 
 class BinaryNotFoundError(Exception):
-    """Raised when the Polychro native binary cannot be located."""
+    """Raised when the polychro CLI cannot be located."""
 
 
 def _platform_binary_name() -> str:
@@ -44,7 +44,7 @@ def _search_paths() -> list[Path]:
 
 
 def resolve_binary() -> Path:
-    """Locate the Polychro native binary.
+    """Locate the polychro CLI.
 
     Search order:
     1. POLYCHRO_BIN environment variable
@@ -62,6 +62,6 @@ def resolve_binary() -> Path:
             return candidate
 
     raise BinaryNotFoundError(
-        "Polychro binary not found. Install it or set POLYCHRO_BIN. "
-        "Searched: " + ", ".join(str(p) for p in _search_paths())
+        "polychro CLI not found. Install it with scripts/install.sh or scripts/install.ps1, "
+        "or set POLYCHRO_BIN. Searched: " + ", ".join(str(p) for p in _search_paths())
     )

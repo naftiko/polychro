@@ -1,7 +1,7 @@
 // Copyright 2026 Naftiko — Apache License 2.0
 
 /**
- * Core linting interface — subprocess wrapper around the Polychro native binary.
+ * Core linting interface — subprocess wrapper around the polychro CLI.
  */
 
 import { execFile } from "node:child_process";

@@ -1,8 +1,7 @@
 name: Publish CLI Binaries
 
 # On a v* tag: builds and tests the CLI packages (a jar plus an embedded jlink JRE, one archive
-# per OS, through publish-cli-packages.yml), then creates the release with them. The GraalVM
-# native binaries are no longer built or released: the packages replace them for now.
+# per OS, through publish-cli-packages.yml), then creates the release with them.
 
 on:
   push:

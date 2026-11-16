@@ -223,12 +223,8 @@ class CliIntegrationTest {
     void lintWithRulesetExtendingSpectralOasShouldResolveBundledRuleset() throws Exception {
         // naftiko/polychro#84: a user-authored ruleset that extends the bundled spectral:oas
         // equivalent must resolve end-to-end through the CLI, exactly the way it would in the
-        // packaged/native binary — the bundled ruleset is loaded via the classpath resource
-        // "rulesets/openapi.yml", the same resource path declared in
-        // META-INF/native-image/io.polychro/polychro-cli/resource-config.json
-        // ("rulesets/.*\\.yml"), so this test doubles as a functional guard that the existing
-        // glob pattern is sufficient — no new native-image resource-config entry is needed for
-        // bundled `extends` refs.
+        // jar + JRE package — the bundled ruleset is loaded via the classpath resource
+        // "rulesets/openapi.yml".
         Path ruleset = createFile("extends-spectral-oas.yml", """
                 extends: "spectral:oas"
                 rules: {}

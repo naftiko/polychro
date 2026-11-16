@@ -1,6 +1,6 @@
 # Copyright 2026 Naftiko — Apache License 2.0
 
-"""Polychro Python SDK — thin wrapper for the Polychro native binary."""
+"""Polychro Python SDK — thin wrapper for the polychro CLI."""
 
 from polychro.diagnostic import Diagnostic, Severity
 from polychro.linter import Linter, LintResult

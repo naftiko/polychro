@@ -130,4 +130,14 @@ describe("resolveBinary", () => {
     vi.mocked(existsSync).mockImplementation((path) => path === WRAPPER);
     expect(resolveBinary()).toBe(WRAPPER);
   });
+
+  it("should name the polychro CLI and every place it looked when nothing is found", () => {
+    vi.mocked(execSync).mockImplementation(() => {
+      throw new Error("not on PATH");
+    });
+    vi.mocked(existsSync).mockReturnValue(false);
+    expect(() => resolveBinary()).toThrow(
+      /^polychro CLI not found\. Install it with scripts\/install\.sh or scripts\/install\.ps1, or set POLYCHRO_BIN\. Searched: /
+    );
+  });
 });

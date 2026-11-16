@@ -1,6 +1,6 @@
 # Copyright 2026 Naftiko — Apache License 2.0
 
-"""Core linting interface — subprocess wrapper around the Polychro native binary."""
+"""Core linting interface — subprocess wrapper around the polychro CLI."""
 
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ class LintResult:
 
 
 class Linter:
-    """Polychro linter — thin wrapper over the native binary.
+    """Polychro linter — thin wrapper over the polychro CLI.
 
     Usage:
         linter = Linter(ruleset="my-rules.yml")

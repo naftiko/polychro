@@ -207,9 +207,8 @@
                 <type>pom</type>
             </dependency>
             <!--
-              Truffle JS runtime — required both on the JVM and in the native image
-              (native build arg: language:js). The polyglot BOM above only pulls the
-              polyglot API; this POM pulls org.graalvm.js:js-language and
+              Truffle JS runtime, which JavaScript ruleset functions need. The polyglot BOM
+              above only pulls the polyglot API; this POM pulls org.graalvm.js:js-language and
               org.graalvm.truffle:truffle-runtime — the actual GraalJS language
               implementation. See: https://github.com/naftiko/polychro/issues/45
             -->

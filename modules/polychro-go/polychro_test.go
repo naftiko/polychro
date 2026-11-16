@@ -143,6 +143,10 @@ func TestResolveBinaryNotFound(t *testing.T) {
 	if !errors.Is(err, BinaryNotFoundError) {
 		t.Errorf("expected BinaryNotFoundError, got: %v", err)
 	}
+	want := "polychro CLI not found. Install it with scripts/install.sh or scripts/install.ps1, or set POLYCHRO_BIN"
+	if err == nil || err.Error() != want {
+		t.Errorf("expected %q, got: %v", want, err)
+	}
 }
 
 func TestResolveBinaryFromEnv(t *testing.T) {

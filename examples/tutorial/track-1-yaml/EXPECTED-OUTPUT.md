@@ -28,7 +28,7 @@ parse failure / validator-config error).
 | 3 | `polychro lint --ruleset openapi-ruleset.yml step-3-openapi.yml` | 1 | `path-summary-present` / WARN / "Each path item must declare a `summary`." (at `$.paths./ships/{imo_number}`) |
 | 4 | `polychro lint --config .polychro.yml step-4-openapi.yml` | 2 | `ERROR at $.info.version [type]: $.info.version: number found, string expected`. The `config.json-schema` block in `.polychro.yml` is consumed and the JSON-Schema stage runs as the narrative intends (this was LIMITATIONS §6, **resolved**). |
 | 5 | `polychro lint --ruleset openapi-ruleset.yml step-5-openapi.yml` | 2 | `operation-id-present` / ERROR / "Each operation must declare an `operationId`." (at `$.paths./crew.get`) |
-| 6 | `polychro lint --ruleset openapi-ruleset.yml step-6-openapi.yml` | 2 | `operation-id-unique` / ERROR / "Every `operationId` must be unique across the whole contract." (at `$.paths./ships/{imo_number}.get.operationId`; the ruleset's `message` overrides the function's own, as predicted). GraalVM/Truffle warnings are printed on stderr when the polyglot function runs. |
+| 6 | `polychro lint --ruleset openapi-ruleset.yml step-6-openapi.yml` | 2 | `operation-id-unique` / ERROR / "Every `operationId` must be unique across the whole contract." (at `$.paths./ships/{imo_number}.get.operationId`; the ruleset's `message` overrides the function's own, as predicted). Nothing is printed on stderr. |
 | 7 | `polychro lint --format agent step-7-openapi.yml` | 0 | AgentFormatter JSON with no diagnostics: `{"diagnostics":[],"summary":{"errors":0,"warnings":0,"info":0},"tokens":27}` (pretty-printed by the CLI). |
 
 > **Step 7 fixture:** `step-7-openapi.yml` is byte-identical to `step-1-openapi.yml` — the teaching point of Step 7 is the `--format agent` flag, not a new defect in the contract.
@@ -43,8 +43,8 @@ parse failure / validator-config error).
   diagnostic `path` in `$.paths.<path>.…` form and the rule's own `message` — confirming
   the single-fire design and the message-override (ruleset `message` wins over the
   polyglot function's message).
-- **Polyglot** path resolution handles the `/ships/{imo_number}` segment without throwing;
-  GraalVM/Truffle prints interpreter warnings to **stderr** (not part of the diagnostics).
+- **Polyglot** path resolution handles the `/ships/{imo_number}` segment without throwing,
+  and the CLI prints nothing on **stderr**: it turns off the GraalJS interpreter warning.
 - **No divergence from the intended narrative** remains. The `non-string-key` false
   positive on quoted status codes (formerly [`LIMITATIONS.md`](./LIMITATIONS.md) §5) and
   the Step 4 `config.json-schema` block (formerly §6) are both **resolved**.

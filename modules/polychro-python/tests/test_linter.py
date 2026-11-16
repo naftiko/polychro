@@ -120,7 +120,7 @@ class TestBinary:
     def test_binary_not_found_raises(self):
         with patch("polychro.binary.shutil.which", return_value=None):
             with patch.dict("os.environ", {}, clear=True):
-                with pytest.raises(BinaryNotFoundError, match="Polychro binary not found"):
+                with pytest.raises(BinaryNotFoundError, match=r"^polychro CLI not found\. Install it with scripts/install\.sh or scripts/install\.ps1, or set POLYCHRO_BIN\. Searched: "):
                     resolve_binary()
 
     def test_binary_found_via_env(self, tmp_path):
