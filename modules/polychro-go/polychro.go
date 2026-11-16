@@ -1,6 +1,6 @@
 // Copyright 2026 Naftiko — Apache License 2.0
 
-// Package polychro provides a thin wrapper around the Polychro native binary
+// Package polychro provides a thin wrapper around the polychro CLI
 // for deterministic linting of spec-driven YAML/JSON documents.
 package polychro
 

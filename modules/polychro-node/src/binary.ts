@@ -1,7 +1,7 @@
 // Copyright 2026 Naftiko — Apache License 2.0
 
 /**
- * Binary resolution for the Polychro native executable.
+ * Locates the polychro CLI.
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -14,7 +14,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export class BinaryNotFoundError extends Error {
   constructor(searched: string[]) {
     super(
-      `Polychro binary not found. Install it or set POLYCHRO_BIN. Searched: ${searched.join(", ")}`
+      `polychro CLI not found. Install it with scripts/install.sh or scripts/install.ps1, or set POLYCHRO_BIN. Searched: ${searched.join(", ")}`
     );
     this.name = "BinaryNotFoundError";
   }

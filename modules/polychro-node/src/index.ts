@@ -1,7 +1,7 @@
 // Copyright 2026 Naftiko — Apache License 2.0
 
 /**
- * Polychro Node.js SDK — thin wrapper for the Polychro native binary.
+ * Polychro Node.js SDK — thin wrapper for the polychro CLI.
  */
 
 export { lint, lintString, validateSchema, listRules } from "./linter.js";

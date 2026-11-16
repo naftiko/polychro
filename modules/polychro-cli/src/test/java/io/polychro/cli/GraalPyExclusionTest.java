@@ -19,22 +19,20 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import org.junit.jupiter.api.Test;
 
 /**
- * Guards the CLI's native-image classpath against the unused GraalPy (Truffle Python) stack.
+ * Guards the CLI's runtime classpath, which is what the jar + JRE package ships, against the unused
+ * GraalPy (Truffle Python) stack.
  *
  * <p>The CLI only uses the GraalVM <strong>JS</strong> language (via {@code
  * polychro-ruleset-polyglot} → {@code org.graalvm.js:js-community}). GraalPy is pulled in purely
  * transitively through {@code polychro-capability} → {@code io.ikanos:ikanos-engine} → {@code
  * org.graalvm.polyglot:python}. It is never executed by Polychro.
  *
- * <p>When GraalPy is on the native-image classpath, the {@code python-language} (~88 MB) and {@code
- * python-resources} (~62 MB) jars plus the full Truffle/LLVM/BouncyCastle closure push the
- * native-image analysis to ~343,000 reachable methods. On the memory-constrained GitHub {@code
- * macos-latest} runner (7 GB RAM) the build spends ~79% of its time in GC and is aborted by the
- * deadlock watchdog (exit status 30), so the macOS CLI binary is never produced
- * (naftiko/polychro#58).
+ * <p>With GraalPy, the package's {@code lib/} grows from about 95 MB to about 254 MB: {@code
+ * python-language} (~86 MB), {@code python-resources} (~61 MB), BouncyCastle and the Truffle NFI
+ * and LLVM jars, which every install downloads and unpacks for nothing.
  *
- * <p>This test fails fast — at {@code mvn test} time, on every platform — if GraalPy ever returns
- * to the CLI's runtime classpath, instead of waiting ~1h26 for the macOS native build to OOM.
+ * <p>This test fails at {@code mvn test} time if GraalPy ever returns to the CLI's runtime
+ * classpath.
  */
 class GraalPyExclusionTest {
 
@@ -51,10 +49,9 @@ class GraalPyExclusionTest {
         isClassPresent(GRAALPY_LANGUAGE_CLASS),
         "GraalPy ("
             + GRAALPY_LANGUAGE_CLASS
-            + ") is on the polychro-cli classpath. It is unused by the CLI and bloats the "
-            + "native-image analysis until the macOS build OOMs (naftiko/polychro#58). Keep the "
-            + "org.graalvm.polyglot:python exclusion on the polychro-capability dependency in "
-            + "polychro-cli/pom.xml.");
+            + ") is on the polychro-cli classpath. It is unused by the CLI and adds about 159 MB "
+            + "to the jar + JRE package. Keep the org.graalvm.polyglot:python exclusion on the "
+            + "polychro-capability dependency in polychro-cli/pom.xml.");
   }
 
   @Test

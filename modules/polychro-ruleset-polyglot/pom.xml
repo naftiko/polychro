@@ -32,8 +32,7 @@
         </dependency>
         <!--
           Truffle JS runtime jar — without this, Engine.create() throws
-          "No language and polyglot implementation was found on the module-path"
-          in both the JVM shaded jar and the native image.
+          "No language and polyglot implementation was found on the module-path".
           See: https://github.com/naftiko/polychro/issues/45
         -->
         <dependency>
