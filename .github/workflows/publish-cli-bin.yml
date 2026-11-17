@@ -21,7 +21,9 @@ jobs:
       packages: read
 
   # The one job that creates the release, once the packages are built and tested: a tag never
-  # goes out with nothing for install.sh, which installs the newest release.
+  # goes out with nothing for install.sh, which installs the newest release. JReleaser publishes
+  # the four packages, the SBOM, a .sha256 per file and a changelog from the conventional commits
+  # (jreleaser.yml). It refuses to start when one platform's package is missing.
   release:
     name: Create the release
     needs: [build-packages]
@@ -29,35 +31,65 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      packages: read
     steps:
-      # Every artifact of this run named polychro-cli-*: the four packages, each with its .sha256.
+      # The whole history: the changelog runs from the previous v* tag.
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Every artifact of this run named polychro-cli-*: the four packages, put where JReleaser
+      # assembles them. JReleaser writes their .sha256 files again, the same way.
       - name: Download the packages
         uses: actions/download-artifact@v8
         with:
           pattern: polychro-cli-*
-          path: release
+          path: out/jreleaser/assemble/polychro-cli/jlink
           merge-multiple: true
 
-      # The names the install scripts ask for: fail here rather than ship a release on which one
-      # platform's download returns a 404.
-      - name: Check every file the release must carry
-        shell: bash
-        run: |
-          set -euo pipefail
-          ls -l release
-          for f in polychro-cli-linux-amd64.tar.gz polychro-cli-linux-arm64.tar.gz \
-                   polychro-cli-macos-arm64.tar.gz polychro-cli-windows-amd64.zip; do
-            test -f "release/$f" || { echo "FAIL: $f is missing"; exit 1; }
-            test -f "release/$f.sha256" || { echo "FAIL: $f.sha256 is missing"; exit 1; }
-          done
-
-      # The action creates the release as a draft, uploads every file, then publishes it, so the
-      # release is never public with only part of its files. If publish-maven.yml has already
-      # opened the release as a draft for its SBOM, the action reuses that draft.
-      - name: Create the release
-        uses: softprops/action-gh-release@v3
+      - name: Setup JDK 21 (Temurin)
+        uses: actions/setup-java@v6
         with:
-          files: release/*
-          fail_on_unmatched_files: true
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+          server-id: github-naftiko
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+
+      # The CycloneDX SBOM of every module, made as publish-maven.yml makes the one it scans.
+      # Made here, not attached by publish-maven.yml: JReleaser does not see a draft release, so a
+      # draft opened for the SBOM would stay apart from the release (v1.0.0-beta9 has no SBOM).
+      - name: Generate SBOM (CycloneDX)
+        run: mvn -B org.cyclonedx:cyclonedx-maven-plugin:2.9.2:makeAggregateBom -DoutputFormat=json -DoutputName=bom
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MAVEN_USERNAME: ${{ github.actor }}
+          MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+      # A final release's changelog starts at the previous final release: its betas are left out.
+      - name: Choose the version
+        run: |
+          {
+            echo "JRELEASER_PROJECT_VERSION=${GITHUB_REF_NAME#v}"
+            case "$GITHUB_REF_NAME" in
+              *-*) echo "POLYCHRO_PREVIOUS_TAG=$(git describe --tags --abbrev=0 --match 'v*.*.*' HEAD^ 2>/dev/null || true)" ;;
+              *) echo "POLYCHRO_PREVIOUS_TAG=$(git describe --tags --abbrev=0 --match 'v*.*.*' --exclude '*-*' HEAD^ 2>/dev/null || true)" ;;
+            esac
+          } >> "$GITHUB_ENV"
+
+      - name: Publish the release
+        uses: jreleaser/release-action@97b5e2f0e845de2fe1dbbdf451ac6a21233fafff # v2
+        with:
+          version: 1.26.0
+          arguments: full-release
+        env:
+          JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Keep JReleaser's log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: jreleaser-release-log
+          path: out/jreleaser/trace.log
+          retention-days: 7

@@ -1,10 +1,10 @@
 name: Publish CLI Packages
 
 # Builds the Polychro CLI as a jar plus a custom jlink JRE, one archive per OS with a SHA-256
-# checksum, and installs it with scripts/install.sh / install.ps1 (issue #170). Same mechanism
-# as naftiko/ikanos (#638): no executable of ours to sign, so Windows and macOS do not warn.
-# On a v* tag, publish-cli-bin.yml calls it through workflow_call and attaches the archives to
-# the release.
+# checksum, and installs it with scripts/install.sh / install.ps1 (issue #170). JReleaser makes
+# the archives (jreleaser.yml). No executable of ours to sign, so Windows and macOS do not warn.
+# On a v* tag, publish-cli-bin.yml calls it through workflow_call and JReleaser publishes the
+# archives on the release.
 
 on:
   pull_request:
@@ -14,6 +14,7 @@ on:
       # Any module, not only polychro-cli: jdeps reads the final jar and all of lib/, so a module
       # that starts using a new JDK API can need a new module in the jlink runtime.
       - 'modules/*/src/main/**'
+      - 'jreleaser.yml'
       - 'scripts/install.sh'
       - 'scripts/install.ps1'
       - 'modules/polychro-node/src/**'
@@ -53,22 +54,23 @@ jobs:
     strategy:
       matrix:
         include:
-          # macOS Apple Silicon (ARM64)
+          # jdk: the variable jreleaser.yml reads this runner's JDK from.
           - os: macos-latest
             artifact_name: polychro-cli-macos-arm64.tar.gz
-
-          # Linux AMD64
+            jdk: POLYCHRO_JDK_MACOS_ARM64
           - os: ubuntu-latest
             artifact_name: polychro-cli-linux-amd64.tar.gz
-
-          # Linux ARM64
+            jdk: POLYCHRO_JDK_LINUX_X64
           - os: ubuntu-24.04-arm
             artifact_name: polychro-cli-linux-arm64.tar.gz
-
-          # Windows AMD64
+            jdk: POLYCHRO_JDK_LINUX_ARM64
           - os: windows-latest
             artifact_name: polychro-cli-windows-amd64.zip
+            jdk: POLYCHRO_JDK_WINDOWS_X64
 
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -83,179 +85,75 @@ jobs:
           server-username: MAVEN_USERNAME
           server-password: MAVEN_PASSWORD
 
-      # -Pjre-package writes polychro-cli-<version>.jar (its manifest lists lib/*.jar) and copies
-      # every runtime dependency into target/lib. Not a shaded jar: see modules/polychro-cli/pom.xml.
-      - name: Build jar and lib/ with Maven
-        shell: bash
-        run: mvn -B clean package -Pjre-package -pl modules/polychro-cli -am -DskipTests
+      # -Pjre-package writes target/polychro.jar (its manifest lists the other jars by name) and
+      # copies every runtime dependency into target/lib. Not a shaded jar: see modules/polychro-cli/pom.xml.
+      - name: Build polychro.jar and lib/ with Maven
+        run: |
+          mvn -B clean package -Pjre-package -pl modules/polychro-cli -am -DskipTests
+          # Without -q, so a failure says why; the version goes to a file, not into the log.
+          mvn -B help:evaluate -Dexpression=project.version -Doutput=target/version.txt
+          {
+            echo "JRELEASER_PROJECT_VERSION=$(cat target/version.txt)"
+            echo "${{ matrix.jdk }}=$JAVA_HOME"
+          } >> "$GITHUB_ENV"
         env:
           MAVEN_USERNAME: ${{ github.actor }}
           MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
 
-      # jdeps finds the JDK modules the code links against. Two are added by hand because nothing
-      # links to them, they are only looked up at run time: jdk.crypto.ec (the EC ciphers most TLS
-      # servers need, for a remote $ref over HTTPS) and jdk.zipfs (zip file system provider).
-      # --bind-services (used by Ikanos) is left out: it pulls in every service provider of the
-      # JDK and makes the runtime about twice as large.
-      - name: Build custom JRE with jlink (Unix)
-        if: runner.os != 'Windows'
-        shell: bash
-        working-directory: modules/polychro-cli/target
+      # JReleaser builds the jlink runtime and packs it with the jars (jreleaser.yml): jdeps picks
+      # the JDK modules, --generate-cds-archive writes the JDK's class cache that the installer's
+      # per-install cache builds on. Each runner builds its own OS's package with its own JDK.
+      - name: Package with JReleaser
+        uses: jreleaser/release-action@97b5e2f0e845de2fe1dbbdf451ac6a21233fafff # v2
+        with:
+          version: 1.26.0
+          arguments: assemble --select-current-platform
+          # jlink must use the JDK set up above, not the action's own.
+          setup-java: false
+
+      # The installers run bin/java -jar jars/polychro.jar from the package's one folder: fail
+      # fast if that layout ever drifts, before the test job installs it.
+      - name: Smoke test the package — extract + run --version
         run: |
           set -euo pipefail
-          JAR=$(ls polychro-cli-*.jar | grep -vE -- '-(sources|javadoc)\.jar$')
-          MODS=$(jdeps --print-module-deps -R --ignore-missing-deps --multi-release 21 \
-            --class-path 'lib/*' "$JAR")
-          if [ -z "$MODS" ]; then
-            echo "FAIL: jdeps produced no module list — check $JAR and lib/ exist"
-            exit 1
-          fi
-          MODS="$MODS,jdk.crypto.ec,jdk.zipfs"
-          echo "Modules: $MODS"
-
-          # --generate-cds-archive writes the JDK's class cache (CDS). Without it the JVM starts
-          # slower, and the launcher's per-install AppCDS cache cannot be created at all. The
-          # nocoops variant only serves heaps over 32 GB, so it is dropped (about 4 MB packed).
-          jlink \
-            --module-path "$JAVA_HOME/jmods" \
-            --add-modules "$MODS" \
-            --strip-debug --no-header-files --no-man-pages \
-            --generate-cds-archive \
-            --output "$RUNNER_TEMP/polychro-jre"
-          rm -f "$RUNNER_TEMP"/polychro-jre/lib/server/classes_nocoops.jsa
-          test -f "$RUNNER_TEMP/polychro-jre/lib/server/classes.jsa"
-
-      - name: Build custom JRE with jlink (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        working-directory: modules/polychro-cli/target
-        run: |
-          $JAR = (Get-ChildItem polychro-cli-*.jar | Where-Object { $_.Name -notmatch '-(sources|javadoc)\.jar$' }).Name
-          $MODS = jdeps --print-module-deps -R --ignore-missing-deps --multi-release 21 --class-path 'lib\*' $JAR
-          if ([string]::IsNullOrWhiteSpace($MODS)) {
-            Write-Error "FAIL: jdeps produced no module list — check $JAR and lib\ exist"
-            exit 1
-          }
-          $MODS = "$MODS,jdk.crypto.ec,jdk.zipfs"
-          Write-Host "Modules: $MODS"
-
-          # Same CDS archive as the Unix step; on Windows it lives under bin\server.
-          jlink `
-            --module-path "$env:JAVA_HOME\jmods" `
-            --add-modules "$MODS" `
-            --strip-debug --no-header-files --no-man-pages `
-            --generate-cds-archive `
-            --output "$env:RUNNER_TEMP\polychro-jre"
-          Remove-Item -Force -ErrorAction SilentlyContinue "$env:RUNNER_TEMP\polychro-jre\bin\server\classes_nocoops.jsa"
-          if (-not (Test-Path "$env:RUNNER_TEMP\polychro-jre\bin\server\classes.jsa")) {
-            Write-Error "FAIL: jlink did not write the CDS archive"
-            exit 1
-          }
-
-      - name: Stage archive contents — jre/ + lib/ + polychro.jar at top level (Unix)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          set -euo pipefail
-          TARGET=modules/polychro-cli/target
-          STAGE="$RUNNER_TEMP/polychro-package-stage"
-          mkdir -p "$STAGE"
-          cp -R "$RUNNER_TEMP/polychro-jre" "$STAGE/jre"
-          cp -R "$TARGET/lib" "$STAGE/lib"
-          cp "$(ls $TARGET/polychro-cli-*.jar | grep -vE -- '-(sources|javadoc)\.jar$')" "$STAGE/polychro.jar"
-
-          # The wrapper written by install.sh runs jre/bin/java -jar polychro.jar, and the jar's
-          # manifest finds lib/ next to it — fail fast if that layout ever drifts.
-          ls "$STAGE"
-          test -x "$STAGE/jre/bin/java" || { echo "FAIL: jre/bin/java missing or not executable"; exit 1; }
-          test -f "$STAGE/polychro.jar" || { echo "FAIL: polychro.jar missing"; exit 1; }
-          ls "$STAGE"/lib/*.jar >/dev/null || { echo "FAIL: lib/ has no jars"; exit 1; }
-
-      - name: Stage archive contents — jre/ + lib/ + polychro.jar at top level (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $TARGET = "modules\polychro-cli\target"
-          $STAGE = "$env:RUNNER_TEMP\polychro-package-stage"
-          New-Item -ItemType Directory -Force -Path $STAGE | Out-Null
-          Copy-Item -Recurse "$env:RUNNER_TEMP\polychro-jre" "$STAGE\jre"
-          Copy-Item -Recurse "$TARGET\lib" "$STAGE\lib"
-          $JAR = Get-ChildItem "$TARGET\polychro-cli-*.jar" | Where-Object { $_.Name -notmatch '-(sources|javadoc)\.jar$' }
-          Copy-Item $JAR.FullName "$STAGE\polychro.jar"
-
-          # The wrapper written by install.ps1 runs jre\bin\java.exe -jar polychro.jar, and the
-          # jar's manifest finds lib\ next to it — fail fast if that layout ever drifts.
-          Get-ChildItem $STAGE
-          if (-not (Test-Path "$STAGE\jre\bin\java.exe")) {
-            Write-Error "FAIL: jre\bin\java.exe missing"
-            exit 1
-          }
-          if (-not (Test-Path "$STAGE\polychro.jar")) {
-            Write-Error "FAIL: polychro.jar missing"
-            exit 1
-          }
-          if (-not (Get-ChildItem "$STAGE\lib\*.jar")) {
-            Write-Error "FAIL: lib\ has no jars"
-            exit 1
-          }
-
-      - name: Create tarball (Unix)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          mkdir -p modules/polychro-cli/target/packages
-          tar czf "modules/polychro-cli/target/packages/${{ matrix.artifact_name }}" \
-            -C "$RUNNER_TEMP/polychro-package-stage" jre lib polychro.jar
-
-      - name: Create zip (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path modules\polychro-cli\target\packages | Out-Null
-          Compress-Archive -Path "$env:RUNNER_TEMP\polychro-package-stage\*" `
-            -DestinationPath "modules\polychro-cli\target\packages\${{ matrix.artifact_name }}" -Force
-
-      - name: Smoke test the package — extract + run --version (Unix)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          set -euo pipefail
+          PACKAGE="out/jreleaser/assemble/polychro-cli/jlink/${{ matrix.artifact_name }}"
           TESTDIR="$RUNNER_TEMP/polychro-package-smoketest"
           mkdir -p "$TESTDIR"
-          tar xzf "modules/polychro-cli/target/packages/${{ matrix.artifact_name }}" -C "$TESTDIR"
-          "$TESTDIR/jre/bin/java" -jar "$TESTDIR/polychro.jar" --version
+          case "$PACKAGE" in
+            *.zip) pwsh -NoProfile -Command "Expand-Archive -Path '$PACKAGE' -DestinationPath '$TESTDIR'"; JAVA=java.exe ;;
+            *) tar xzf "$PACKAGE" -C "$TESTDIR"; JAVA=java ;;
+          esac
+          ROOT="$TESTDIR/${{ matrix.artifact_name }}"
+          ROOT="${ROOT%.tar.gz}"; ROOT="${ROOT%.zip}"
+          ls "$ROOT"
+          # lib/server on macOS and Linux, bin\server on Windows.
+          [ -f "$ROOT/lib/server/classes.jsa" ] || [ -f "$ROOT/bin/server/classes.jsa" ] \
+            || { echo "FAIL: jlink did not write the JDK's class cache"; exit 1; }
+          "$ROOT/bin/$JAVA" -jar "$ROOT/jars/polychro.jar" --version
 
-      - name: Smoke test the package — extract + run --version (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
+      # The hash alone, as JReleaser writes it on the release (checksum.individual in jreleaser.yml).
+      - name: Generate checksum
+        working-directory: out/jreleaser/assemble/polychro-cli/jlink
         run: |
-          $TESTDIR = "$env:RUNNER_TEMP\polychro-package-smoketest"
-          New-Item -ItemType Directory -Force -Path $TESTDIR | Out-Null
-          Expand-Archive -Path "modules\polychro-cli\target\packages\${{ matrix.artifact_name }}" -DestinationPath $TESTDIR -Force
-          & "$TESTDIR\jre\bin\java.exe" -jar "$TESTDIR\polychro.jar" --version
-
-      - name: Generate checksum (Unix)
-        if: runner.os != 'Windows'
-        working-directory: modules/polychro-cli/target/packages
-        shell: bash
-        run: shasum -a 256 "${{ matrix.artifact_name }}" > "${{ matrix.artifact_name }}.sha256"
-
-      - name: Generate checksum (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $hash = Get-FileHash modules\polychro-cli\target\packages\${{ matrix.artifact_name }} -Algorithm SHA256
-          $line = "$($hash.Hash.ToLower())  ${{ matrix.artifact_name }}`n"
-          $out = Join-Path $env:GITHUB_WORKSPACE "modules/polychro-cli/target/packages/${{ matrix.artifact_name }}.sha256"
-          [System.IO.File]::WriteAllText($out, $line, (New-Object System.Text.UTF8Encoding($false)))
+          set -euo pipefail
+          if command -v sha256sum >/dev/null; then SUM="sha256sum"; else SUM="shasum -a 256"; fi
+          $SUM "${{ matrix.artifact_name }}" | awk '{ printf "%s", $1 }' > "${{ matrix.artifact_name }}.sha256"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact_name }}
           path: |
-            modules/polychro-cli/target/packages/${{ matrix.artifact_name }}
-            modules/polychro-cli/target/packages/${{ matrix.artifact_name }}.sha256
+            out/jreleaser/assemble/polychro-cli/jlink/${{ matrix.artifact_name }}
+            out/jreleaser/assemble/polychro-cli/jlink/${{ matrix.artifact_name }}.sha256
+
+      - name: Keep JReleaser's log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: jreleaser-log-${{ matrix.jdk }}
+          path: out/jreleaser/trace.log
+          retention-days: 7
 
   test-package:
     name: Test package on ${{ matrix.os }}
@@ -286,11 +184,15 @@ jobs:
           name: ${{ matrix.artifact_name }}
           path: ./pkg
 
+      # The .sha256 holds the hash alone, as on the release.
       - name: Verify checksum (Unix)
         if: runner.os != 'Windows'
         shell: bash
         working-directory: ./pkg
-        run: shasum -a 256 -c ${{ matrix.artifact_name }}.sha256
+        run: |
+          expected=$(cat "${{ matrix.artifact_name }}.sha256")
+          actual=$(shasum -a 256 "${{ matrix.artifact_name }}" | awk '{ print $1 }')
+          [ "$actual" = "$expected" ] || { echo "Checksum mismatch: expected $expected, got $actual"; exit 1; }
 
       - name: Verify checksum (Windows)
         if: runner.os == 'Windows'
