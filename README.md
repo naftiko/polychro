@@ -1,5 +1,5 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
-[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/naftiko/polychro/badges/main/polychro-coverage.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/naftiko/polychro/badges/main/polychro-coverage.json)](https://github.com/naftiko/polychro/actions/workflows/quality-gate.yml)
 [![Quality Gate](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/naftiko/polychro/badges/main/polychro-quality-gate.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
 [![Bugs](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/naftiko/polychro/badges/main/polychro-bugs.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
 [![Trivy](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/naftiko/polychro/badges/main/polychro-trivy.json)](https://github.com/naftiko/polychro/actions/workflows/nightly-quality-gate.yml)
