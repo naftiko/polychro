@@ -223,13 +223,16 @@
                 </dependency>
             </dependencies>
             <build>
+                <!-- polychro.jar, whatever the version: jreleaser.yml and install.sh name it. -->
+                <finalName>polychro</finalName>
                 <plugins>
                     <!--
-                      Lays out target/ the way publish-cli-packages.yml ships it next to a jlink
-                      runtime: polychro-cli-<version>.jar plus every runtime dependency in lib/.
+                      Lays out target/ for jreleaser.yml, which ships every jar in one jars/ folder
+                      next to a jlink runtime: polychro.jar plus every runtime dependency in lib/.
                       Not a shaded jar: the GraalJS and Truffle jars keep their module
-                      descriptors only as separate jars. The jar's manifest lists lib/*.jar on its
-                      Class-Path, so "java -jar polychro.jar" works on its own.
+                      descriptors only as separate jars. The jar's manifest lists the other jars by
+                      name, with no folder, so "java -jar jars/polychro.jar" works on its own once
+                      they sit side by side.
                       useUniqueVersions=false makes SNAPSHOT entries match the file names that
                       copy-dependencies writes (no timestamp).
                     -->
@@ -240,7 +243,7 @@
                             <archive>
                                 <manifest>
                                     <addClasspath>true</addClasspath>
-                                    <classpathPrefix>lib/</classpathPrefix>
+                                    <classpathPrefix></classpathPrefix>
                                     <useUniqueVersions>false</useUniqueVersions>
                                 </manifest>
                             </archive>

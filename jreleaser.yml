@@ -1,0 +1,132 @@
+# How the Polychro CLI is packaged and released, by JReleaser, as naftiko/platform-cli does.
+# Each OS runner runs `jreleaser assemble --select-current-platform` (publish-cli-packages.yml): its own JDK builds
+# its own package. On a v* tag, one job then runs `jreleaser full-release` with all of them (publish-cli-bin.yml).
+# Try it locally without publishing anything:
+#   mvn -q package -Pjre-package -DskipTests -pl modules/polychro-cli -am
+#   POLYCHRO_JDK_MACOS_ARM64=$JAVA_HOME JRELEASER_PROJECT_VERSION=1.0.0 \
+#     java -jar jreleaser-tool-provider.jar assemble --select-current-platform
+project:
+  name: polychro
+  description: The Polychro command-line interface
+  longDescription: Spec-driven linter for AI-generated specs, in-process, multi-format and agent-native.
+  links:
+    homepage: https://shipyard.naftiko.io/polychro/
+  authors:
+    - Naftiko
+  license: Apache-2.0
+  inceptionYear: '2026'
+  languages:
+    java:
+      groupId: io.polychro
+      artifactId: polychro-cli
+      version: '21'
+      mainClass: io.polychro.cli.PolychroCli
+
+# The names install.sh and install.ps1 ask for, as before JReleaser: polychro-cli-macos-arm64.tar.gz.
+platform:
+  replacements:
+    osx-aarch_64: macos-arm64
+    linux-x86_64: linux-amd64
+    linux-aarch_64: linux-arm64
+    windows-x86_64: windows-amd64
+
+assemble:
+  jlink:
+    polychro-cli:
+      active: ALWAYS
+      stereotype: CLI
+      executable: polychro
+      imageName: 'polychro-cli'
+      # The jar is not shaded: the GraalJS and Truffle jars keep their module descriptors only as separate jars.
+      # polychro.jar names each of them on its Class-Path, so all of them go in jars/ beside it.
+      mainJar:
+        path: modules/polychro-cli/target/polychro.jar
+      jars:
+        - pattern: modules/polychro-cli/target/lib/*.jar
+      jdeps:
+        multiRelease: '21'
+        ignoreMissingDeps: true
+        # Analyse polychro.jar only, with the other jars on the class path. Given every jar as a target, jdeps reads
+        # GraalJS and Restlet as modules and stops on Restlet's optional Jetty QUIC module.
+        # Each jar is named: with wildcards, Windows jdeps takes "windows-x86_64\*" for a path (no jar is
+        # Windows-only, so that folder does not exist) and stops on the "*".
+        useWildcardInPath: false
+        targets:
+          - 'modules/polychro-cli/target/polychro.jar'
+      # Loaded by name, so jdeps can't see them: the EC ciphers most TLS servers need, for a remote $ref over HTTPS,
+      # and the zip file system.
+      additionalModuleNames:
+        - jdk.crypto.ec
+        - jdk.zipfs
+      args:
+        - --no-header-files
+        - --no-man-pages
+        - --strip-debug
+        # Without a --compress, JReleaser adds zip-9. The .tar.gz and the .zip pack an uncompressed runtime better
+        # (about 11 MB less), and the JVM reads it faster.
+        - --compress=zip-0
+        # A class data archive of the JDK's own classes: the base the per-install cache builds on. It also writes
+        # classes_nocoops.jsa (about 4 MB packed), which only serves heaps over 32 GB; JReleaser can't leave it out.
+        - --generate-cds-archive
+      # bin/polychro and bin/polychro.bat are JReleaser's launchers, for an archive unpacked by hand. install.sh and
+      # install.ps1 write their own, which adds the per-install class cache (polychro.jsa).
+      java:
+        mainClass: io.polychro.cli.PolychroCli
+      fileSets:
+        - input: '.'
+          includes: [LICENSE.md]
+      # The asset names install.sh and install.ps1 download: a .tar.gz for macOS and Linux, a .zip for Windows.
+      formats: [TAR_GZ, ZIP]
+      targetJdks:
+        - path: '{{ Env.POLYCHRO_JDK_LINUX_X64 }}'
+          platform: linux-x86_64
+          extraProperties: { skipZip: true }
+        - path: '{{ Env.POLYCHRO_JDK_LINUX_ARM64 }}'
+          platform: linux-aarch_64
+          extraProperties: { skipZip: true }
+        - path: '{{ Env.POLYCHRO_JDK_MACOS_ARM64 }}'
+          platform: osx-aarch_64
+          extraProperties: { skipZip: true }
+        - path: '{{ Env.POLYCHRO_JDK_WINDOWS_X64 }}'
+          platform: windows-x86_64
+          extraProperties: { skipTargz: true }
+
+# The CycloneDX SBOM of every Maven module, which the release job makes before calling JReleaser. A glob, so a
+# local run without it still works.
+files:
+  globs:
+    - pattern: 'glob:bom.json'
+      directory: 'target'
+
+checksum:
+  individual: true
+
+release:
+  github:
+    owner: naftiko
+    name: polychro
+    # The tag already exists: it's what starts the release workflow.
+    skipTag: true
+    # Named like the earlier releases; the codename ("Trawler"...) is added by hand.
+    releaseName: 'Polychro v{{projectVersion}}'
+    overwrite: false
+    # A run that failed halfway can run again: it adds the files that are missing to the release it made.
+    update:
+      enabled: true
+      sections: [ASSETS]
+    milestone:
+      close: false
+    # The last v* tag before this one, from the release workflow: JReleaser would take the newest tag of any
+    # name, such as the nightly's sha-* tags.
+    previousTagName: '{{ Env.POLYCHRO_PREVIOUS_TAG }}'
+    prerelease:
+      pattern: '.*-.*'
+    changelog:
+      formatted: ALWAYS
+      preset: conventional-commits
+      skipMergeCommits: true
+      format: '- {{commitShortHash}} {{#conventionalCommitScope}}**{{conventionalCommitScope}}**: {{/conventionalCommitScope}}{{conventionalCommitDescription}}'
+      hide:
+        uncategorized: true
+      contributors:
+        enabled: false

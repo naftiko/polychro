@@ -32,3 +32,6 @@ __pycache__/
 
 # Agent scratch directory (diffs, divergence drafts, temp payloads) — wiped per run, never committed.
 .work/
+
+# JReleaser's output (jreleaser.yml)
+/out/

@@ -164,13 +164,6 @@ jobs:
         with:
           maven-version: 3.9.16
 
-      - name: Download SBOM
-        # Reuses the exact SBOM scan-dependencies generated and Trivy already
-        uses: actions/download-artifact@v8
-        with:
-          name: sbom-cyclonedx
-          path: target
-
       - name: Configure Maven Central
         run: bash ./scripts/builder.sh config_maven_central
         env:
@@ -197,18 +190,6 @@ jobs:
 
       #- name: List repo content
       #  run: find local-repo -type f
-      # draft: true, because this job finishes long before publish-cli-bin.yml's release job: the
-      # SBOM must not publish the release on its own, before the binaries and the packages are on
-      # it. That release job publishes the draft; a release it already published stays published.
-      - name: Attach SBOM to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v3
-        with:
-          files: target/bom.json
-          draft: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Cleanup
         if: always()
         run: |
