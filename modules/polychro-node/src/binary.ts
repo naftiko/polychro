@@ -98,15 +98,21 @@ export function commandFor(
   // Same lookup as the wrapper: POLYCHRO_HOME if set, else the parent of the wrapper's folder.
   const home = env["POLYCHRO_HOME"] || win32.join(win32.dirname(binary), "..");
   const current = win32.join(home, "current");
-  const java = win32.join(current, "jre", "bin", "java.exe");
-  const jar = win32.join(current, "polychro.jar");
-  if (!fileExists(java) || !fileExists(jar)) {
+  // The layouts install.ps1 installs, in the order it checks them: a package built by JReleaser
+  // (from 1.0.0-beta10), then an older one.
+  const layouts = [
+    { java: win32.join(current, "bin", "java.exe"), jar: win32.join(current, "jars", "polychro.jar") },
+    { java: win32.join(current, "jre", "bin", "java.exe"), jar: win32.join(current, "polychro.jar") },
+  ];
+  const found = layouts.find((layout) => fileExists(layout.java) && fileExists(layout.jar));
+  if (!found) {
     throw new Error(
       `${binary} is a batch file, which Node.js cannot run without a shell, and no ` +
-        `install was found next to it (${java}). Set POLYCHRO_BIN to polychro.exe, ` +
+        `install was found next to it (${layouts[0]!.java}). Set POLYCHRO_BIN to polychro.exe, ` +
         `or reinstall Polychro with scripts/install.ps1.`
     );
   }
+  const { java, jar } = found;
   return {
     file: java,
     args: [
