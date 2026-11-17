@@ -41,7 +41,7 @@
 #
 # What it does:
 #   1. Detects OS/arch and downloads the matching tarball (a jlink runtime,
-#      polychro.jar and its lib/ folder) from a GitHub Release (naftiko/polychro).
+#      polychro.jar and the jars it needs) from a GitHub Release (naftiko/polychro).
 #   2. Verifies its SHA-256 against the release's per-asset checksum file.
 #   3. Extracts it to a versioned directory under $POLYCHRO_HOME/versions/
 #      and symlinks $POLYCHRO_HOME/current to it.
@@ -121,7 +121,8 @@ info "Verifying checksum..."
 curl -fsSL "$base_url/$checksum" -o "$tmp_dir/$checksum" \
   || fail "Could not download $checksum for verification."
 
-expected_sha=$(grep "  ${asset}\$" "$tmp_dir/$checksum" | awk '{print $1}')
+# The file holds the hash alone (JReleaser, from 1.0.0-beta10), or "<hash>  <asset>" (older releases).
+expected_sha=$(awk -v a="$asset" 'NF == 1 || $2 == a || $2 == "*" a { print $1; exit }' "$tmp_dir/$checksum")
 [ -n "$expected_sha" ] || fail "No checksum entry found for $asset in $checksum."
 
 if command -v shasum >/dev/null 2>&1; then
@@ -153,6 +154,21 @@ rm -rf "$install_dir"
 mkdir -p "$install_dir"
 tar xzf "$tmp_dir/$asset" -C "$install_dir"
 
+# From 1.0.0-beta10 the package is built by JReleaser: one polychro-cli-<os>-<arch> folder holding the
+# runtime (bin/java) and the jars (jars/). Older packages hold jre/, lib/ and polychro.jar at the top.
+packaged="$install_dir/polychro-cli-${os}-${arch}"
+if [ -d "$packaged" ]; then
+  for entry in "$packaged"/*; do mv "$entry" "$install_dir/"; done
+  rmdir "$packaged"
+fi
+if [ -x "$install_dir/bin/java" ]; then
+  java_path="bin/java"; jar_path="jars/polychro.jar"
+else
+  java_path="jre/bin/java"; jar_path="polychro.jar"
+fi
+[ -x "$install_dir/$java_path" ] && [ -f "$install_dir/$jar_path" ] \
+  || fail "$asset holds no Java runtime and polychro.jar that this installer knows."
+
 mkdir -p "$POLYCHRO_HOME/bin"
 ln -sfn "$install_dir" "$POLYCHRO_HOME/current"
 
@@ -172,9 +188,9 @@ polychro_install_home='$quoted_home'
 POLYCHRO_HOME="\${POLYCHRO_HOME:-\$polychro_install_home}"
 # polychro.jsa is the class cache (AppCDS) written at install time. It is only read here:
 # a missing, stale or damaged cache (VerifySharedSpaces) is skipped without a message.
-exec "\$POLYCHRO_HOME/current/jre/bin/java" -XX:+VerifySharedSpaces \\
+exec "\$POLYCHRO_HOME/current/$java_path" -XX:+VerifySharedSpaces \\
   -XX:SharedArchiveFile="\$POLYCHRO_HOME/current/polychro.jsa" "-Xlog:cds*=off" \\
-  -jar "\$POLYCHRO_HOME/current/polychro.jar" "\$@"
+  -jar "\$POLYCHRO_HOME/current/$jar_path" "\$@"
 WRAPPER
 chmod +x "$POLYCHRO_HOME/bin/polychro"
 
@@ -194,8 +210,8 @@ printf 'functionsDir: functions\nfunctions: [warm_up]\nrules:\n  warm-up:\n    m
 current_dir="$POLYCHRO_HOME/current"
 # The user's JVM options (an agent, -Xshare:off...) must not shape the cache.
 (unset JAVA_TOOL_OPTIONS _JAVA_OPTIONS JDK_JAVA_OPTIONS
-  cd "$warm_up_dir" && "$current_dir/jre/bin/java" -XX:ArchiveClassesAtExit="$current_dir/polychro.jsa" \
-  -jar "$current_dir/polychro.jar" lint doc.yaml -s schema.json -r ruleset.yml) >/dev/null 2>&1 || true
+  cd "$warm_up_dir" && "$current_dir/$java_path" -XX:ArchiveClassesAtExit="$current_dir/polychro.jsa" \
+  -jar "$current_dir/$jar_path" lint doc.yaml -s schema.json -r ruleset.yml) >/dev/null 2>&1 || true
 [ -s "$install_dir/polychro.jsa" ] || warn "Could not prepare the start-up cache; polychro will start more slowly."
 
 info "Installed polychro $POLYCHRO_VERSION -> $install_dir"

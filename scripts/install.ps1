@@ -40,7 +40,7 @@
 #
 # What it does:
 #   1. Detects CPU arch and downloads the matching zip (a jlink runtime,
-#      polychro.jar and its lib\ folder) from a GitHub Release (naftiko/polychro).
+#      polychro.jar and the jars it needs) from a GitHub Release (naftiko/polychro).
 #   2. Verifies its SHA-256 against the release's per-asset checksum file.
 #   3. Extracts it to a versioned directory under $POLYCHRO_HOME\versions\
 #      and repoints $POLYCHRO_HOME\current at it (junction, no admin needed -
@@ -128,9 +128,16 @@ try {
       Write-Fail "Could not download $checksum for verification."
     }
 
-    $checksumLine = Select-String -Path $checksumsPath -Pattern "  $([regex]::Escape($asset))$" | Select-Object -First 1
-    if (-not $checksumLine) { Write-Fail "No checksum entry found for $asset in $checksum." }
-    $expectedSha = ($checksumLine.Line -split "\s+")[0]
+    # The file holds the hash alone (JReleaser, from 1.0.0-beta10), or "<hash>  <asset>" (older releases).
+    $expectedSha = $null
+    foreach ($line in ([string](Get-Content -LiteralPath $checksumsPath -Raw)) -split "\r?\n") {
+      $fields = @($line.Trim() -split "\s+")
+      if ($fields[0] -and ($fields.Count -eq 1 -or $fields[1] -eq $asset -or $fields[1] -eq "*$asset")) {
+        $expectedSha = $fields[0]
+        break
+      }
+    }
+    if (-not $expectedSha) { Write-Fail "No checksum entry found for $asset in $checksum." }
 
     $actualSha = (Get-FileHash -Path $assetPath -Algorithm SHA256).Hash.ToLower()
     if ($expectedSha.ToLower() -ne $actualSha) {
@@ -149,6 +156,22 @@ try {
     New-Item -ItemType Directory -Path $installDir -Force | Out-Null
 
     Expand-Archive -Path $assetPath -DestinationPath $installDir -Force
+
+    # From 1.0.0-beta10 the package is built by JReleaser: one polychro-cli-windows-<arch> folder holding
+    # the runtime (bin\java.exe) and the jars (jars\). Older packages hold jre\, lib\ and polychro.jar at the top.
+    $packaged = Join-Path $installDir "polychro-cli-windows-$arch"
+    if (Test-Path -LiteralPath $packaged) {
+      Get-ChildItem -LiteralPath $packaged -Force | Move-Item -Destination $installDir
+      Remove-Item -LiteralPath $packaged -Force
+    }
+    if (Test-Path -LiteralPath (Join-Path $installDir "bin\java.exe")) {
+      $javaPath = "bin\java.exe"; $jarPath = "jars\polychro.jar"
+    } else {
+      $javaPath = "jre\bin\java.exe"; $jarPath = "polychro.jar"
+    }
+    if (-not (Test-Path -LiteralPath (Join-Path $installDir $javaPath)) -or -not (Test-Path -LiteralPath (Join-Path $installDir $jarPath))) {
+      Write-Fail "$asset holds no Java runtime and polychro.jar that this installer knows."
+    }
 
     $binDir = Join-Path $PolychroHome "bin"
     New-Item -ItemType Directory -Path $binDir -Force | Out-Null
@@ -192,7 +215,7 @@ rem setlocal keeps POLYCHRO_HOME inside this script: without it, the set below s
 rem The install root is the parent of this folder. A POLYCHRO_HOME set at run time still wins.
 if not defined POLYCHRO_HOME for %%I in ("%~dp0..") do set "POLYCHRO_HOME=%%~fI"
 rem polychro.jsa is the class cache (AppCDS) written at install time. A missing, stale or damaged cache is skipped silently.
-"%POLYCHRO_HOME%\current\jre\bin\java.exe" -XX:+VerifySharedSpaces "-XX:SharedArchiveFile=%POLYCHRO_HOME%\current\polychro.jsa" -Xlog:cds*=off -jar "%POLYCHRO_HOME%\current\polychro.jar" %*
+"%POLYCHRO_HOME%\current\$javaPath" -XX:+VerifySharedSpaces "-XX:SharedArchiveFile=%POLYCHRO_HOME%\current\polychro.jsa" -Xlog:cds*=off -jar "%POLYCHRO_HOME%\current\$jarPath" %*
 "@
     [System.IO.File]::WriteAllText($wrapperPath, $wrapperContent, [System.Text.Encoding]::ASCII)
 
@@ -219,7 +242,7 @@ rem polychro.jsa is the class cache (AppCDS) written at install time. A missing,
     $savedPreference = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     try {
-      & (Join-Path $currentLink "jre\bin\java.exe") "-XX:ArchiveClassesAtExit=$cachePath" -jar (Join-Path $currentLink "polychro.jar") lint doc.yaml -s schema.json -r ruleset.yml *> $null
+      & (Join-Path $currentLink $javaPath) "-XX:ArchiveClassesAtExit=$cachePath" -jar (Join-Path $currentLink $jarPath) lint doc.yaml -s schema.json -r ruleset.yml *> $null
     } catch {
     } finally {
       $ErrorActionPreference = $savedPreference
