@@ -110,11 +110,13 @@ release:
     # Named like the earlier releases; the codename ("Trawler"...) is added by hand.
     releaseName: 'Polychro v{{projectVersion}}'
     overwrite: false
-    # Created as a draft, then published once every file is uploaded: install.sh
-    # takes the newest release, so it never finds one without its package.
-    immutableRelease: true
-    # A run that failed before publishing leaves a draft no one sees: run it again, then delete that draft.
-    # One that failed after publishing adds the files that are missing to the release it made.
+    # Created as a draft, and published by publish-cli-bin.yml once JReleaser has uploaded every
+    # file: install.sh takes the newest release, so it never finds one without its package.
+    # (immutableRelease does the same, but JReleaser refuses it with the snapshot version the
+    # package workflow builds.)
+    draft: true
+    # A run that failed before the draft was published leaves it unseen: run it again, then delete
+    # the old draft. One that failed later adds the files that are missing to the release it made.
     update:
       enabled: true
       sections: [ASSETS]
