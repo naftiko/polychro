@@ -129,7 +129,8 @@ release:
       formatted: ALWAYS
       preset: conventional-commits
       skipMergeCommits: true
-      format: '- {{commitShortHash}} {{#conventionalCommitScope}}**{{conventionalCommitScope}}**: {{/conventionalCommitScope}}{{conventionalCommitDescription}}'
+      # As the preset's, without its "closes #n": a breaking change gets 🚨 and its BREAKING CHANGE text.
+      format: '- {{commitShortHash}} {{#conventionalCommitIsBreakingChange}}🚨 {{/conventionalCommitIsBreakingChange}}{{#conventionalCommitScope}}**{{conventionalCommitScope}}**: {{/conventionalCommitScope}}{{conventionalCommitDescription}}{{#conventionalCommitBreakingChangeContent}} - *{{conventionalCommitBreakingChangeContent}}*{{/conventionalCommitBreakingChangeContent}}'
       hide:
         uncategorized: true
       contributors:
