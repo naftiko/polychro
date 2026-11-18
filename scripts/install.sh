@@ -28,6 +28,12 @@
 # package):
 #   curl -fsSL https://raw.githubusercontent.com/naftiko/polychro/v1.0.0/scripts/install.sh | POLYCHRO_VERSION=v1.0.0 sh
 #
+# An installer from v1.0.0-beta9 or older installs releases up to
+# v1.0.0-beta9 only: from v1.0.0-beta10, a package's .sha256 file holds
+# the hash alone, which those installers don't read ("No checksum entry
+# found"). A pinned installer that old must set POLYCHRO_VERSION to
+# v1.0.0-beta9 or older too, or be taken from main.
+#
 # Env overrides:
 #   POLYCHRO_VERSION   Install a specific release tag (e.g. "v1.0.0-beta7").
 #                      Defaults to the latest GitHub release, including
