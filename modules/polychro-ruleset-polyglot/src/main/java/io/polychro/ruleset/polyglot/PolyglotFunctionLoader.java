@@ -44,8 +44,9 @@ class PolyglotFunctionLoader {
      * {@code Engine.create()} is deferred until the first script is actually loaded so that
      * a ruleset declaring {@code functions:} but whose custom rules never fire (and thus
      * {@link #loadFunctions} is never called with non-empty names) does not crash in
-     * environments where no Truffle language is on the module-path (e.g. a misconfigured
-     * native image). See: <a href="https://github.com/naftiko/polychro/issues/45">issue #45</a>.
+     * environments where no Truffle language is on the module-path (e.g. a package built
+     * without the JavaScript language). See:
+     * <a href="https://github.com/naftiko/polychro/issues/45">issue #45</a>.
      */
     private Engine engine;
 
