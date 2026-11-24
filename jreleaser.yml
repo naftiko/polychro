@@ -43,6 +43,11 @@ assemble:
         path: modules/polychro-cli/target/polychro.jar
       jars:
         - pattern: modules/polychro-cli/target/lib/*.jar
+      # JReleaser still stages these jars for jdeps, but doesn't copy them: the fileSets below put them in jars/.
+      # With copyJars, JReleaser also puts their folder on jlink's module path, and the JDK 25 jlink scans that
+      # folder and stops on two jars with the same module name (jaxb-api and jakarta.xml.bind-api, the swagger 1 and
+      # 2 jars). The runtime holds only JDK modules, so jlink never needed them.
+      copyJars: false
       jdeps:
         multiRelease: '25'
         ignoreMissingDeps: true
@@ -81,6 +86,13 @@ assemble:
       fileSets:
         - input: '.'
           includes: [LICENSE.md]
+        # polychro.jar and the jars it names, in jars/ (see copyJars above).
+        - input: 'modules/polychro-cli/target'
+          includes: [polychro.jar]
+          output: jars
+        - input: 'modules/polychro-cli/target/lib'
+          includes: ['*.jar']
+          output: jars
       # The asset names install.sh and install.ps1 download: a .tar.gz for macOS and Linux, a .zip for Windows.
       formats: [TAR_GZ, ZIP]
       targetJdks:
