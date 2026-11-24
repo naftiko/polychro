@@ -45,6 +45,7 @@ describe("commandFor", () => {
     expect(command).toEqual({
       file: JAVA,
       args: [
+        "--sun-misc-unsafe-memory-access=allow",
         "-XX:+VerifySharedSpaces",
         `-XX:SharedArchiveFile=${CURRENT}\\polychro.jsa`,
         "-Xlog:cds*=off",

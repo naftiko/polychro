@@ -16,12 +16,12 @@
 
 ## Local Bootstrap
 
-Before contributing, ensure your local environment has at least JDK 21 and Maven.
+Before contributing, ensure your local environment has at least JDK 25 and Maven.
 
-**Required:** JDK 21, Maven 3.9+
+**Required:** JDK 25, Maven 3.9+
 
 ```bash
-java -version    # must be 21+
+java -version    # must be 25+
 mvn -version     # must be 3.9+
 ```
 
@@ -102,7 +102,7 @@ This section provides **machine-readable guidance** for AI coding agents contrib
 
 ### Repository context
 
-- **Language**: Java 21 (Maven multi-module build)
+- **Language**: Java 25 (Maven multi-module build)
 - **Description**: Polyglot spec linting engine — validates YAML, JSON, XML, Markdown, and HTML specs against schemas and rulesets through a composable pipeline (well-formedness → schema-model → ruleset → format-aware)
 - **Modules**: `polychro-api`, `polychro-core`, `polychro-wellformedness`, `polychro-json-schema`, `polychro-json-structure`, `polychro-ruleset`, `polychro-markdown`, `polychro-html`, `polychro-cli`, plus Go / Node.js / Python SDKs
 - **Documentation**: the [Naftiko Shipyard](https://shipyard.naftiko.io/docs/1.0.0-alpha3/polychro/) hosts the full Polychro documentation (Features, Architecture, CLI, Guides, Tutorial, FAQ)

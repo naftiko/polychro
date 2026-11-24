@@ -19,7 +19,7 @@ project:
     java:
       groupId: io.polychro
       artifactId: polychro-cli
-      version: '21'
+      version: '25'
       mainClass: io.polychro.cli.PolychroCli
 
 # The names install.sh and install.ps1 ask for, as before JReleaser: polychro-cli-macos-arm64.tar.gz.
@@ -44,10 +44,10 @@ assemble:
       jars:
         - pattern: modules/polychro-cli/target/lib/*.jar
       jdeps:
-        multiRelease: '21'
+        multiRelease: '25'
         ignoreMissingDeps: true
         # Analyse polychro.jar only, with the other jars on the class path. Given every jar as a target, jdeps reads
-        # GraalJS and Restlet as modules and stops on Restlet's optional Jetty QUIC module.
+        # GraalJS and Restlet as modules and stops on Restlet's optional Netty HTTP/3 and QUIC modules.
         # Each jar is named: with wildcards, Windows jdeps takes "windows-x86_64\*" for a path (no jar is
         # Windows-only, so that folder does not exist) and stops on the "*".
         useWildcardInPath: false
@@ -72,6 +72,12 @@ assemble:
       # install.ps1 write their own, which adds the per-install class cache (polychro.jsa).
       java:
         mainClass: io.polychro.cli.PolychroCli
+        # GraalJS (Truffle) still uses sun.misc.Unsafe, which JDK 24+ warns about on every run that uses a JavaScript
+        # rule function. Native access is allowed by polychro.jar's manifest (Enable-Native-Access), not here: that
+        # option would differ from the runtime's class data archive and turn the start-up cache off.
+        jvmOptions:
+          universal:
+            - '--sun-misc-unsafe-memory-access=allow'
       fileSets:
         - input: '.'
           includes: [LICENSE.md]

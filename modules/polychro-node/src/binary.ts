@@ -116,6 +116,7 @@ export function commandFor(
   return {
     file: java,
     args: [
+      "--sun-misc-unsafe-memory-access=allow",
       "-XX:+VerifySharedSpaces",
       `-XX:SharedArchiveFile=${win32.join(current, "polychro.jsa")}`,
       "-Xlog:cds*=off",

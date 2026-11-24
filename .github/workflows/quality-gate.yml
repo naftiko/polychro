@@ -12,18 +12,18 @@ permissions:
 
 jobs:
   build:
-    name: Build & Test Java 21
+    name: Build & Test
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Set up JDK 21
+      - name: Set up JDK 25
         uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '25'
           cache: maven
           server-id: github-naftiko
           server-username: MAVEN_USERNAME
