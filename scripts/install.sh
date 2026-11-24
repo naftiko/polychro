@@ -194,7 +194,10 @@ polychro_install_home='$quoted_home'
 POLYCHRO_HOME="\${POLYCHRO_HOME:-\$polychro_install_home}"
 # polychro.jsa is the class cache (AppCDS) written at install time. It is only read here:
 # a missing, stale or damaged cache (VerifySharedSpaces) is skipped without a message.
-exec "\$POLYCHRO_HOME/current/$java_path" -XX:+VerifySharedSpaces \\
+# --sun-misc-unsafe-memory-access=allow: GraalJS (Truffle) still uses sun.misc.Unsafe, which
+# JDK 24+ warns about on every run that uses a JavaScript rule function. Keep these options the
+# same as the warm-up below, install.ps1, jreleaser.yml and modules/polychro-node/src/binary.ts.
+exec "\$POLYCHRO_HOME/current/$java_path" --sun-misc-unsafe-memory-access=allow -XX:+VerifySharedSpaces \\
   -XX:SharedArchiveFile="\$POLYCHRO_HOME/current/polychro.jsa" "-Xlog:cds*=off" \\
   -jar "\$POLYCHRO_HOME/current/$jar_path" "\$@"
 WRAPPER
@@ -216,7 +219,8 @@ printf 'functionsDir: functions\nfunctions: [warm_up]\nrules:\n  warm-up:\n    m
 current_dir="$POLYCHRO_HOME/current"
 # The user's JVM options (an agent, -Xshare:off...) must not shape the cache.
 (unset JAVA_TOOL_OPTIONS _JAVA_OPTIONS JDK_JAVA_OPTIONS
-  cd "$warm_up_dir" && "$current_dir/$java_path" -XX:ArchiveClassesAtExit="$current_dir/polychro.jsa" \
+  cd "$warm_up_dir" && "$current_dir/$java_path" --sun-misc-unsafe-memory-access=allow \
+  -XX:ArchiveClassesAtExit="$current_dir/polychro.jsa" \
   -jar "$current_dir/$jar_path" lint doc.yaml -s schema.json -r ruleset.yml) >/dev/null 2>&1 || true
 [ -s "$install_dir/polychro.jsa" ] || warn "Could not prepare the start-up cache; polychro will start more slowly."
 

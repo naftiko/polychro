@@ -235,6 +235,10 @@
                       they sit side by side.
                       useUniqueVersions=false makes SNAPSHOT entries match the file names that
                       copy-dependencies writes (no timestamp).
+                      Enable-Native-Access lets GraalJS (Truffle) load its native code without the
+                      JDK 24+ warning on every run that uses a JavaScript rule function. It is set
+                      here rather than with enable-native-access on the command line, which would
+                      differ from the JDK's own class data archive and turn the start-up cache off.
                     -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
@@ -246,6 +250,9 @@
                                     <classpathPrefix></classpathPrefix>
                                     <useUniqueVersions>false</useUniqueVersions>
                                 </manifest>
+                                <manifestEntries>
+                                    <Enable-Native-Access>ALL-UNNAMED</Enable-Native-Access>
+                                </manifestEntries>
                             </archive>
                         </configuration>
                     </plugin>

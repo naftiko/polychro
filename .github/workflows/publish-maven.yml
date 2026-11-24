@@ -18,7 +18,9 @@ jobs:
 
       - uses: actions/setup-java@v6
         with:
-          java-version: '21'
+          java-version: '25'
+          # The latest 25.x build, not the runner's cached one: the JDK we ship gets its security fixes.
+          check-latest: true
           distribution: 'temurin'
           cache: maven
           server-id: github-naftiko
@@ -122,7 +124,9 @@ jobs:
 
       - uses: actions/setup-java@v6
         with:
-          java-version: '21'
+          java-version: '25'
+          # The latest 25.x build, not the runner's cached one: the JDK we ship gets its security fixes.
+          check-latest: true
           distribution: 'temurin'
           cache: maven
 
@@ -151,7 +155,9 @@ jobs:
 
       - uses: actions/setup-java@v6
         with:
-          java-version: '21'
+          java-version: '25'
+          # The latest 25.x build, not the runner's cached one: the JDK we ship gets its security fixes.
+          check-latest: true
           distribution: 'temurin'
           cache: maven
 
@@ -208,7 +214,9 @@ jobs:
 
       - uses: actions/setup-java@v6
         with:
-          java-version: '21'
+          java-version: '25'
+          # The latest 25.x build, not the runner's cached one: the JDK we ship gets its security fixes.
+          check-latest: true
           distribution: 'temurin'
           cache: maven
 

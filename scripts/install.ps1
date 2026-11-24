@@ -221,7 +221,8 @@ rem setlocal keeps POLYCHRO_HOME inside this script: without it, the set below s
 rem The install root is the parent of this folder. A POLYCHRO_HOME set at run time still wins.
 if not defined POLYCHRO_HOME for %%I in ("%~dp0..") do set "POLYCHRO_HOME=%%~fI"
 rem polychro.jsa is the class cache (AppCDS) written at install time. A missing, stale or damaged cache is skipped silently.
-"%POLYCHRO_HOME%\current\$javaPath" -XX:+VerifySharedSpaces "-XX:SharedArchiveFile=%POLYCHRO_HOME%\current\polychro.jsa" -Xlog:cds*=off -jar "%POLYCHRO_HOME%\current\$jarPath" %*
+rem --sun-misc-unsafe-memory-access=allow silences the JDK 24+ warning about GraalJS's use of sun.misc.Unsafe.
+"%POLYCHRO_HOME%\current\$javaPath" --sun-misc-unsafe-memory-access=allow -XX:+VerifySharedSpaces "-XX:SharedArchiveFile=%POLYCHRO_HOME%\current\polychro.jsa" -Xlog:cds*=off -jar "%POLYCHRO_HOME%\current\$jarPath" %*
 "@
     [System.IO.File]::WriteAllText($wrapperPath, $wrapperContent, [System.Text.Encoding]::ASCII)
 
@@ -248,7 +249,7 @@ rem polychro.jsa is the class cache (AppCDS) written at install time. A missing,
     $savedPreference = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     try {
-      & (Join-Path $currentLink $javaPath) "-XX:ArchiveClassesAtExit=$cachePath" -jar (Join-Path $currentLink $jarPath) lint doc.yaml -s schema.json -r ruleset.yml *> $null
+      & (Join-Path $currentLink $javaPath) "--sun-misc-unsafe-memory-access=allow" "-XX:ArchiveClassesAtExit=$cachePath" -jar (Join-Path $currentLink $jarPath) lint doc.yaml -s schema.json -r ruleset.yml *> $null
     } catch {
     } finally {
       $ErrorActionPreference = $savedPreference

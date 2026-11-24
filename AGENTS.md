@@ -7,7 +7,7 @@ pluggable via a Java SPI. The engine lints YAML, JSON, XML, Markdown, and HTML d
 composable pipeline (well-formedness → schema-model → ruleset → format-aware) and exposes its
 results as SARIF, JSON, text, or LLM-native (agent) output.
 
-- **Language**: Java 21, Maven build system (multi-module)
+- **Language**: Java 25, Maven build system (multi-module)
 - **Shipyard**: https://shipyard.naftiko.io/docs/1.0.0-alpha3/polychro/ (Features, Architecture, CLI, Guides, Tutorial, FAQ)
 
 <!-- BEGIN agents-shared:always-on — mirrored from agents-shared/context/agent-universal.md.
@@ -97,7 +97,7 @@ tightened wording lives there; this is a working copy so the rules are actually 
 All commands must be run from the repository root (`polychro/`).
 
 ```bash
-# Full build + tests (standard workflow — requires JDK 21 + Maven 3.9+)
+# Full build + tests (standard workflow — requires JDK 25 + Maven 3.9+)
 mvn -B clean verify
 
 # Faster iteration (skip JaCoCo coverage check)
@@ -107,10 +107,10 @@ mvn clean test --no-transfer-progress
 mvn -B clean verify
 ```
 
-**Required:** JDK 21, Maven 3.9+
+**Required:** JDK 25, Maven 3.9+
 
 ```bash
-java -version    # must be 21+
+java -version    # must be 25+
 mvn -version     # must be 3.9+
 ```
 
