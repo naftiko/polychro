@@ -102,7 +102,7 @@
         <node.version>v20.20.0</node.version>
         <maven.resources.plugin.version>3.5.0</maven.resources.plugin.version>
         <!-- OpenTelemetry, aligned with the Ikanos engine (see polychro-capability/pom.xml) -->
-        <opentelemetry.version>1.62.0</opentelemetry.version>
+        <opentelemetry.version>1.67.0</opentelemetry.version>
 
         <!-- Test dependency versions -->
         <junit.version>5.12.2</junit.version>
@@ -274,6 +274,24 @@
     <build>
         <pluginManagement>
             <plugins>
+                <!-- Plugins Maven binds by default, pinned to the Naftiko reference versions
+                     (golden-repo-naftiko java/versions.md) instead of the Maven release's defaults. -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <version>3.4.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>3.4.2</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-install-plugin</artifactId>
+                    <version>3.1.4</version>
+                </plugin>
+
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
