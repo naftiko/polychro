@@ -22,8 +22,10 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,12 +38,20 @@ import static org.junit.jupiter.api.Assertions.*;
  * {@code polychro serve} builds one {@code Linter}, so every request shares one
  * {@link MarkdownValidator} and its {@link ExternalLinkChecker} (#211). These tests call one
  * checker from several threads at once.
+ *
+ * <p>The JDK HTTP client sends a HEAD or GET a second time when a pooled connection is closed under
+ * it (#237), so the server can see one URL twice. These tests count the URLs that reached the
+ * server, not the requests.</p>
  */
 class ExternalLinkCheckerConcurrencyTest {
 
     private HttpServer server;
     private String baseUrl;
-    private final List<Long> arrivalsNanos = Collections.synchronizedList(new ArrayList<>());
+    /** When each URL first reached the server: a resent request keeps the first arrival. */
+    private final Map<String, Long> arrivalsNanos = new ConcurrentHashMap<>();
+    /** Every URL that reached the server, once each. */
+    private final Set<String> urlsReached = ConcurrentHashMap.newKeySet();
+    /** Every request the server got, resent ones included. */
     private final AtomicInteger hits = new AtomicInteger();
 
     @BeforeEach
@@ -50,12 +60,14 @@ class ExternalLinkCheckerConcurrencyTest {
         // Several handler threads, so the server itself does not space requests out.
         server.setExecutor(Executors.newFixedThreadPool(8));
         server.createContext("/ok", exchange -> {
-            arrivalsNanos.add(System.nanoTime());
+            arrivalsNanos.putIfAbsent(exchange.getRequestURI().toString(), System.nanoTime());
+            urlsReached.add(exchange.getRequestURI().toString());
             hits.incrementAndGet();
             exchange.sendResponseHeaders(200, -1);
             exchange.close();
         });
         server.createContext("/not-found", exchange -> {
+            urlsReached.add(exchange.getRequestURI().toString());
             hits.incrementAndGet();
             exchange.sendResponseHeaders(404, -1);
             exchange.close();
@@ -82,8 +94,8 @@ class ExternalLinkCheckerConcurrencyTest {
 
         runTogether(threads, i -> assertNull(checker.checkUrl(baseUrl + "/ok?n=" + i, i)));
 
-        List<Long> sorted = new ArrayList<>(arrivalsNanos);
-        Collections.sort(sorted);
+        List<Long> sorted = new ArrayList<>(arrivalsNanos.values());
+        sorted.sort(null);
         assertEquals(threads, sorted.size());
         // 250 ms between requests, checked over the whole run rather than gap by gap: on a shared
         // CI runner, one thread waking up late shortens the gap before it, but not the span.
@@ -107,9 +119,10 @@ class ExternalLinkCheckerConcurrencyTest {
             }
         });
 
-        assertEquals(threads * urlsPerThread, hits.get());
+        assertEquals(threads * urlsPerThread, urlsReached.size(), "every checked URL should reach the server");
         assertEquals(threads * urlsPerThread, checker.cacheSize(),
                 "every checked URL should be in the success or the failure cache");
+        int requestsAfterFirstPass = hits.get();
 
         // Every result is cached, so checking the same URLs again sends no request.
         runTogether(threads, t -> {
@@ -118,7 +131,7 @@ class ExternalLinkCheckerConcurrencyTest {
                 checker.checkUrl(baseUrl + path + "?t=" + t + "&i=" + i, i);
             }
         });
-        assertEquals(threads * urlsPerThread, hits.get());
+        assertEquals(requestsAfterFirstPass, hits.get(), "a cached URL should never be sent again");
     }
 
     /** Runs {@code task} once per thread, releasing all threads at the same moment. */
