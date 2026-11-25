@@ -1,0 +1,26 @@
+# skill-ruleset.yml : a custom oriented ruleset for SKILL.md files.
+#
+# "Oriented" here means: structure and quantifiable leanness only, no attempt
+# at judging whether a skill's instructions are correct or unambiguous.
+functionsDir: functions
+functions:
+  - section-lean
+
+aliases:
+  Frontmatter: "$.document.frontmatter"
+
+rules:
+  skill-certifying-officer-present:
+    message: "SKILL.md frontmatter must name a `certifying_officer` the crew member who signed off this competency."
+    severity: warn
+    given: "#Frontmatter"
+    then:
+      field: "certifying_officer"
+      function: truthy
+
+  section-lean:
+    message: "Keep each section lean no more than 30 words. A skill is a quick reference, not a novel."
+    severity: warn
+    given: "$"
+    then:
+      function: section-lean
